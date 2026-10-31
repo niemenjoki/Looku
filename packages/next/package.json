@@ -1,0 +1,25 @@
+{
+  "name": "@looku/next",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Next.js proxy/middleware connector for Looku: server-side page views without cookies or scripts.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "peerDependencies": {
+    "next": ">=14"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
+  }
+}
