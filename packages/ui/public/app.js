@@ -20,7 +20,17 @@ const SECTIONS = [
   { id: "browsers", module: "perus" },
   { id: "countries", module: "perus" },
   { id: "page_groups", module: "perus" },
+  { id: "shop_overview", module: "shop" },
+  { id: "shop_funnel", module: "shop" },
+  { id: "shop_products", module: "shop" },
+  { id: "campaigns", module: "campaigns" },
+  { id: "content_engagement", module: "content" },
+  { id: "content_rising", module: "content" },
 ];
+
+// Filters apply to the basic module's sections (see the API's filter params).
+const FILTER_KEYS = ["page_group", "utm_campaign", "device"];
+const ALL = "\u0001all";
 
 const state = {
   sites: [],
@@ -31,6 +41,8 @@ const state = {
   from: "",
   to: "",
   compare: true,
+  hourly: false,
+  filters: {},
   month: "",
   lang: "",
   theme: "auto",
@@ -77,8 +89,8 @@ function load() {
 
 function save() {
   try {
-    const { site, range, from, to, compare, lang, theme } = state;
-    localStorage.setItem("looku", JSON.stringify({ site: site?.id, range, from, to, compare, lang, theme }));
+    const { site, range, from, to, compare, hourly, lang, theme } = state;
+    localStorage.setItem("looku", JSON.stringify({ site: site?.id, range, from, to, compare, hourly, lang, theme }));
   } catch {
     // Storage blocked: settings last until the page is closed.
   }
@@ -102,6 +114,10 @@ function formatRange({ from, to }) {
 }
 
 function formatPeriod(period) {
+  if (period.includes("T")) {
+    const hour = period.slice(11, 13);
+    return L.locale === "fi-FI" ? `${formatDay(period.slice(0, 10))} klo ${Number(hour)}` : `${formatDay(period.slice(0, 10))} ${hour}:00`;
+  }
   if (period.length === 7) {
     const [y, m] = period.split("-").map(Number);
     return L.locale === "fi-FI" ? `${m}/${y}` : new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric", timeZone: "UTC" }).format(Date.UTC(y, m - 1, 1));
@@ -151,6 +167,24 @@ async function api(path, { method = "GET", body } = {}) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || response.statusText);
   return data;
+}
+
+function filterQuery() {
+  // A page group removed or renamed in the settings is dropped.
+  const group = state.filters.page_group;
+  if (group && !(state.config?.page_groups || []).some((g) => g.name === group)) delete state.filters.page_group;
+  return FILTER_KEYS.filter((key) => state.filters[key] !== undefined)
+    .map((key) => `&${key}=${encodeURIComponent(state.filters[key])}`)
+    .join("");
+}
+
+function money(value) {
+  return value === null || value === undefined ? "" : nf(value, 2);
+}
+
+function duration(seconds) {
+  if (seconds < 60) return `${seconds} s`;
+  return `${Math.floor(seconds / 60)} min ${seconds % 60} s`;
 }
 
 function rangeQuery() {
@@ -288,7 +322,7 @@ function logo() {
 function header(route) {
   const link = (key, hash) => h("a", { href: hash, "aria-current": route === key ? "page" : null }, L.nav[key]);
   const siteSelect = state.sites.length > 1
-    ? h("select", { "aria-label": "Site", onchange: (e) => { state.site = state.sites.find((x) => x.id === e.target.value); state.config = null; save(); render(); } },
+    ? h("select", { "aria-label": "Site", onchange: (e) => { state.site = state.sites.find((x) => x.id === e.target.value); state.config = null; state.filters = {}; save(); render(); } },
       state.sites.map((x) => h("option", { value: x.id, selected: x.id === state.site.id }, x.domain)))
     : h("strong", {}, state.site.domain);
   return h("header", { class: "top" },
@@ -302,17 +336,21 @@ function header(route) {
 function sectionOrder() {
   const known = new Map(SECTIONS.map((x) => [x.id, x]));
   const modules = state.site.modules;
-  const ids = state.config?.sections || SECTIONS.map((x) => x.id);
+  let ids = state.config?.sections || SECTIONS.map((x) => x.id);
+  // A module enabled after the order was saved shows all its sections.
+  const listed = new Set(ids.map((id) => known.get(id)?.module));
+  ids = [...ids, ...SECTIONS.filter((x) => !listed.has(x.module)).map((x) => x.id)];
   return ids.map((id) => known.get(id)).filter((x) => x && modules.includes(x.module));
 }
 
 async function dashboardView(container, token) {
   const q = rangeQuery();
-  const summary = await api(siteUrl(`/summary?${q}&compare=${state.compare ? "previous" : ""}`));
+  const fq = filterQuery();
+  const summary = await api(siteUrl(`/summary?${q}&compare=${state.compare ? "previous" : ""}${fq}`));
   if (token !== renderToken) return;
   const range = summary.meta.range;
   const days = daysBetween(range.from, range.to);
-  const interval = days > 400 ? "month" : days > 92 ? "week" : "day";
+  const interval = state.hourly && days <= 31 ? "hour" : days > 400 ? "month" : days > 92 ? "week" : "day";
   const previous = summary.meta.previous;
 
   const sections = sectionOrder();
@@ -321,15 +359,28 @@ async function dashboardView(container, token) {
     utm_source: "utm_source?limit=8&sort=entries", utm_campaign: "utm_campaign?limit=8&sort=entries", devices: "device?limit=10",
     browsers: "browser?limit=10", countries: "country?limit=8", page_groups: "page_group?",
   };
+  const moduleUrls = {
+    shop_overview: `/reports/shop/summary?${q}&compare=previous`,
+    shop_funnel: `/reports/shop/funnel?${q}`,
+    shop_products: `/reports/shop/products?${q}&limit=8`,
+    campaigns: `/reports/campaigns/overview?${q}&limit=10`,
+    content_engagement: `/reports/content/engagement?${q}&limit=8`,
+    content_rising: `/reports/content/rising?${q}&limit=8`,
+  };
   const requests = {
-    series: api(siteUrl(`/timeseries?${q}&interval=${interval}`)),
-    prevSeries: previous ? api(siteUrl(`/timeseries?from=${previous.from}&to=${previous.to}&interval=${interval}`)) : null,
-    prevPages: previous && sections.some((x) => x.id === "pages") ? api(siteUrl(`/breakdown/page?from=${previous.from}&to=${previous.to}&limit=200`)) : null,
-    os: sections.some((x) => x.id === "browsers") ? api(siteUrl(`/breakdown/os?${q}&limit=10`)) : null,
+    series: api(siteUrl(`/timeseries?${q}&interval=${interval}${fq}`)),
+    prevSeries: previous ? api(siteUrl(`/timeseries?from=${previous.from}&to=${previous.to}&interval=${interval}${fq}`)) : null,
+    prevPages: previous && sections.some((x) => x.id === "pages") ? api(siteUrl(`/breakdown/page?from=${previous.from}&to=${previous.to}&limit=200${fq}`)) : null,
+    os: sections.some((x) => x.id === "browsers") ? api(siteUrl(`/breakdown/os?${q}&limit=10${fq}`)) : null,
+    campaignList: api(siteUrl(`/breakdown/utm_campaign?${q}&limit=50&sort=entries`)),
   };
   for (const section of sections) {
-    const [dim, params] = dims[section.id].split("?");
-    requests[section.id] = api(siteUrl(`/breakdown/${dim}?${q}&${params}`));
+    if (dims[section.id]) {
+      const [dim, params] = dims[section.id].split("?");
+      requests[section.id] = api(siteUrl(`/breakdown/${dim}?${q}&${params}${fq}`));
+    } else {
+      requests[section.id] = api(siteUrl(moduleUrls[section.id]));
+    }
   }
   const keys = Object.keys(requests);
   const values = await Promise.all(keys.map((k) => requests[k]));
@@ -347,7 +398,7 @@ async function dashboardView(container, token) {
   ];
 
   const prevPages = new Map((r.prevPages?.data.rows || []).map((row) => [row.value, row.pageviews]));
-  const csv = (report) => h("a", { href: `/api/v1${siteUrl(`/export.csv?${q}&report=${report}`)}`, download: true }, L.csv);
+  const csv = (report) => h("a", { href: `/api/v1${siteUrl(`/export.csv?${q}&report=${report}${report.includes("/") ? "" : fq}`)}`, download: true }, L.csv);
   const rows = (id) => r[id].data.rows.filter((row) => !(id.startsWith("utm") && row.value === "") && (!["referrers", "utm_source", "utm_campaign"].includes(id) || row.entries > 0));
   const bodies = {
     pages: () => table([
@@ -367,7 +418,91 @@ async function dashboardView(container, token) {
       ? table([{ title: L.col.group, value: (row) => label("page_group", row.value) }, { title: L.col.views, value: (row) => nf(row.pageviews), right: true }, { title: L.col.entries, value: (row) => nf(row.entries), right: true }], rows("page_groups"))
       : h("p", { class: "empty" }, L.noGroups)),
   };
+  const sample = (data) => h("p", { class: "note" }, L.sampleNote(nf(data.sample_size)));
+  const moduleBodies = {
+    shop_overview: () => {
+      const x = r.shop_overview.data;
+      const px = x.previous;
+      const figs = [
+        [L.shop.orders, nf(x.orders), chg(x.orders, px.orders)],
+        [L.shop.revenue, money(x.revenue), chg(x.revenue, px.revenue)],
+        [L.shop.average, money(x.average_order), chg(x.average_order, px.average_order)],
+        [L.shop.conversion, `${nf(x.conversion_pct, 2)} %`, chg(x.conversion_pct, px.conversion_pct)],
+      ];
+      return [
+        h("div", { class: "figs" }, figs.map(([k, v, c]) => h("div", {}, h("div", { class: "k" }, k), h("div", { class: "v" }, v), c))),
+        h("p", { class: "note" }, L.shop.conversionNote),
+      ];
+    },
+    shop_funnel: () => {
+      const f = r.shop_funnel.data;
+      return [
+        barList(f.steps, (row) => row.count, (row) => `${L.shop.steps[row.id]} · ${nf(row.pct, row.pct % 1 ? 1 : 0)} %`),
+        h("p", { class: "note" }, f.configured ? L.shop.funnelNote : L.shop.funnelSetup),
+      ];
+    },
+    shop_products: () => {
+      const p = r.shop_products.data;
+      const cart = p.cart_sample;
+      return [
+        table([
+          { title: L.shop.product, value: (row) => row.name || row.sku },
+          { title: L.shop.quantity, value: (row) => nf(row.quantity), right: true },
+          { title: L.shop.revenue, value: (row) => money(row.revenue), right: true },
+        ], p.sold),
+        cart.sample_size
+          ? h("p", { class: "note" }, L.shop.cartSample(nf(cart.sample_size), cart.rows.slice(0, 3).map((row) => `${row.sku} (${nf(row.quantity)})`).join(", ")))
+          : null,
+      ];
+    },
+    campaigns: () => table([
+      { title: L.col.campaign, value: (row) => row.value },
+      { title: L.col.sessions, value: (row) => nf(row.sessions), right: true },
+      { title: "%", value: (row) => (row.status === "new" || row.status === "ended" ? L.campaignStatus[row.status] : chg(row.sessions, row.previous_sessions) || ""), right: true },
+      { title: L.shop.orders, value: (row) => nf(row.orders), right: true },
+    ], r.campaigns.data.rows),
+    content_engagement: () => [
+      table([
+        { title: L.col.page, value: (row) => row.value, path: true },
+        { title: L.col.time, value: (row) => duration(row.median_seconds), right: true },
+        { title: L.col.scroll, value: (row) => `${nf(row.avg_scroll_pct)} %`, right: true },
+        { title: L.col.n, value: (row) => nf(row.n), right: true },
+      ], r.content_engagement.data.rows),
+      sample(r.content_engagement.data),
+    ],
+    content_rising: () => table([
+      { title: L.col.page, value: (row) => row.value, path: true },
+      { title: L.col.views, value: (row) => nf(row.pageviews), right: true },
+      { title: "%", value: (row) => (row.change_pct === null ? L.campaignStatus.new : `+${nf(row.change_pct)} %`), right: true },
+    ], r.content_rising.data.rows),
+  };
+  Object.assign(bodies, moduleBodies);
+
+  // Filter bar. Page group "" means pages in no group, so "all" has its own value.
+  const pick = (key, value) => {
+    if (value === ALL) delete state.filters[key];
+    else state.filters[key] = value;
+    render();
+  };
+  const filterSelect = (key, labelText, options) => h("select", { "aria-label": labelText, onchange: (e) => pick(key, e.target.value) },
+    h("option", { value: ALL }, labelText),
+    options.map(([value, text]) => h("option", { value, selected: state.filters[key] === value }, text)));
+  const groups = state.config?.page_groups || [];
+  const campaignNames = r.campaignList.data.rows.map((row) => row.value).filter(Boolean);
+  if (state.filters.utm_campaign && !campaignNames.includes(state.filters.utm_campaign)) campaignNames.push(state.filters.utm_campaign);
+  const filtered = Object.keys(state.filters).length > 0;
+  const filterBar = h("div", { class: "va-bar filters" },
+    h("span", { class: "muted" }, L.filters.title),
+    groups.length ? filterSelect("page_group", L.filters.allGroups, [...groups.map((g) => [g.name, g.name]), ["", L.names.noGroup]]) : null,
+    campaignNames.length ? filterSelect("utm_campaign", L.filters.allCampaigns, campaignNames.map((name) => [name, name])) : null,
+    filterSelect("device", L.filters.allDevices, ["mobile", "desktop", "tablet"].map((v) => [v, L.names[v]])),
+    filtered ? h("button", { class: "btn", type: "button", onclick: () => { state.filters = {}; render(); } }, L.filters.clear) : null,
+    days <= 31 ? h("label", { class: "check" }, h("input", { type: "checkbox", checked: state.hourly, onchange: (e) => { state.hourly = e.target.checked; save(); render(); } }), L.hourly) : null,
+    filtered ? h("span", { class: "muted" }, L.filters.note) : null);
+
   const csvReport = {
+    shop_overview: "shop/summary", shop_funnel: "shop/funnel", shop_products: "shop/products",
+    campaigns: "campaigns/overview", content_engagement: "content/engagement", content_rising: "content/rising",
     pages: "breakdown&dimension=page", entries: "breakdown&dimension=entry", exits: "breakdown&dimension=exit",
     referrers: "breakdown&dimension=referrer", utm_source: "breakdown&dimension=utm_source", utm_campaign: "breakdown&dimension=utm_campaign",
     devices: "breakdown&dimension=device", browsers: "breakdown&dimension=browser", countries: "breakdown&dimension=country", page_groups: "breakdown&dimension=page_group",
@@ -402,7 +537,8 @@ async function dashboardView(container, token) {
         h("label", { class: "check" }, h("input", { type: "checkbox", checked: state.compare, onchange: (e) => { state.compare = e.target.checked; save(); render(); } }), L.compare),
         h("span", { class: "sp" }),
         previous ? h("span", { class: "muted" }, L.prevPeriod(formatRange(previous))) : null,
-        h("a", { class: "btn", href: `/api/v1${siteUrl(`/export.csv?${q}&report=timeseries&interval=${interval}`)}`, download: true }, L.exportSeries)),
+        h("a", { class: "btn", href: `/api/v1${siteUrl(`/export.csv?${q}&report=timeseries&interval=${interval}${fq}`)}`, download: true }, L.exportSeries)),
+      filterBar,
       h("div", { class: "va-kpi m-perus" }, kpis.map(([k, v, c, series]) => h("div", {}, h("div", { class: "k" }, k), h("div", { class: "v" }, v), c, spark(series)))),
       h("div", { class: "va-main" }, lineChart(points, r.prevSeries?.data.points, 130)),
       h("div", { class: "va-grid" }, sections.map((section) =>
@@ -487,7 +623,8 @@ async function settingsView(container, token) {
   const admin = state.me?.scope === "admin";
   const tokens = admin ? (await api("/tokens")).data : [];
   if (token !== renderToken) return;
-  const config = state.config || { language: "", page_groups: [], sections: null };
+  const config = state.config || { language: "", page_groups: [], sections: null, shop: {} };
+  const enabled = SECTIONS.filter((x) => state.site.modules.includes(x.module));
 
   // Your view (this browser only).
   const seg = (options, current, onPick) => h("div", { class: "seg", role: "group" },
@@ -508,8 +645,8 @@ async function settingsView(container, token) {
     h("button", { class: "btn", type: "button", onclick: () => { groups.splice(i, 1); drawGroups(); } }, S.remove))));
   drawGroups();
 
-  const order = (config.sections || SECTIONS.map((x) => x.id)).filter((id) => SECTIONS.some((x) => x.id === id));
-  const hidden = SECTIONS.map((x) => x.id).filter((id) => !order.includes(id));
+  const order = sectionOrder().map((x) => x.id);
+  const hidden = enabled.map((x) => x.id).filter((id) => !order.includes(id));
   const sectionRows = [...order.map((id) => ({ id, on: true })), ...hidden.map((id) => ({ id, on: false }))];
   const sectionList = h("div", { class: "list" });
   const drawSections = () => sectionList.replaceChildren(...sectionRows.map((row, i) => h("div", { class: "item" },
@@ -518,6 +655,14 @@ async function settingsView(container, token) {
       h("button", { class: "btn", type: "button", disabled: i === 0, "aria-label": `${S.up}: ${L.sections[row.id]}`, onclick: () => { [sectionRows[i - 1], sectionRows[i]] = [sectionRows[i], sectionRows[i - 1]]; drawSections(); } }, "↑"),
       h("button", { class: "btn", type: "button", disabled: i === sectionRows.length - 1, "aria-label": `${S.down}: ${L.sections[row.id]}`, onclick: () => { [sectionRows[i + 1], sectionRows[i]] = [sectionRows[i], sectionRows[i + 1]]; drawSections(); } }, "↓")))));
   drawSections();
+
+  const shop = { ...(config.shop || {}) };
+  const shopFields = state.site.modules.includes("shop")
+    ? [h("h2", {}, S.shop), h("p", { class: "note" }, S.shopNote),
+      ...[["product_prefix", "/tuotteet/"], ["cart_path", "/ostoskori"], ["checkout_path", "/kassa"]].map(([key, example]) => h("div", { class: "row" },
+        h("span", { class: "muted" }, S.shopPaths[key]),
+        h("input", { type: "text", value: shop[key] || "", placeholder: example, "aria-label": S.shopPaths[key], oninput: (e) => { shop[key] = e.target.value; } })))]
+    : [];
 
   const languageSelect = h("select", { "aria-label": S.siteLanguage },
     [["", S.languageAuto], ["fi", "Suomi"], ["en", "English"]].map(([v, t]) => h("option", { value: v, selected: config.language === v }, t)));
@@ -528,8 +673,10 @@ async function settingsView(container, token) {
         language: languageSelect.value,
         page_groups: groups.filter((g) => g.name.trim() || g.prefix.trim()),
         sections: sectionRows.filter((row) => row.on).map((row) => row.id),
+        shop,
       };
       state.config = (await api(siteUrl("/config"), { method: "PUT", body })).data;
+      state.filters = {};
       status.textContent = S.saved;
       status.className = "note";
     } catch (error) {
@@ -544,6 +691,7 @@ async function settingsView(container, token) {
     h("div", { class: "row" }, h("span", { class: "muted" }, S.siteLanguage), languageSelect),
     h("h2", {}, S.groups), h("p", { class: "note" }, S.groupsNote), groupList,
     h("div", { class: "row" }, h("button", { class: "btn", type: "button", onclick: () => { groups.push({ name: "", prefix: "/" }); drawGroups(); } }, S.add)),
+    shopFields,
     h("h2", {}, S.sections), h("p", { class: "note" }, S.sectionsNote), sectionList,
     admin ? h("div", { class: "row" }, h("button", { class: "btn primary", type: "button", onclick: saveSite }, S.save), status) : null);
 

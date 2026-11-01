@@ -6,6 +6,8 @@ import { runMaintenance } from "../src/maintenance.js";
 import { breakdown, summary, timeseries } from "../src/modules/perus/reports.js";
 import { CHROME_UA, IPHONE_UA, setup } from "./helpers.js";
 
+const SITE = { site_id: "lieromaa", timezone: "Europe/Helsinki" };
+
 // Two Helsinki days. Visitor A: two sessions on day 1 (gap over 30 min).
 // Visitor B: one session on day 1 from Google. Visitor A again on day 2.
 function seed() {
@@ -51,7 +53,7 @@ test("reports are the same before and after the nightly rollup", () => {
     pages: breakdown(db, "lieromaa", "page", BOTH),
     entries: breakdown(db, "lieromaa", "entry", BOTH),
     referrers: breakdown(db, "lieromaa", "referrer", BOTH),
-    series: timeseries(db, "lieromaa", BOTH),
+    series: timeseries(db, SITE, BOTH),
   };
 
   const report = runMaintenance(db, new Date("2026-11-05T06:00:00Z"));
@@ -62,7 +64,7 @@ test("reports are the same before and after the nightly rollup", () => {
   assert.deepEqual(breakdown(db, "lieromaa", "page", BOTH), before.pages);
   assert.deepEqual(breakdown(db, "lieromaa", "entry", BOTH), before.entries);
   assert.deepEqual(breakdown(db, "lieromaa", "referrer", BOTH), before.referrers);
-  assert.deepEqual(timeseries(db, "lieromaa", BOTH), before.series);
+  assert.deepEqual(timeseries(db, SITE, BOTH), before.series);
 });
 
 test("breakdowns: pages, entries, exits and dimensions", () => {
@@ -86,12 +88,12 @@ test("breakdowns: pages, entries, exits and dimensions", () => {
 
 test("weekly and monthly series fill empty days", () => {
   const { db } = seed();
-  const weeks = timeseries(db, "lieromaa", { from: "2026-11-01", to: "2026-11-10" }, { interval: "week" });
+  const weeks = timeseries(db, SITE, { from: "2026-11-01", to: "2026-11-10" }, { interval: "week" });
   assert.deepEqual(
     weeks.points.map((p) => [p.period, p.pageviews]),
     [["2026-10-26", 0], ["2026-11-02", 5], ["2026-11-09", 0]],
   );
-  const days = timeseries(db, "lieromaa", { from: "2026-11-01", to: "2026-11-03" });
+  const days = timeseries(db, SITE, { from: "2026-11-01", to: "2026-11-03" });
   assert.deepEqual(days.points.map((p) => p.pageviews), [0, 4, 1]);
 });
 

@@ -99,7 +99,7 @@ test("bad parameters give 400, unknown things 404", async (t) => {
   assert.equal(await status("/sites/lieromaa/summary?range=99y"), 400);
   assert.equal(await status("/sites/lieromaa/summary?from=2026-11-03&to=2026-11-01"), 400);
   assert.equal(await status("/sites/lieromaa/breakdown/ip"), 400);
-  assert.equal(await status("/sites/lieromaa/timeseries?interval=hour"), 400);
+  assert.equal(await status("/sites/lieromaa/timeseries?interval=minute"), 400);
   assert.equal(await status("/sites/nope/summary"), 404);
   assert.equal(await status("/sites/lieromaa/reports/perus/__proto__"), 404);
   assert.equal(await status("/sites/lieromaa/reports/shop/funnel"), 404);
@@ -283,8 +283,9 @@ test("review fixes: site-limited admin keys, odd paths and bodies, host list, pa
   assert.equal(bySort.data.sort, "exits");
 });
 
-test("with a host list, other Host headers are refused", async (t) => {
-  const { server, base } = await start({ allowedHosts: ["looku.lan"] });
+test("the health check answers on any Host, other routes need an allowed Host", async (t) => {
+  const { server, base } = await start({ allowedHosts: ["looku.lan:8788"] });
   t.after(() => server.close());
-  assert.equal((await fetch(`${base}/api/v1/health`)).status, 421);
+  assert.equal((await fetch(`${base}/api/v1/health`)).status, 200);
+  assert.equal((await fetch(`${base}/api/v1/sites`)).status, 421);
 });

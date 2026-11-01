@@ -24,31 +24,31 @@ export function openDatabase(file, { readonly = false } = {}) {
   return db;
 }
 
+// Two processes may start on a new database at the same time, so each
+// migration is checked again inside a write transaction.
 export function migrate(db) {
   db.exec(
     "CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)",
-  );
-  const applied = new Set(
-    db
-      .prepare("SELECT name FROM schema_migrations")
-      .all()
-      .map((row) => row.name),
   );
   const files = fs
     .readdirSync(MIGRATIONS_DIR)
     .filter((name) => name.endsWith(".sql"))
     .sort();
+  const isApplied = db.prepare("SELECT 1 FROM schema_migrations WHERE name = ?");
 
   for (const name of files) {
-    if (applied.has(name)) {
+    if (isApplied.get(name)) {
       continue;
     }
     const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, name), "utf8");
     db.transaction(() => {
+      if (isApplied.get(name)) {
+        return;
+      }
       db.exec(sql);
       db.prepare(
         "INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)",
       ).run(name, new Date().toISOString());
-    })();
+    }).immediate();
   }
 }

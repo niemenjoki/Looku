@@ -1,0 +1,68 @@
+# Looku with Docker Compose. Copy .env.example to .env and fill it in, and
+# create the data folder for the container user (uid 1000) first:
+#
+#   mkdir -p data && sudo chown 1000:1000 data
+#
+#   docker compose up -d --build
+#   docker compose run --rm ingest site:add example --domain example.com
+#   docker compose run --rm -T dashboard admin:password < password.txt
+#
+# The receiver (ingest) is not published: a reverse proxy or tunnel on the
+# same network forwards POST /ingest and POST /orders to http://ingest:8787.
+# The dashboard is published only on LOOKU_DASHBOARD_BIND (e.g. a LAN or
+# Tailscale address). The receiver also runs the nightly job and the
+# monthly email.
+name: looku
+
+x-looku: &looku
+  build: ..
+  image: looku:local
+  restart: unless-stopped
+  volumes:
+    - ${LOOKU_DATA_DIR:-./data}:/data
+  environment: &env
+    LOOKU_TIMEZONE: ${LOOKU_TIMEZONE:-Europe/Helsinki}
+
+services:
+  ingest:
+    <<: *looku
+    command: ["ingest"]
+    environment:
+      <<: *env
+      LOOKU_SMTP_URL: ${LOOKU_SMTP_URL:-}
+      LOOKU_REPORT_FROM: ${LOOKU_REPORT_FROM:-}
+      LOOKU_REPORT_TO: ${LOOKU_REPORT_TO:-}
+      LOOKU_REPORT_LANG: ${LOOKU_REPORT_LANG:-fi}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 60s
+      timeout: 5s
+
+  dashboard:
+    <<: *looku
+    command: ["serve"]
+    environment:
+      <<: *env
+      LOOKU_API_HOSTS: ${LOOKU_API_HOSTS:-}
+      LOOKU_PUBLIC_ORIGIN: ${LOOKU_PUBLIC_ORIGIN:-}
+      LOOKU_COOKIE_SECURE: ${LOOKU_COOKIE_SECURE:-0}
+    ports:
+      - "${LOOKU_DASHBOARD_BIND:-127.0.0.1}:${LOOKU_DASHBOARD_PORT:-8788}:8788"
+    depends_on:
+      - ingest
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8788/api/v1/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 60s
+      timeout: 5s
+
+  # Optional Cloudflare tunnel to the receiver: `docker compose --profile tunnel up -d`.
+  # Route the public hostname to http://ingest:8787 and allow only POST /ingest and /orders.
+  tunnel:
+    image: cloudflare/cloudflared:${CLOUDFLARED_VERSION:-latest}
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: ${LOOKU_TUNNEL_TOKEN:-}
+    depends_on:
+      - ingest

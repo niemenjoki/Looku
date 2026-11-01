@@ -33,8 +33,11 @@ export function parseConfig(json) {
     language: ["fi", "en"].includes(value.language) ? value.language : "",
     page_groups: Array.isArray(value.page_groups) ? value.page_groups : [],
     sections: Array.isArray(value.sections) ? value.sections : null,
+    shop: value.shop && typeof value.shop === "object" ? value.shop : {},
   };
 }
+
+const SHOP_PATHS = ["product_prefix", "cart_path", "checkout_path"];
 
 const SECTION_PATTERN = /^[a-z0-9_.-]{1,40}$/;
 
@@ -42,7 +45,7 @@ export function validateConfig(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new ReportError("The settings must be a JSON object.");
   }
-  const config = { language: "", page_groups: [], sections: null };
+  const config = { language: "", page_groups: [], sections: null, shop: {} };
 
   if (input.language !== undefined && input.language !== "") {
     if (!["fi", "en"].includes(input.language)) {
@@ -74,6 +77,22 @@ export function validateConfig(input) {
       throw new ReportError("sections must be a list of section ids.");
     }
     config.sections = [...new Set(input.sections)];
+  }
+
+  // Shop funnel paths, e.g. product_prefix "/tuotteet/", cart_path "/ostoskori".
+  if (input.shop !== undefined && input.shop !== null) {
+    if (typeof input.shop !== "object" || Array.isArray(input.shop)) {
+      throw new ReportError("shop must be an object.");
+    }
+    for (const key of SHOP_PATHS) {
+      const value = String(input.shop[key] ?? "").trim();
+      if (value && (!value.startsWith("/") || value.length > 200)) {
+        throw new ReportError(`shop.${key} must start with / (max 200 characters).`);
+      }
+      if (value) {
+        config.shop[key] = value;
+      }
+    }
   }
   return config;
 }

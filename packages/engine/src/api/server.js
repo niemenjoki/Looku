@@ -404,7 +404,7 @@ export function createApiServer(
             ? String(query.report).split("/")
             : ["perus", query.report];
           const { data } = runReport(site, moduleId, reportId, query);
-          const rows = data.rows || data.points || [data];
+          const rows = data.rows || data.points || data.steps || data.sold || [data];
           const columns = rows.length
             ? Object.keys(rows[0]).filter((key) => typeof rows[0][key] !== "object" || rows[0][key] === null)
             : ["value"];
@@ -438,7 +438,12 @@ export function createApiServer(
       res.setHeader(name, value);
     }
     // DNS rebinding: with a host list set, other Host headers are refused.
-    if (hosts.size && !hosts.has(String(req.headers.host || "").toLowerCase())) {
+    // The health check (no data) stays open for container health checks.
+    if (
+      hosts.size &&
+      !hosts.has(String(req.headers.host || "").toLowerCase()) &&
+      !(req.method === "GET" && String(req.url || "").split("?")[0] === "/api/v1/health")
+    ) {
       res.writeHead(421, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("Unknown host");
       return;

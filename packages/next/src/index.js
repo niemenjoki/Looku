@@ -133,8 +133,8 @@ async function hmacHex(key, message) {
   return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-/** Sends a signed payload to the Looku receiver. Never throws. */
-export async function sendToLooku(payload, { endpoint, siteId, signingKey, timeoutMs = 3000, fetchImpl = fetch }) {
+/** Sends a signed payload to the Looku receiver (POST /ingest, or `path`). Never throws. */
+export async function sendToLooku(payload, { endpoint, siteId, signingKey, timeoutMs = 3000, fetchImpl = fetch, path = "/ingest" }) {
   if (!endpoint || !siteId || !signingKey) {
     return false;
   }
@@ -142,7 +142,7 @@ export async function sendToLooku(payload, { endpoint, siteId, signingKey, timeo
     const body = JSON.stringify(payload);
     const timestamp = Math.floor(Date.now() / 1000);
     const mac = await hmacHex(signingKey, `${timestamp}.${body}`);
-    const response = await fetchImpl(`${endpoint.replace(/\/+$/, "")}/ingest`, {
+    const response = await fetchImpl(`${endpoint.replace(/\/+$/, "")}${path}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -172,10 +172,22 @@ export async function sendToLooku(payload, { endpoint, siteId, signingKey, timeo
  * `enabled` defaults to production only (VERCEL_ENV, or NODE_ENV when not on
  * Vercel), so previews and local development do not send data.
  */
-export function trackPageview(request, event, options = {}) {
+function settings(options) {
   const env = options.env || (typeof process !== "undefined" ? process.env : {});
-  const enabled =
-    options.enabled ?? (env.VERCEL_ENV ? env.VERCEL_ENV === "production" : env.NODE_ENV === "production");
+  return {
+    enabled: options.enabled ?? (env.VERCEL_ENV ? env.VERCEL_ENV === "production" : env.NODE_ENV === "production"),
+    send: {
+      endpoint: options.endpoint ?? env.LOOKU_ENDPOINT,
+      siteId: options.siteId ?? env.LOOKU_SITE_ID,
+      signingKey: options.signingKey ?? env.LOOKU_SIGNING_KEY,
+      timeoutMs: options.timeoutMs,
+      fetchImpl: options.fetchImpl,
+    },
+  };
+}
+
+export function trackPageview(request, event, options = {}) {
+  const { enabled, send } = settings(options);
   if (!enabled) {
     return null;
   }
@@ -190,13 +202,7 @@ export function trackPageview(request, event, options = {}) {
   if (!payload) {
     return null;
   }
-  const sending = sendToLooku(payload, {
-    endpoint: options.endpoint ?? env.LOOKU_ENDPOINT,
-    siteId: options.siteId ?? env.LOOKU_SITE_ID,
-    signingKey: options.signingKey ?? env.LOOKU_SIGNING_KEY,
-    timeoutMs: options.timeoutMs,
-    fetchImpl: options.fetchImpl,
-  });
+  const sending = sendToLooku(payload, send);
   if (event?.waitUntil) {
     event.waitUntil(sending);
   }
@@ -217,3 +223,141 @@ export const RECOMMENDED_MATCHER = [
     ],
   },
 ];
+
+const MAX_COLLECT_BYTES = 4096;
+const EVENT_NAME_PATTERN = /^[a-z0-9_.-]{1,40}$/;
+
+function cleanString(value, max) {
+  return typeof value === "string" ? value.slice(0, max) : undefined;
+}
+
+// Reads the body up to `max` bytes; returns null when it is longer.
+async function readLimited(request, max) {
+  if (!request.body) {
+    return "";
+  }
+  const reader = request.body.getReader();
+  const chunks = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel().catch(() => {});
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+function sameOrigin(request) {
+  const site = request.headers.get("sec-fetch-site");
+  if (site) {
+    return site === "same-origin";
+  }
+  const origin = request.headers.get("origin");
+  try {
+    return Boolean(origin) && new URL(origin).host === new URL(request.url).host;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Builds the payload from a browser collector request, or returns null when
+ * it is not accepted. Only known fields are passed on, and never the IP
+ * address or user agent, so the data cannot be linked to a visitor.
+ */
+export function buildCollected(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return null;
+  }
+  const path = cleanString(data.path, 500);
+  if (!path?.startsWith("/")) {
+    return null;
+  }
+  if (data.type === "engagement") {
+    const dwell = Math.trunc(Number(data.dwell_ms));
+    const scroll = Math.trunc(Number(data.max_scroll_pct));
+    if (!(dwell >= 0) || !(scroll >= 0)) {
+      return null;
+    }
+    return { type: "engagement", source: "client", path, dwell_ms: dwell, max_scroll_pct: Math.min(scroll, 100) };
+  }
+  if (data.type === "event" && EVENT_NAME_PATTERN.test(String(data.name))) {
+    const payload = { type: "event", name: data.name, path };
+    const target = cleanString(data.target, 200);
+    if (target) payload.target = target;
+    if (Number.isFinite(data.value)) payload.value = data.value;
+    if (Array.isArray(data.items)) {
+      payload.items = data.items.slice(0, 50).map((item) => ({ sku: cleanString(item?.sku, 80), quantity: Math.trunc(Number(item?.quantity)) }));
+    }
+    if (data.props && typeof data.props === "object" && !Array.isArray(data.props) && JSON.stringify(data.props).length <= 1000) {
+      payload.props = data.props;
+    }
+    return payload;
+  }
+  return null;
+}
+
+/**
+ * Route handler for the browser collector (@looku/browser). In
+ * app/api/looku/route.js:
+ *
+ *   import { createCollectHandler } from "@looku/next";
+ *   export const POST = createCollectHandler();
+ *
+ * Accepts same-origin requests only and answers 204 also when data is
+ * dropped, so the page never sees an error.
+ */
+export function createCollectHandler(options = {}) {
+  return async function POST(request) {
+    const { enabled, send } = settings(options);
+    if (!sameOrigin(request)) {
+      return new Response(null, { status: 403 });
+    }
+    const userAgent = String(request.headers.get("user-agent") || "");
+    if (!enabled || !userAgent || BOT_USER_AGENT_PATTERN.test(userAgent)) {
+      return new Response(null, { status: 204 });
+    }
+    if (Number(request.headers.get("content-length")) > MAX_COLLECT_BYTES) {
+      return new Response(null, { status: 413 });
+    }
+    let payload;
+    try {
+      const text = await readLimited(request, MAX_COLLECT_BYTES);
+      payload = text === null ? null : buildCollected(JSON.parse(text));
+    } catch {
+      payload = null;
+    }
+    if (payload) {
+      await sendToLooku({ ...payload, ts: new Date().toISOString() }, send);
+    }
+    return new Response(null, { status: 204 });
+  };
+}
+
+/**
+ * Sends an order from the shop to Looku (POST /orders), for example from the
+ * order system after payment (production only, like trackPageview). Send only the fields below: no names,
+ * addresses or emails. Resending the same id replaces the order, and
+ * { id, status: "cancelled" } removes it.
+ *
+ *   await sendOrder({ id: "1001", ts, total: 34.9, utm_campaign: "syksy",
+ *     items: [{ sku: "MATO-250", name: "Kompostimadot", quantity: 2, price: 17.45 }] });
+ */
+export async function sendOrder(order, options = {}) {
+  const { enabled, send } = settings(options);
+  if (!enabled) {
+    return false;
+  }
+  return sendToLooku(order, { ...send, path: "/orders" });
+}

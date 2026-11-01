@@ -1,3 +1,12 @@
+/* Space Grotesk (SIL Open Font License 1.1, fonts/OFL.txt), latin subset, variable weight. */
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("fonts/space-grotesk-latin-wght.woff2") format("woff2");
+}
+
 /* Looku dashboard. Brand: Yö palette, Space Grotesk (system font if not installed). */
 :root {
   --bg: #F4F6FB; --surface: #FFFFFF; --surface2: #E8ECF5; --ink: #141C33; --muted: #4A5470; --line: #D5DBE8;
@@ -151,3 +160,10 @@ td.p { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space:
 .token { font-family: ui-monospace, Consolas, monospace; word-break: break-all; background: var(--surface2); padding: 8px; border-radius: 4px; }
 .login { max-width: 360px; margin: 12vh auto 0; width: 100%; }
 .login form { display: grid; gap: 10px; }
+
+/* Module sections and filters (phase 3a) */
+.va-bar.filters { padding-block: 8px; }
+.va-bar.filters select { max-width: 14rem; }
+.figs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.figs .v { font-size: 20px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.figs .k { font-size: 12px; color: var(--muted); }

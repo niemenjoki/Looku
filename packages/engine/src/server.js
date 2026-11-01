@@ -1,6 +1,7 @@
 import http from "node:http";
 
 import { createIngest, IngestError } from "./ingest.js";
+import { createOrderIngest } from "./orders.js";
 import {
   SIGNATURE_HEADER,
   SIGNATURE_TOLERANCE_SECONDS,
@@ -8,7 +9,8 @@ import {
   verifySignature,
 } from "./signature.js";
 
-const MAX_BODY_BYTES = 8 * 1024;
+// Orders carry up to 100 items, so they get a larger limit.
+const MAX_BODY_BYTES = { "/ingest": 8 * 1024, "/orders": 64 * 1024 };
 const REQUEST_TIMEOUT_MS = 10_000;
 const MAX_REPLAY_ENTRIES = 100_000;
 
@@ -23,13 +25,13 @@ function send(res, status, message = "") {
   res.end(message);
 }
 
-function readBody(req) {
+function readBody(req, maxBytes) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
     req.on("data", (chunk) => {
       size += chunk.length;
-      if (size > MAX_BODY_BYTES) {
+      if (size > maxBytes) {
         reject(Object.assign(new Error("too large"), { status: 413 }));
         req.removeAllListeners("data");
         req.resume();
@@ -72,10 +74,11 @@ function createReplayGuard(now) {
   return { firstUse, release };
 }
 
-// The internet-facing receiver. It only writes: there are no read routes in
+// The internet-facing receiver: POST /ingest for page views, events and
+// engagement, POST /orders for a shop adapter. It only writes: there are no read routes in
 // this process, and request bodies (which carry IP addresses) are never logged.
 export function createIngestServer(db, { now = () => new Date() } = {}) {
-  const ingest = createIngest(db);
+  const handlers = { "/ingest": createIngest(db), "/orders": createOrderIngest(db) };
   const getSite = db.prepare("SELECT * FROM sites WHERE site_id = ?");
   const replay = createReplayGuard(now);
 
@@ -88,7 +91,7 @@ export function createIngestServer(db, { now = () => new Date() } = {}) {
       send(res, 200, "ok");
       return;
     }
-    if (path !== "/ingest") {
+    if (!Object.hasOwn(handlers, path)) {
       send(res, 404);
       return;
     }
@@ -97,7 +100,8 @@ export function createIngestServer(db, { now = () => new Date() } = {}) {
       send(res, 405);
       return;
     }
-    if (Number(req.headers["content-length"]) > MAX_BODY_BYTES) {
+    const maxBytes = MAX_BODY_BYTES[path];
+    if (Number(req.headers["content-length"]) > maxBytes) {
       // The rest of the body is drained, bounded by the request timeout, so
       // the 413 response reaches the client.
       res.setHeader("Connection", "close");
@@ -108,7 +112,7 @@ export function createIngestServer(db, { now = () => new Date() } = {}) {
 
     let body;
     try {
-      body = await readBody(req);
+      body = await readBody(req, maxBytes);
     } catch (error) {
       res.setHeader("Connection", "close");
       send(res, error.status || 400);
@@ -131,7 +135,7 @@ export function createIngestServer(db, { now = () => new Date() } = {}) {
     }
 
     try {
-      ingest(site, JSON.parse(body), now());
+      handlers[path](site, JSON.parse(body), now());
       send(res, 202);
     } catch (error) {
       if (error instanceof SyntaxError || error instanceof IngestError) {

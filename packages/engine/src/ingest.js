@@ -37,6 +37,11 @@ function eventTime(value, now) {
   return new Date(time);
 }
 
+// Engagement and unhashed events keep only the day (decision 7).
+function dayStart(time) {
+  return `${time.toISOString().slice(0, 10)}T00:00:00.000Z`;
+}
+
 function clientInfo(payload) {
   const ip = cleanText(payload.ip, 100);
   const userAgent = cleanText(payload.ua, 500);
@@ -92,7 +97,7 @@ export function createIngest(db) {
       device: deviceType(userAgent),
       browser_family: browserFamily(userAgent),
       os_family: osFamily(userAgent),
-      country: normalizeCountry(payload.country),
+      country: site.store_country === 0 ? "" : normalizeCountry(payload.country),
       source: payload.source === "client" ? "client" : "server",
     };
     for (const field of UTM_FIELDS) {
@@ -124,11 +129,14 @@ export function createIngest(db) {
       }
     }
 
+    // Without a visitor hash, the time is kept only to the day, so the event
+    // cannot be matched to a page view by its time.
+    const hashed = Boolean(ip && userAgent);
     const { lastInsertRowid } = insertEvent.run(
       site.site_id,
-      time.toISOString(),
+      hashed ? time.toISOString() : dayStart(time),
       dayKey(time, site.timezone),
-      ip && userAgent ? visitorHash(site, ip, userAgent, now) : null,
+      hashed ? visitorHash(site, ip, userAgent, now) : null,
       normalizePath(payload.path),
       name,
       cleanText(payload.target, 200),
@@ -158,7 +166,7 @@ export function createIngest(db) {
     const time = eventTime(payload.ts, now);
     insertEngagement.run(
       site.site_id,
-      time.toISOString(),
+      dayStart(time),
       dayKey(time, site.timezone),
       normalizePath(payload.path),
       Math.min(dwellMs, 6 * 60 * 60 * 1000),

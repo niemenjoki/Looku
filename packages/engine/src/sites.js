@@ -1,3 +1,4 @@
+import { MODULE_IDS } from "./modules/index.js";
 import { generateSigningKey } from "./signature.js";
 import { isValidTimeZone } from "./time.js";
 
@@ -49,7 +50,32 @@ export function getSite(db, siteId) {
 export function listSites(db) {
   return db
     .prepare(
-      "SELECT site_id, name, domain, timezone, modules_json, retention_months, created_at FROM sites ORDER BY site_id",
+      "SELECT site_id, name, domain, timezone, modules_json, store_country, retention_months, created_at FROM sites ORDER BY site_id",
     )
     .all();
+}
+
+// The basic module is always on.
+export function setModules(db, siteId, modules) {
+  const list = ["perus", ...modules.filter((id) => id !== "perus")];
+  const unknown = list.filter((id) => !MODULE_IDS.includes(id));
+  if (unknown.length) {
+    throw new Error(`Unknown module: ${unknown.join(", ")}. Modules: ${MODULE_IDS.join(", ")}`);
+  }
+  const result = db
+    .prepare("UPDATE sites SET modules_json = ? WHERE site_id = ?")
+    .run(JSON.stringify([...new Set(list)]), siteId);
+  if (result.changes === 0) {
+    throw new Error(`Unknown site: ${siteId}`);
+  }
+  return [...new Set(list)];
+}
+
+export function setStoreCountry(db, siteId, on) {
+  const result = db
+    .prepare("UPDATE sites SET store_country = ? WHERE site_id = ?")
+    .run(on ? 1 : 0, siteId);
+  if (result.changes === 0) {
+    throw new Error(`Unknown site: ${siteId}`);
+  }
 }

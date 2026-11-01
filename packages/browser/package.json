@@ -1,0 +1,18 @@
+{
+  "name": "@looku/browser",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Looku browser collector: reading time, scroll depth and events from consented visitors, without cookies or identifiers.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

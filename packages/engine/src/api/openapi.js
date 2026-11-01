@@ -25,6 +25,13 @@ function report(summary, extraParams = []) {
 
 // The read API description. The dashboard is one client of this API; any
 // other client can be built against it.
+
+const filterParams = [
+  { name: "page_group", in: "query", schema: { type: "string" }, description: "Page group name from the site settings; empty = pages in no group." },
+  { name: "utm_campaign", in: "query", schema: { type: "string" }, description: "Campaign of the page where the session started." },
+  { name: "device", in: "query", schema: { type: "string", enum: ["mobile", "desktop", "tablet", ""] } },
+];
+
 export function openApiDocument(version) {
   return {
     openapi: "3.1.0",
@@ -92,16 +99,19 @@ export function openApiDocument(version) {
       },
       "/sites/{site}/summary": report("Page views, visitors, sessions and pages per session.", [
         { name: "compare", in: "query", schema: { type: "string", enum: ["previous"] }, description: "Add the previous period of the same length." },
+        ...filterParams,
       ]),
-      "/sites/{site}/timeseries": report("Totals per day, week (from Monday) or month.", [
-        { name: "interval", in: "query", schema: { type: "string", enum: ["day", "week", "month"], default: "day" } },
+      "/sites/{site}/timeseries": report("Totals per hour (at most 31 days, local time), day, week (from Monday) or month.", [
+        { name: "interval", in: "query", schema: { type: "string", enum: ["hour", "day", "week", "month"], default: "day" } },
+        ...filterParams,
       ]),
       "/sites/{site}/breakdown/{dimension}": report("Totals by one dimension.", [
         { name: "dimension", in: "path", required: true, schema: { type: "string", enum: [...BREAKDOWN_DIMENSIONS, "page_group"] } },
         { name: "limit", in: "query", schema: { type: "integer", default: 50, maximum: 1000 } },
         { name: "sort", in: "query", schema: { type: "string", enum: ["pageviews", "visitors", "entries", "exits"] } },
+        ...filterParams,
       ]),
-      "/sites/{site}/reports/{module}/{report}": report("Any report of an installed module (see /modules).", [
+      "/sites/{site}/reports/{module}/{report}": report("Any report of a module enabled for the site (see /modules): shop/summary, shop/timeseries, shop/funnel, shop/products, campaigns/overview, content/engagement, content/rising. Results with sample: true come only from consenting visitors.", [
         { name: "module", in: "path", required: true, schema: { type: "string" } },
         { name: "report", in: "path", required: true, schema: { type: "string" } },
       ]),

@@ -11,6 +11,8 @@ import { signBody } from "../src/signature.js";
 import { isDayKey } from "../src/time.js";
 import { CHROME_UA, setup } from "./helpers.js";
 
+const SITE = { site_id: "lieromaa", timezone: "Europe/Helsinki" };
+
 async function listen(db) {
   const server = createIngestServer(db);
   server.listen(0, "127.0.0.1");
@@ -106,6 +108,6 @@ test("report ranges are bounded and days must be real", () => {
   assert.equal(isDayKey("2026-02-31"), false);
   assert.equal(isDayKey("9999-12-31"), false);
   assert.equal(isDayKey("2026-11-02"), true);
-  assert.throws(() => timeseries(db, "lieromaa", { from: "2026-01-01", to: "9999-12-31" }));
+  assert.throws(() => timeseries(db, SITE, { from: "2026-01-01", to: "9999-12-31" }));
   assert.throws(() => summary(db, "lieromaa", { from: "2024-01-01", to: "2026-12-31" }), /at most 800/);
 });
