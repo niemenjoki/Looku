@@ -15,10 +15,10 @@ export function openDatabase(file, { readonly = false } = {}) {
   }
 
   const db = new Database(file, { readonly, fileMustExist: readonly });
+  db.pragma("busy_timeout = 5000");
   if (!readonly) {
     db.pragma("journal_mode = WAL");
     db.pragma("foreign_keys = ON");
-    db.pragma("busy_timeout = 5000");
     migrate(db);
   }
   return db;

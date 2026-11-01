@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+import path from "node:path";
+import readline from "node:readline";
+import { fileURLToPath } from "node:url";
+
+import { createToken, listTokens, revokeToken, setPassword } from "./api/auth.js";
+import { createApiServer } from "./api/server.js";
 import { openDatabase } from "./db.js";
 import { runMaintenance } from "./maintenance.js";
 import { createIngestServer } from "./server.js";
@@ -11,12 +17,50 @@ const USAGE = `Usage: looku <command>
   site:rotate-key <site-id>
   ingest                 Start the receiver (POST /ingest)
   maintain               Nightly job: salts, rollups, retention
+  serve                  Start the read API and dashboard (LAN only)
+  admin:password         Set the dashboard password (read from stdin)
+  token:create <name> [--scope read|admin] [--site <site-id>]
+  token:list
+  token:revoke <id>
 
 Environment:
   LOOKU_DB               Database file (default ./data/looku.db)
   LOOKU_INGEST_HOST      Receiver address (default 127.0.0.1)
   LOOKU_INGEST_PORT      Receiver port (default 8787)
+  LOOKU_API_HOST         Read API and dashboard address (default 127.0.0.1)
+  LOOKU_API_PORT         Read API and dashboard port (default 8788)
+  LOOKU_API_CORS         Origins allowed to call the API, comma separated
+  LOOKU_COOKIE_SECURE    1 = login cookie only over HTTPS
+  LOOKU_PUBLIC_ORIGIN    Dashboard address behind a reverse proxy, e.g. https://looku.lan
+  LOOKU_API_HOSTS        Accepted Host headers, comma separated (DNS rebinding guard)
+  LOOKU_UI_DIR           Dashboard files (default: the @looku/ui package)
 `;
+
+function readSecret(prompt) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: process.stdin.isTTY });
+    if (process.stdin.isTTY) {
+      process.stdout.write(prompt);
+      rl._writeToOutput = () => {};
+    }
+    rl.once("line", (line) => {
+      rl.close();
+      if (process.stdin.isTTY) {
+        process.stdout.write("\n");
+      }
+      resolve(line);
+    });
+    rl.once("close", () => resolve(""));
+  });
+}
+
+function defaultUiDir() {
+  try {
+    return path.join(path.dirname(fileURLToPath(import.meta.resolve("@looku/ui/package.json"))), "public");
+  } catch {
+    return null;
+  }
+}
 
 function parseOptions(args) {
   const options = {};
@@ -32,7 +76,7 @@ function parseOptions(args) {
   return { options, positional };
 }
 
-function main(argv) {
+async function main(argv) {
   const [command, ...rest] = argv;
   const { options, positional } = parseOptions(rest);
   const dbFile = process.env.LOOKU_DB || "./data/looku.db";
@@ -72,6 +116,56 @@ function main(argv) {
       process.on("SIGINT", stop);
       return;
     }
+    case "serve": {
+      // Settings and keys are written through their own connection; reports
+      // read through a read-only one.
+      const writeDb = openDatabase(dbFile);
+      const db = openDatabase(dbFile, { readonly: true });
+      const host = process.env.LOOKU_API_HOST || "127.0.0.1";
+      const port = Number(process.env.LOOKU_API_PORT) || 8788;
+      const uiDir = process.env.LOOKU_UI_DIR || defaultUiDir();
+      const server = createApiServer(db, {
+        writeDb,
+        uiDir,
+        allowedOrigins: (process.env.LOOKU_API_CORS || "").split(",").map((o) => o.trim()).filter(Boolean),
+        secureCookie: process.env.LOOKU_COOKIE_SECURE === "1",
+        publicOrigin: process.env.LOOKU_PUBLIC_ORIGIN || null,
+        allowedHosts: (process.env.LOOKU_API_HOSTS || "").split(",").map((o) => o.trim()).filter(Boolean),
+      });
+      server.listen(port, host, () => {
+        console.log(`Looku dashboard and API on http://${host}:${port}${uiDir ? "" : " (no dashboard files found)"}`);
+      });
+      const stop = () => server.close(() => { db.close(); writeDb.close(); });
+      process.on("SIGTERM", stop);
+      process.on("SIGINT", stop);
+      return;
+    }
+    case "admin:password": {
+      const db = openDatabase(dbFile);
+      setPassword(db, await readSecret("New dashboard password: "));
+      console.log("Password set. Restart `looku serve` to end existing logins.");
+      db.close();
+      return;
+    }
+    case "token:create": {
+      const db = openDatabase(dbFile);
+      const { id, token } = createToken(db, { name: positional[0], scope: options.scope, siteId: options.site });
+      console.log(`Key ${id} created. Key (shown once):\n${token}`);
+      db.close();
+      return;
+    }
+    case "token:list": {
+      const db = openDatabase(dbFile);
+      console.table(listTokens(db));
+      db.close();
+      return;
+    }
+    case "token:revoke": {
+      const db = openDatabase(dbFile);
+      console.log(revokeToken(db, positional[0]) ? "Key revoked." : "Unknown key.");
+      db.close();
+      return;
+    }
     case "maintain": {
       const db = openDatabase(dbFile);
       console.log(JSON.stringify(runMaintenance(db), null, 2));
@@ -84,9 +178,7 @@ function main(argv) {
   }
 }
 
-try {
-  main(process.argv.slice(2));
-} catch (error) {
+main(process.argv.slice(2)).catch((error) => {
   console.error(error.message);
   process.exitCode = 1;
-}
+});

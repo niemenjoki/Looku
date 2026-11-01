@@ -6,6 +6,14 @@ import { addDays, isDayKey } from "../../time.js";
 // numbers are the same before and after the nightly job. Visitors over several
 // days are the sum of daily visitors, because the visitor hash changes daily.
 
+// A bad request (range, dimension, interval); the API answers 400.
+export class ReportError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ReportError";
+  }
+}
+
 export const BREAKDOWN_DIMENSIONS = [
   "page",
   "entry",
@@ -18,10 +26,10 @@ const MAX_RANGE_DAYS = 800;
 function checkRange(range) {
   const { from, to } = range;
   if (!isDayKey(from) || !isDayKey(to) || from > to) {
-    throw new Error("from and to must be days (YYYY-MM-DD), from <= to.");
+    throw new ReportError("from and to must be days (YYYY-MM-DD), from <= to.");
   }
   if (dayCount(range) > MAX_RANGE_DAYS) {
-    throw new Error(`The range can be at most ${MAX_RANGE_DAYS} days.`);
+    throw new ReportError(`The range can be at most ${MAX_RANGE_DAYS} days.`);
   }
 }
 
@@ -89,7 +97,7 @@ function bucketKey(day, interval) {
 export function timeseries(db, siteId, range, { interval = "day" } = {}) {
   checkRange(range);
   if (!["day", "week", "month"].includes(interval)) {
-    throw new Error("interval must be day, week or month.");
+    throw new ReportError("interval must be day, week or month.");
   }
 
   const byDay = new Map(dailyTotals(db, siteId, range).map((row) => [row.day, row]));
@@ -108,31 +116,72 @@ export function timeseries(db, siteId, range, { interval = "day" } = {}) {
   return { range, interval, points: [...buckets.values()] };
 }
 
+// With `top`, only the best rows are returned, sorted and limited in SQL, so
+// sites with many distinct paths (bots trying URLs) stay cheap to report.
+function pageRows(db, siteId, range, top = null) {
+  const tail = top
+    ? `HAVING SUM(${top.having}) > 0 ORDER BY SUM(${top.column}) DESC, path LIMIT ${top.limit}`
+    : "";
+  return db
+    .prepare(
+      `SELECT path AS value, SUM(pageviews) AS pageviews, SUM(visitors) AS visitors,
+              SUM(entries) AS entries, SUM(exits) AS exits
+       FROM (
+         SELECT path, pageviews, visitors, entries, exits FROM daily_rollup
+           WHERE site_id = ? AND day BETWEEN ? AND ?
+         UNION ALL
+         SELECT path, COUNT(*), COUNT(DISTINCT visitor_hash), SUM(is_entry), SUM(is_exit)
+           FROM (${sessionedPageviews(RAW_WHERE)}) GROUP BY day, path
+       )
+       GROUP BY path ${tail}`,
+    )
+    .all(siteId, range.from, range.to, siteId, range.from, range.to, siteId);
+}
+
+// Page groups are path prefixes from the site settings, e.g. "/oppaat/". A
+// page belongs to the first group whose prefix matches, others to "".
+// Visitors are not given for groups: daily visitors per page cannot be added
+// up without counting a visitor who saw several pages more than once.
+export function pageGroups(db, siteId, range, groups = []) {
+  checkRange(range);
+  const totals = new Map();
+  for (const row of pageRows(db, siteId, range)) {
+    const group = groups.find((g) => row.value.startsWith(g.prefix));
+    const name = group ? group.name : "";
+    const total = totals.get(name) || { value: name, pageviews: 0, entries: 0, exits: 0 };
+    total.pageviews += row.pageviews;
+    total.entries += row.entries;
+    total.exits += row.exits;
+    totals.set(name, total);
+  }
+  const rows = [...totals.values()].sort(
+    (a, b) => b.pageviews - a.pageviews || a.value.localeCompare(b.value),
+  );
+  return { range, dimension: "page_group", sort: "pageviews", rows };
+}
+
 const SORT_COLUMNS = ["pageviews", "visitors", "entries", "exits"];
 
 export function breakdown(db, siteId, dimension, range, { limit = 50, sort } = {}) {
   checkRange(range);
   if (!BREAKDOWN_DIMENSIONS.includes(dimension)) {
-    throw new Error(`Unknown dimension: ${dimension}`);
+    throw new ReportError(`Unknown dimension: ${dimension}`);
   }
   const rowLimit = Math.min(Math.max(Math.trunc(Number(limit)) || 50, 1), 1000);
 
+  const defaultSort = { entry: "entries", exit: "exits" }[dimension] || "pageviews";
+  const isPage = ["page", "entry", "exit"].includes(dimension);
+  const sortable = isPage ? SORT_COLUMNS : SORT_COLUMNS.filter((c) => c !== "exits");
+  const sortColumn = sortable.includes(sort) ? sort : defaultSort;
+
   let rows;
-  if (["page", "entry", "exit"].includes(dimension)) {
-    rows = db
-      .prepare(
-        `SELECT path AS value, SUM(pageviews) AS pageviews, SUM(visitors) AS visitors,
-                SUM(entries) AS entries, SUM(exits) AS exits
-         FROM (
-           SELECT path, pageviews, visitors, entries, exits FROM daily_rollup
-             WHERE site_id = ? AND day BETWEEN ? AND ?
-           UNION ALL
-           SELECT path, COUNT(*), COUNT(DISTINCT visitor_hash), SUM(is_entry), SUM(is_exit)
-             FROM (${sessionedPageviews(RAW_WHERE)}) GROUP BY day, path
-         )
-         GROUP BY path`,
-      )
-      .all(siteId, range.from, range.to, siteId, range.from, range.to, siteId);
+  if (isPage) {
+    // Entry and exit lists show only pages where sessions started or ended.
+    rows = pageRows(db, siteId, range, {
+      column: sortColumn,
+      having: { entry: "entries", exit: "exits" }[dimension] || "pageviews",
+      limit: rowLimit,
+    });
   } else {
     const column = DIMENSION_COLUMNS[dimension];
     rows = db
@@ -151,13 +200,6 @@ export function breakdown(db, siteId, dimension, range, { limit = 50, sort } = {
       .all(siteId, range.from, range.to, dimension, siteId, range.from, range.to, siteId);
   }
 
-  const defaultSort = { entry: "entries", exit: "exits" }[dimension] || "pageviews";
-  const sortColumn = SORT_COLUMNS.includes(sort) && rows[0]?.[sort] !== undefined ? sort : defaultSort;
-  if (dimension === "entry") {
-    rows = rows.filter((row) => row.entries > 0);
-  } else if (dimension === "exit") {
-    rows = rows.filter((row) => row.exits > 0);
-  }
   rows.sort((a, b) => b[sortColumn] - a[sortColumn] || String(a.value).localeCompare(String(b.value)));
 
   return { range, dimension, sort: sortColumn, rows: rows.slice(0, rowLimit) };
