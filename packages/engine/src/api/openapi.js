@@ -74,7 +74,7 @@ export function openApiDocument(version) {
       },
     },
     paths: {
-      "/health": { get: { summary: "Version and time of the last received page view. No key needed.", security: [], responses: { 200: { description: "OK" } } } },
+      "/health": { get: { summary: "Status and version, no key needed; with a key also the time of the last page view.", security: [], responses: { 200: { description: "OK" } } } },
       "/openapi.json": { get: { summary: "This document.", security: [], responses: { 200: { description: "OK" } } } },
       "/login": {
         post: {

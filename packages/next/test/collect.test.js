@@ -100,3 +100,11 @@ test("a long body without Content-Length is not read past 4 kB", async (t) => {
   assert.ok(pulled < 10);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM engagement").get().n, 0);
 });
+
+test("the collect route respects Do Not Track and Global Privacy Control", async (t) => {
+  const { db, options } = await receiver(t);
+  const POST = createCollectHandler(options);
+  await POST(collect({ type: "engagement", path: "/a", dwell_ms: 1, max_scroll_pct: 1 }, { "sec-gpc": "1" }));
+  await POST(collect({ type: "engagement", path: "/b", dwell_ms: 1, max_scroll_pct: 1 }, { dnt: "1" }));
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM engagement").get().n, 0);
+});

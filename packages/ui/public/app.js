@@ -230,6 +230,7 @@ function lineChart(points, previousPoints, height = 140) {
   const width = 600;
   const pv = points.map((p) => p.pageviews);
   const vis = points.map((p) => p.visitors);
+  const hasVisitors = vis.some((v) => v !== null && v !== undefined);
   const prev = (previousPoints || []).map((p) => p.pageviews).slice(0, pv.length);
   const max = niceMax(Math.max(...pv, ...prev, 1));
 
@@ -244,7 +245,7 @@ function lineChart(points, previousPoints, height = 140) {
   if (d) {
     svg.append(s("path", { d: `${d}L${width},${height}L0,${height}Z`, class: "a-pv" }));
     svg.append(s("path", { d, class: "s-pv", "vector-effect": "non-scaling-stroke" }));
-    svg.append(s("path", { d: linePath(vis, max, width, height), class: "s-vis", "vector-effect": "non-scaling-stroke" }));
+    if (hasVisitors) svg.append(s("path", { d: linePath(vis, max, width, height), class: "s-vis", "vector-effect": "non-scaling-stroke" }));
   }
 
   const ticks = [];
@@ -264,7 +265,7 @@ function lineChart(points, previousPoints, height = 140) {
     chart,
     h("div", { class: "legend" },
       h("span", {}, h("i", { class: "i-pv" }), L.pv),
-      h("span", {}, h("i", { class: "i-vis" }), L.vis),
+      hasVisitors ? h("span", {}, h("i", { class: "i-vis" }), L.vis) : null,
       prev.length ? h("span", {}, h("i", { class: "i-prev" }), `${L.pv}, ${L.prevLine}`) : null),
   ];
 }
@@ -340,7 +341,9 @@ function sectionOrder() {
   // A module enabled after the order was saved shows all its sections.
   const listed = new Set(ids.map((id) => known.get(id)?.module));
   ids = [...ids, ...SECTIONS.filter((x) => !listed.has(x.module)).map((x) => x.id)];
-  return ids.map((id) => known.get(id)).filter((x) => x && modules.includes(x.module));
+  // Without the visitor hash there are no sessions, so no entry, exit or funnel lists.
+  const needHash = new Set(state.site.visitors === "off" ? ["entries", "exits", "shop_funnel"] : []);
+  return ids.map((id) => known.get(id)).filter((x) => x && modules.includes(x.module) && !needHash.has(x.id));
 }
 
 async function dashboardView(container, token) {
@@ -390,16 +393,19 @@ async function dashboardView(container, token) {
   const d = summary.data;
   const p = d.previous;
   const points = r.series.data.points;
-  const kpis = [
+  const noVisitors = state.site.visitors === "off";
+  const measure = (row) => (noVisitors ? row.pageviews : row.entries);
+  const allKpis = [
     [L.pv, nf(d.pageviews), p && chg(d.pageviews, p.pageviews), points.map((x) => x.pageviews)],
     [L.vis, nf(d.visitors), p && chg(d.visitors, p.visitors), points.map((x) => x.visitors)],
     [L.ses, nf(d.sessions), p && chg(d.sessions, p.sessions), points.map((x) => x.sessions)],
     [L.pps, nf(d.pages_per_session, 1), p && chg(d.pages_per_session, p.pages_per_session), points.map((x) => (x.sessions ? x.pageviews / x.sessions : 0))],
   ];
+  const kpis = noVisitors ? allKpis.slice(0, 1) : allKpis;
 
   const prevPages = new Map((r.prevPages?.data.rows || []).map((row) => [row.value, row.pageviews]));
   const csv = (report) => h("a", { href: `/api/v1${siteUrl(`/export.csv?${q}&report=${report}${report.includes("/") ? "" : fq}`)}`, download: true }, L.csv);
-  const rows = (id) => r[id].data.rows.filter((row) => !(id.startsWith("utm") && row.value === "") && (!["referrers", "utm_source", "utm_campaign"].includes(id) || row.entries > 0));
+  const rows = (id) => r[id].data.rows.filter((row) => !(id.startsWith("utm") && row.value === "") && (!["referrers", "utm_source", "utm_campaign"].includes(id) || measure(row) > 0));
   const bodies = {
     pages: () => table([
       { title: L.col.page, value: (row) => row.value, path: true },
@@ -408,14 +414,14 @@ async function dashboardView(container, token) {
     ], rows("pages")),
     entries: () => table([{ title: L.col.page, value: (row) => row.value, path: true }, { title: L.col.entries, value: (row) => nf(row.entries), right: true }], rows("entries")),
     exits: () => table([{ title: L.col.page, value: (row) => row.value, path: true }, { title: L.col.exits, value: (row) => nf(row.exits), right: true }], rows("exits")),
-    referrers: () => barList(rows("referrers"), (row) => row.entries, (row) => label("referrer", row.value)),
-    utm_source: () => barList(rows("utm_source"), (row) => row.entries, (row) => row.value),
-    utm_campaign: () => barList(rows("utm_campaign"), (row) => row.entries, (row) => row.value),
+    referrers: () => barList(rows("referrers"), measure, (row) => label("referrer", row.value)),
+    utm_source: () => barList(rows("utm_source"), measure, (row) => row.value),
+    utm_campaign: () => barList(rows("utm_campaign"), measure, (row) => row.value),
     devices: () => stack(rows("devices"), "device"),
     browsers: () => [stack(rows("browsers"), "browser"), stack(r.os.data.rows, "os")],
     countries: () => table([{ title: L.col.value, value: (row) => label("country", row.value) }, { title: L.col.views, value: (row) => nf(row.pageviews), right: true }], rows("countries")),
     page_groups: () => (state.config?.page_groups?.length
-      ? table([{ title: L.col.group, value: (row) => label("page_group", row.value) }, { title: L.col.views, value: (row) => nf(row.pageviews), right: true }, { title: L.col.entries, value: (row) => nf(row.entries), right: true }], rows("page_groups"))
+      ? table([{ title: L.col.group, value: (row) => label("page_group", row.value) }, { title: L.col.views, value: (row) => nf(row.pageviews), right: true }, ...(noVisitors ? [] : [{ title: L.col.entries, value: (row) => nf(row.entries), right: true }])], rows("page_groups"))
       : h("p", { class: "empty" }, L.noGroups)),
   };
   const sample = (data) => h("p", { class: "note" }, L.sampleNote(nf(data.sample_size)));
@@ -427,11 +433,11 @@ async function dashboardView(container, token) {
         [L.shop.orders, nf(x.orders), chg(x.orders, px.orders)],
         [L.shop.revenue, money(x.revenue), chg(x.revenue, px.revenue)],
         [L.shop.average, money(x.average_order), chg(x.average_order, px.average_order)],
-        [L.shop.conversion, `${nf(x.conversion_pct, 2)} %`, chg(x.conversion_pct, px.conversion_pct)],
+        ...(x.conversion_pct === null ? [] : [[L.shop.conversion, `${nf(x.conversion_pct, 2)} %`, chg(x.conversion_pct, px.conversion_pct)]]),
       ];
       return [
         h("div", { class: "figs" }, figs.map(([k, v, c]) => h("div", {}, h("div", { class: "k" }, k), h("div", { class: "v" }, v), c))),
-        h("p", { class: "note" }, L.shop.conversionNote),
+        x.conversion_pct === null ? null : h("p", { class: "note" }, L.shop.conversionNote),
       ];
     },
     shop_funnel: () => {
@@ -457,8 +463,8 @@ async function dashboardView(container, token) {
     },
     campaigns: () => table([
       { title: L.col.campaign, value: (row) => row.value },
-      { title: L.col.sessions, value: (row) => nf(row.sessions), right: true },
-      { title: "%", value: (row) => (row.status === "new" || row.status === "ended" ? L.campaignStatus[row.status] : chg(row.sessions, row.previous_sessions) || ""), right: true },
+      { title: r.campaigns.data.measure === "pageviews" ? L.col.views : L.col.sessions, value: (row) => nf(row.count), right: true },
+      { title: "%", value: (row) => (row.status === "new" || row.status === "ended" ? L.campaignStatus[row.status] : chg(row.count, row.previous_count) || ""), right: true },
       { title: L.shop.orders, value: (row) => nf(row.orders), right: true },
     ], r.campaigns.data.rows),
     content_engagement: () => [
@@ -591,7 +597,8 @@ async function reportView(container, token) {
 
   const d = summary.data;
   const pd = previous.data;
-  const figs = [[L.vis, d.visitors, pd.visitors], [L.pv, d.pageviews, pd.pageviews], [L.ses, d.sessions, pd.sessions], [L.pps, d.pages_per_session, pd.pages_per_session]];
+  const allFigs = [[L.vis, d.visitors, pd.visitors], [L.pv, d.pageviews, pd.pageviews], [L.ses, d.sessions, pd.sessions], [L.pps, d.pages_per_session, pd.pages_per_session]];
+  const figs = d.visitors === null ? allFigs.slice(1, 2) : allFigs;
   const go = (delta) => { state.month = shiftMonth(state.month, delta); render(); };
   const sectionBody = {
     visitors: () => [lineChart(series.data.points, prevSeries.data.points, 150)],
@@ -609,13 +616,13 @@ async function reportView(container, token) {
         h("h2", {}, review.title),
         h("p", { class: "lead" }, review.lead.map((part) => (typeof part === "string" ? part : h("b", {}, part.b)))),
         d.pageviews
-          ? h("div", { class: "vc-figs" }, figs.map(([k, v, pv], i) => h("div", {}, h("div", { class: "v" }, nf(v, i === 3 ? 1 : 0)), h("div", { class: "k" }, `${k} `, chg(v, pv)))))
+          ? h("div", { class: "vc-figs" }, figs.map(([k, v, pv]) => h("div", {}, h("div", { class: "v" }, nf(v, k === L.pps ? 1 : 0)), h("div", { class: "k" }, `${k} `, chg(v, pv)))))
           : null,
         review.sections.map((section) => h("section", { class: "m-perus" },
           h("h3", {}, section.title, h("span", { class: "tag" }, L.modules.perus)),
           section.sentences.length ? h("p", {}, section.sentences.join(" ")) : null,
           sectionBody[section.id]())),
-        h("p", { class: "foot" }, review.foot))));
+        h("p", { class: "foot" }, d.visitors === null ? L.report.footViews : review.foot))));
 }
 
 async function settingsView(container, token) {

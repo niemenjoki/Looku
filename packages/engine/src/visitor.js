@@ -7,6 +7,12 @@ import { dayKey } from "./time.js";
 // same visitor gets a new hash every day and old hashes cannot be recomputed.
 // The formula matches the one Lieromaa's order system has used since
 // 29.10.2026, so its data can move here without a break.
+// With the site setting visitors = off, no hash is computed: each page view
+// gets a random value, so nothing links two page views of the same visitor.
+export function randomVisitor() {
+  return crypto.randomBytes(16).toString("hex");
+}
+
 export function createVisitorHasher(db) {
   const getSalt = db.prepare(
     "SELECT salt FROM daily_salt WHERE site_id = ? AND day = ?",

@@ -45,12 +45,16 @@ async function login(base, password = "oikea salasana 1") {
 }
 
 test("health and the API description need no key, reports do", async (t) => {
-  const { server, base } = await start();
+  const { db, server, base } = await start();
   t.after(() => server.close());
 
   const health = await (await fetch(`${base}/api/v1/health`)).json();
   assert.equal(health.status, "ok");
-  assert.equal(health.last_ingest, "2026-11-03T08:00:00.000Z");
+  // The time of the last page view only with a key.
+  assert.equal(health.last_ingest, undefined);
+  const { token: healthKey } = createToken(db, { name: "health" });
+  const known = await (await fetch(`${base}/api/v1/health`, bearer(healthKey))).json();
+  assert.equal(known.last_ingest, "2026-11-03T08:00:00.000Z");
   const doc = await (await fetch(`${base}/api/v1/openapi.json`)).json();
   assert.equal(doc.openapi, "3.1.0");
   assert.ok(doc.paths["/sites/{site}/breakdown/{dimension}"]);

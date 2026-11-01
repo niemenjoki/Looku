@@ -60,7 +60,10 @@ export const MODULES = {
       },
       funnel: {
         params: [],
-        run: (db, site, range, query, config) => shop.funnel(db, site.site_id, range, config.shop),
+        run: (db, site, range, query, config) =>
+          site.visitors === "off"
+            ? { range, steps: [], configured: false, unavailable: "visitors_off" }
+            : shop.funnel(db, site.site_id, range, config.shop),
       },
       products: {
         params: ["limit"],
@@ -74,7 +77,11 @@ export const MODULES = {
     reports: {
       overview: {
         params: ["limit"],
-        run: (db, site, range, query) => campaigns.overview(db, site.site_id, range, { limit: query.limit }),
+        run: (db, site, range, query) =>
+          campaigns.overview(db, site.site_id, range, {
+            limit: query.limit,
+            measure: site.visitors === "off" ? "pageviews" : "sessions",
+          }),
       },
     },
   },

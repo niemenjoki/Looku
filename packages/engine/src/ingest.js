@@ -9,7 +9,7 @@ import {
   parseReferrer,
 } from "./classify.js";
 import { dayKey } from "./time.js";
-import { createVisitorHasher } from "./visitor.js";
+import { createVisitorHasher, randomVisitor } from "./visitor.js";
 
 const MAX_PAST_MS = 24 * 60 * 60 * 1000;
 const MAX_FUTURE_MS = 5 * 60 * 1000;
@@ -90,7 +90,7 @@ export function createIngest(db) {
       site_id: site.site_id,
       ts: time.toISOString(),
       day: dayKey(time, site.timezone),
-      visitor_hash: visitorHash(site, ip, userAgent, now),
+      visitor_hash: site.visitors === "off" ? randomVisitor() : visitorHash(site, ip, userAgent, now),
       path: normalizePath(payload.path),
       referrer_host: referrer.host,
       referrer_path: referrer.path,
@@ -131,7 +131,7 @@ export function createIngest(db) {
 
     // Without a visitor hash, the time is kept only to the day, so the event
     // cannot be matched to a page view by its time.
-    const hashed = Boolean(ip && userAgent);
+    const hashed = Boolean(ip && userAgent) && site.visitors !== "off";
     const { lastInsertRowid } = insertEvent.run(
       site.site_id,
       hashed ? time.toISOString() : dayStart(time),

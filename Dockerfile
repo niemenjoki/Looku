@@ -9,6 +9,7 @@ COPY packages/engine/package.json packages/engine/
 COPY packages/ui/package.json packages/ui/
 COPY packages/next/package.json packages/next/
 COPY packages/browser/package.json packages/browser/
+COPY packages/node/package.json packages/node/
 RUN npm ci --omit=dev --no-audit --no-fund
 COPY packages/engine packages/engine
 COPY packages/ui packages/ui

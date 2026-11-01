@@ -41,30 +41,37 @@ export function buildReview(L, data, { formatNumber, formatDay }) {
     return { title: title(R.headline.empty), lead: [R.empty], sections: [], foot: R.foot };
   }
 
-  const change = percentChange(s.visitors, data.previous?.visitors);
+  // A site without the visitor hash (visitors null) is described by page views.
+  const byViews = s.visitors === null;
+  const H = byViews ? R.views : R;
+  const change = byViews
+    ? percentChange(s.pageviews, data.previous?.pageviews)
+    : percentChange(s.visitors, data.previous?.visitors);
   let headline = R.headline.first;
   let compare = "";
   if (change !== null) {
     if (change >= 3) {
-      headline = R.headline.more(n(change));
-      compare = R.compareMore(n(change), R.inMonth(prevName));
+      headline = H.headline.more(n(change));
+      compare = H.compareMore(n(change), R.inMonth(prevName));
     } else if (change <= -3) {
-      headline = R.headline.less(n(-change));
-      compare = R.compareLess(n(-change), R.inMonth(prevName));
+      headline = H.headline.less(n(-change));
+      compare = H.compareLess(n(-change), R.inMonth(prevName));
     } else {
-      headline = R.headline.same;
-      compare = R.compareSame(R.inMonth(prevName));
+      headline = H.headline.same;
+      compare = H.compareSame(R.inMonth(prevName));
     }
   }
 
-  const lead = R.lead(
-    R.inMonth(monthName),
-    n(s.visitors),
-    R.visitorsWord(s.visitors),
-    n(s.pageviews),
-    R.pagesWord(s.pageviews),
-    n(s.sessions),
-  );
+  const lead = byViews
+    ? R.views.lead(R.inMonth(monthName), n(s.pageviews), R.pagesWord(s.pageviews))
+    : R.lead(
+        R.inMonth(monthName),
+        n(s.visitors),
+        R.visitorsWord(s.visitors),
+        n(s.pageviews),
+        R.pagesWord(s.pageviews),
+        n(s.sessions),
+      );
   lead.push(compare);
   const range = monthRange(data.month);
   if (data.today && data.today >= range.from && data.today <= range.to) {
@@ -72,7 +79,7 @@ export function buildReview(L, data, { formatNumber, formatDay }) {
   }
 
   const visitors = [];
-  const refs = data.referrers || [];
+  const refs = byViews ? [] : data.referrers || [];
   const sessions = s.sessions;
   const search = refs.filter((row) => SEARCH_ENGINES.test(row.value)).reduce((sum, row) => sum + row.entries, 0);
   if (search) {
@@ -99,7 +106,7 @@ export function buildReview(L, data, { formatNumber, formatDay }) {
   if (data.pages?.[0]) {
     content.push(R.topPage(data.pages[0].value, n(data.pages[0].pageviews)));
   }
-  if (data.entries?.[0]) {
+  if (!byViews && data.entries?.[0]) {
     content.push(R.topEntry(data.entries[0].value));
   }
 
@@ -107,7 +114,7 @@ export function buildReview(L, data, { formatNumber, formatDay }) {
     title: title(headline),
     lead,
     sections: [
-      { id: "visitors", title: R.visitorsTitle, sentences: visitors },
+      { id: "visitors", title: byViews ? R.views.title : R.visitorsTitle, sentences: visitors },
       { id: "content", title: R.contentTitle, sentences: content },
     ],
     foot: R.foot,

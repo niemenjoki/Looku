@@ -18,6 +18,8 @@ export function openDatabase(file, { readonly = false } = {}) {
   db.pragma("busy_timeout = 5000");
   if (!readonly) {
     db.pragma("journal_mode = WAL");
+    // Deleted rows (old salts) are overwritten, not left in free pages.
+    db.pragma("secure_delete = ON");
     db.pragma("foreign_keys = ON");
     migrate(db);
   }

@@ -67,6 +67,14 @@ export const T = {
       compareMore: (p, inPrev) => ` Kävijöitä oli ${p} % enemmän kuin ${inPrev}.`,
       compareLess: (p, inPrev) => ` Kävijöitä oli ${p} % vähemmän kuin ${inPrev}.`,
       compareSame: (inPrev) => ` Kävijöitä oli suunnilleen yhtä paljon kuin ${inPrev}.`,
+      views: {
+        title: "Liikenne",
+        headline: { more: (p) => `sivunäyttöjä ${p} % enemmän`, less: (p) => `sivunäyttöjä ${p} % vähemmän`, same: "sivunäyttöjä yhtä paljon" },
+        lead: (inMonth, pages, pagesWord) => [`${capitalize(inMonth)} sivuja katsottiin `, { b: `${pages} kertaa` }, "."],
+        compareMore: (p, inPrev) => ` Sivunäyttöjä oli ${p} % enemmän kuin ${inPrev}.`,
+        compareLess: (p, inPrev) => ` Sivunäyttöjä oli ${p} % vähemmän kuin ${inPrev}.`,
+        compareSame: (inPrev) => ` Sivunäyttöjä oli suunnilleen yhtä paljon kuin ${inPrev}.`,
+      },
       partial: (day) => ` Kuukausi on kesken: luvut ovat ${day} asti, ja vertailu on edellisen kuun samoihin päiviin.`,
       empty: "Tällä kuukaudella ei ole kirjattu käyntejä.",
       visitorsTitle: "Kävijät",
@@ -80,6 +88,7 @@ export const T = {
       topEntry: (path) => `Useimmat istunnot alkoivat sivulta ${path}.`,
       foot:
         "Luvut lasketaan palvelimella kaikista käynneistä ilman evästeitä. Kävijä tunnistetaan vain saman päivän ajan, joten kuukauden kävijämäärä on päivittäisten kävijöiden summa.",
+      footViews: "Luvut lasketaan palvelimella kaikista käynneistä ilman evästeitä. Kävijöitä ei tunnisteta, joten luvut ovat sivunäyttöjä.",
     },
     settings: {
       viewer: "Oma näkymä",
@@ -175,6 +184,14 @@ export const T = {
       compareMore: (p, inPrev) => ` That is ${p} % more visitors than ${inPrev}.`,
       compareLess: (p, inPrev) => ` That is ${p} % fewer visitors than ${inPrev}.`,
       compareSame: (inPrev) => ` About as many visitors as ${inPrev}.`,
+      views: {
+        title: "Traffic",
+        headline: { more: (p) => `${p} % more pageviews`, less: (p) => `${p} % fewer pageviews`, same: "as many pageviews" },
+        lead: (inMonth, pages, pagesWord) => [`${capitalize(inMonth)} the site had `, { b: `${pages} ${pagesWord === "page" ? "pageview" : "pageviews"}` }, "."],
+        compareMore: (p, inPrev) => ` That is ${p} % more than ${inPrev}.`,
+        compareLess: (p, inPrev) => ` That is ${p} % fewer than ${inPrev}.`,
+        compareSame: (inPrev) => ` About as many as ${inPrev}.`,
+      },
       partial: (day) => ` The month is not over: numbers up to ${day}, compared with the same days of the previous month.`,
       empty: "No visits were recorded this month.",
       visitorsTitle: "Visitors",
@@ -188,6 +205,7 @@ export const T = {
       topEntry: (path) => `Most sessions started on ${path}.`,
       foot:
         "Numbers are counted on the server from all visits, without cookies. A visitor is recognised only within one day, so the monthly visitor count is the sum of daily visitors.",
+      footViews: "Numbers are counted on the server from all visits, without cookies. Visitors are not recognised, so the numbers are pageviews.",
     },
     settings: {
       viewer: "Your view",

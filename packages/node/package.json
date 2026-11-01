@@ -1,0 +1,24 @@
+{
+  "name": "@looku/node",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Looku connector for Node.js http and Express: server-side page views without cookies or scripts.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@looku/next": "1.0.0"
+  },
+  "license": "AGPL-3.0-only"
+}

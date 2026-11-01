@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import http from "node:http";
+import net from "node:net";
 import path from "node:path";
 
 import { describeModules, MODULES } from "../modules/index.js";
+import { hideVisitorCounts } from "../modules/visitors.js";
 import { ReportError } from "../modules/perus/reports.js";
 import { dayKey } from "../time.js";
 import {
@@ -126,6 +128,8 @@ export function createApiServer(
     secureCookie = false,
     publicOrigin = null,
     allowedHosts = [],
+    allowedClients = [],
+    trustProxy = 0,
     now = () => new Date(),
     sessions = createSessionStore(),
     loginLimiter = createLoginLimiter(),
@@ -137,11 +141,29 @@ export function createApiServer(
   if (publicOrigin) {
     hosts.add(new URL(publicOrigin).host.toLowerCase());
   }
+  // Optional client allowlist (IP addresses or CIDR ranges), e.g. a public
+  // server whose dashboard only the owner's networks may open.
+  const clients = allowedClients.length ? new net.BlockList() : null;
+  for (const entry of allowedClients) {
+    const [address, prefix, extra] = entry.split("/");
+    const type = net.isIPv6(address) ? "ipv6" : "ipv4";
+    const bits = Number(prefix);
+    // A typo must not open the list: "10.0.0.0/" or "/0" is refused.
+    if (
+      !net.isIP(address) ||
+      extra !== undefined ||
+      (prefix !== undefined && (!/^\d{1,3}$/.test(prefix) || bits < 1 || bits > (type === "ipv6" ? 128 : 32)))
+    ) {
+      throw new Error(`Not an IP address or range: ${entry}`);
+    }
+    if (prefix === undefined) clients.addAddress(address, type);
+    else clients.addSubnet(address, bits, type);
+  }
   // Over HTTPS the __Host- prefix binds the cookie to this exact origin.
   const cookieName = secureCookie ? `__Host-${SESSION_COOKIE}` : SESSION_COOKIE;
 
   const getSite = db.prepare("SELECT * FROM sites WHERE site_id = ?");
-  const allSites = db.prepare("SELECT site_id, name, domain, timezone, modules_json FROM sites ORDER BY site_id");
+  const allSites = db.prepare("SELECT site_id, name, domain, timezone, modules_json, visitors FROM sites ORDER BY site_id");
   const lastIngest = db.prepare("SELECT MAX(ts) AS ts FROM pageviews");
   const touchToken = writeDb.prepare(
     "UPDATE api_tokens SET last_used_day = ? WHERE id = ? AND (last_used_day IS NULL OR last_used_day <> ?)",
@@ -208,11 +230,31 @@ export function createApiServer(
     }
   }
 
-  // Behind a reverse proxy (publicOrigin set) the proxy's address is shared
-  // by everyone, so the client address is taken from X-Forwarded-For.
+  // The client address. With trustProxy = N (the number of reverse proxies
+  // in front of Looku, LOOKU_TRUST_PROXY) it is the Nth X-Forwarded-For entry
+  // from the right: each proxy appends the address it saw, and entries
+  // further left come from the client and can be forged. Without it the
+  // header is ignored.
+  function clientIp(req) {
+    let ip = req.socket.remoteAddress || "";
+    if (trustProxy > 0) {
+      const entries = String(req.headers["x-forwarded-for"] || "").split(",").map((e) => e.trim()).filter(Boolean);
+      ip = entries.length >= trustProxy ? entries[entries.length - trustProxy] : "";
+    }
+    return ip.replace(/^::ffff:(?=\d+\.)/, "");
+  }
+
+  // Login limits per client; an IPv6 client is limited per /64 network,
+  // because one host can use any address in it.
   function clientKey(req) {
-    const forwarded = publicOrigin ? String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() : "";
-    return forwarded || req.socket.remoteAddress || "";
+    const ip = clientIp(req);
+    return net.isIPv6(ip) ? ip.split(":").slice(0, 4).join(":") : ip;
+  }
+
+  function clientAllowed(req) {
+    if (!clients) return true;
+    const ip = clientIp(req);
+    return net.isIP(ip) ? clients.check(ip, net.isIPv6(ip) ? "ipv6" : "ipv4") : false;
   }
 
   function requireAdmin(auth) {
@@ -253,7 +295,10 @@ export function createApiServer(
       throw new HttpError(404, "Unknown report.");
     }
     const range = resolveRange(query, site.timezone, now());
-    const data = report.run(db, site, range, query, parseConfig(site.config_json));
+    let data = report.run(db, site, range, query, parseConfig(site.config_json));
+    if (site.visitors === "off") {
+      data = hideVisitorCounts(data);
+    }
     const extra = data.previous ? { previous: data.previous.range } : {};
     return { meta: meta(site, data.range || range, extra), data };
   }
@@ -268,7 +313,15 @@ export function createApiServer(
     const parts = route.split("/").filter(Boolean).map(decodeURIComponent);
 
     if (route === "/health" && method === "GET") {
-      sendJson(res, 200, { status: "ok", version: API_VERSION, last_ingest: lastIngest.get().ts });
+      // Open for health checks; the time of the last page view only with a
+      // key or login, so the endpoint does not reveal when people visit.
+      let known = false;
+      try {
+        known = Boolean(authenticate(req));
+      } catch {
+        known = false;
+      }
+      sendJson(res, 200, { status: "ok", version: API_VERSION, ...(known ? { last_ingest: lastIngest.get().ts } : {}) });
       return;
     }
     if (route === "/openapi.json" && method === "GET") {
@@ -332,6 +385,7 @@ export function createApiServer(
           timezone: site.timezone,
           today: dayKey(now(), site.timezone),
           modules: JSON.parse(site.modules_json || "[]"),
+          visitors: site.visitors,
         }));
       sendJson(res, 200, { data: sites });
       return;
@@ -437,12 +491,21 @@ export function createApiServer(
     for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
       res.setHeader(name, value);
     }
+    if (secureCookie) {
+      res.setHeader("Strict-Transport-Security", "max-age=31536000");
+    }
+    const isHealth = req.method === "GET" && String(req.url || "").split("?")[0] === "/api/v1/health";
+    if (!isHealth && !clientAllowed(req)) {
+      res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("Forbidden");
+      return;
+    }
     // DNS rebinding: with a host list set, other Host headers are refused.
-    // The health check (no data) stays open for container health checks.
+    // The health check stays open for container health checks.
     if (
       hosts.size &&
       !hosts.has(String(req.headers.host || "").toLowerCase()) &&
-      !(req.method === "GET" && String(req.url || "").split("?")[0] === "/api/v1/health")
+      !isHealth
     ) {
       res.writeHead(421, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("Unknown host");

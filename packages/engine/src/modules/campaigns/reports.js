@@ -24,7 +24,10 @@ function sessionRows(db, siteId, range) {
   );
 }
 
-export function overview(db, siteId, range, { limit = 50 } = {}) {
+// measure "pageviews" compares campaigns by page views instead of sessions
+// (sites without the visitor hash).
+export function overview(db, siteId, range, { limit = 50, measure = "sessions" } = {}) {
+  const field = measure === "pageviews" ? "pageviews" : "entries";
   checkRange(range);
   const rowLimit = Math.min(Math.max(Math.trunc(Number(limit)) || 50, 1), 500);
   const previous = previousRange(range);
@@ -35,8 +38,8 @@ export function overview(db, siteId, range, { limit = 50 } = {}) {
 
   const names = new Set([...now.keys(), ...before.keys(), ...orders.keys()]);
   const rows = [...names].map((value) => {
-    const sessions = now.get(value)?.entries || 0;
-    const previousSessions = before.get(value)?.entries || 0;
+    const sessions = now.get(value)?.[field] || 0;
+    const previousSessions = before.get(value)?.[field] || 0;
     let status = "same";
     if (!previousSessions && sessions) {
       status = "new";
@@ -49,8 +52,8 @@ export function overview(db, siteId, range, { limit = 50 } = {}) {
     }
     return {
       value,
-      sessions,
-      previous_sessions: previousSessions,
+      count: sessions,
+      previous_count: previousSessions,
       change_pct: previousSessions
         ? Math.round(((sessions - previousSessions) / previousSessions) * 100)
         : null,
@@ -61,13 +64,13 @@ export function overview(db, siteId, range, { limit = 50 } = {}) {
       status,
     };
   });
-  rows.sort((a, b) => b.sessions - a.sessions || b.orders - a.orders || a.value.localeCompare(b.value));
+  rows.sort((a, b) => b.count - a.count || b.orders - a.orders || a.value.localeCompare(b.value));
 
   const rising = rows
-    .filter((row) => row.sessions > row.previous_sessions)
-    .sort((a, b) => b.sessions - b.previous_sessions - (a.sessions - a.previous_sessions))
+    .filter((row) => row.count > row.previous_count)
+    .sort((a, b) => b.count - b.previous_count - (a.count - a.previous_count))
     .slice(0, 5)
     .map((row) => row.value);
 
-  return { range, previous: { range: previous }, rows: rows.slice(0, rowLimit), rising };
+  return { range, previous: { range: previous }, measure: field === "entries" ? "sessions" : "pageviews", rows: rows.slice(0, rowLimit), rising };
 }

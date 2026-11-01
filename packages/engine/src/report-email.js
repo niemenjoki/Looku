@@ -2,6 +2,7 @@ import { T } from "@looku/ui/public/i18n.js";
 import { buildReview, monthRange, shiftMonth } from "@looku/ui/public/review.js";
 
 import { breakdown, summary, timeseries } from "./modules/perus/reports.js";
+import { hideVisitorCounts } from "./modules/visitors.js";
 
 // Monthly review as an email: the same sentences as the dashboard's view C,
 // built with the dashboard's own review.js. Nothing is sent unless SMTP is
@@ -24,9 +25,11 @@ export function buildMonthlyReview(db, site, month, { language = "fi" } = {}) {
   const range = monthRange(month);
   const previous = monthRange(shiftMonth(month, -1));
   const id = site.site_id;
-  return buildReview(
+  // Without the visitor hash the review is told in page views, as in the dashboard.
+  const hide = site.visitors === "off" ? hideVisitorCounts : (data) => data;
+  const review = buildReview(
     L,
-    {
+    hide({
       month,
       today: null,
       summary: summary(db, id, range),
@@ -36,9 +39,10 @@ export function buildMonthlyReview(db, site, month, { language = "fi" } = {}) {
       devices: breakdown(db, id, "device", range).rows,
       pages: breakdown(db, id, "page", range, { limit: 5 }).rows,
       entries: breakdown(db, id, "entry", range, { limit: 5 }).rows,
-    },
+    }),
     formatters(L),
   );
+  return site.visitors === "off" ? { ...review, foot: L.report.footViews } : review;
 }
 
 const escapeHtml = (text) =>

@@ -1,6 +1,6 @@
 {
   "name": "looku",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Cookieless, server-side web analytics with a LAN-only dashboard.",
   "type": "module",
@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
-    "@looku/ui": "0.1.0",
+    "@looku/ui": "1.0.0",
     "nodemailer": "10.0.16"
-  }
+  },
+  "license": "AGPL-3.0-only"
 }

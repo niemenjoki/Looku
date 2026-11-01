@@ -81,7 +81,8 @@ export function runMaintenance(db, now = new Date()) {
              AND day IN (SELECT day FROM daily_totals WHERE site_id = ?)`,
         )
         .run(site.site_id, cutoff, site.site_id).changes;
-      for (const table of ["events", "engagement", "orders_ext"]) {
+      // Orders are the shop's own records without personal data and are kept.
+      for (const table of ["events", "engagement"]) {
         counts[table] = db
           .prepare(`DELETE FROM ${table} WHERE site_id = ? AND day < ?`)
           .run(site.site_id, cutoff).changes;

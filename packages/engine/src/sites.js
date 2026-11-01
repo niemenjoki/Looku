@@ -50,7 +50,7 @@ export function getSite(db, siteId) {
 export function listSites(db) {
   return db
     .prepare(
-      "SELECT site_id, name, domain, timezone, modules_json, store_country, retention_months, created_at FROM sites ORDER BY site_id",
+      "SELECT site_id, name, domain, timezone, modules_json, visitors, store_country, retention_months, created_at FROM sites ORDER BY site_id",
     )
     .all();
 }
@@ -75,6 +75,30 @@ export function setStoreCountry(db, siteId, on) {
   const result = db
     .prepare("UPDATE sites SET store_country = ? WHERE site_id = ?")
     .run(on ? 1 : 0, siteId);
+  if (result.changes === 0) {
+    throw new Error(`Unknown site: ${siteId}`);
+  }
+}
+
+export function setVisitors(db, siteId, mode) {
+  if (!["daily-hash", "off"].includes(mode)) {
+    throw new Error("Visitors must be daily-hash or off.");
+  }
+  const result = db.prepare("UPDATE sites SET visitors = ? WHERE site_id = ?").run(mode, siteId);
+  if (result.changes === 0) {
+    throw new Error(`Unknown site: ${siteId}`);
+  }
+  if (mode === "off") {
+    db.prepare("DELETE FROM daily_salt WHERE site_id = ?").run(siteId);
+  }
+}
+
+export function setRetention(db, siteId, months) {
+  const value = Number(months);
+  if (!Number.isInteger(value) || value < 1 || value > 120) {
+    throw new Error("Retention must be 1-120 months.");
+  }
+  const result = db.prepare("UPDATE sites SET retention_months = ? WHERE site_id = ?").run(value, siteId);
   if (result.changes === 0) {
     throw new Error(`Unknown site: ${siteId}`);
   }

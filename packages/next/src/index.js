@@ -211,11 +211,14 @@ export function trackPageview(request, event, options = {}) {
 
 /**
  * Recommended matcher. Next.js requires `config` to be a literal in the
- * proxy file, so copy this there instead of importing it.
+ * proxy file, so copy this there instead of importing it. A dot is written
+ * as [.] because it needs no escaping: a dot escaped with a single
+ * backslash in a JavaScript string becomes a plain dot that matches any
+ * character, and the pattern then excludes every page except the front page.
  */
 export const RECOMMENDED_MATCHER = [
   {
-    source: "/((?!api|_next/static|_next/image|.*\\..*).*)",
+    source: "/((?!api|_next/static|_next/image|.*[.]).*)",
     missing: [
       { type: "header", key: "next-router-prefetch" },
       { type: "header", key: "purpose", value: "prefetch" },
@@ -258,14 +261,17 @@ async function readLimited(request, max) {
   return new TextDecoder().decode(bytes);
 }
 
+// Behind a proxy or in `next start`, request.url can name an internal host,
+// so the Origin is compared with the Host the browser used.
 function sameOrigin(request) {
   const site = request.headers.get("sec-fetch-site");
   if (site) {
     return site === "same-origin";
   }
   const origin = request.headers.get("origin");
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || new URL(request.url).host;
   try {
-    return Boolean(origin) && new URL(origin).host === new URL(request.url).host;
+    return Boolean(origin) && new URL(origin).host === host.split(",")[0].trim();
   } catch {
     return false;
   }
@@ -325,7 +331,10 @@ export function createCollectHandler(options = {}) {
       return new Response(null, { status: 403 });
     }
     const userAgent = String(request.headers.get("user-agent") || "");
-    if (!enabled || !userAgent || BOT_USER_AGENT_PATTERN.test(userAgent)) {
+    const doNotTrack =
+      (options.respectDoNotTrack ?? true) &&
+      (request.headers.get("sec-gpc") === "1" || request.headers.get("dnt") === "1");
+    if (!enabled || !userAgent || doNotTrack || BOT_USER_AGENT_PATTERN.test(userAgent)) {
       return new Response(null, { status: 204 });
     }
     if (Number(request.headers.get("content-length")) > MAX_COLLECT_BYTES) {
