@@ -3,7 +3,7 @@
 This page describes what Looku does technically, so that you can decide how to use it and what to tell your
 visitors. **It is not legal advice.** You run Looku on your own server and you are the controller of the data it
 collects. Whether your use needs consent, and what your privacy notice must say, depends on your country, your site
-and your settings. Looku is provided without warranty (GNU AGPL 3.0, sections 15 and 16).
+and your settings. Looku is provided without warranty (GNU AGPL 3.0, sections 15 and 16; for the connectors, the MIT License).
 
 Every statement under "What Looku does" names the source file where it can be checked.
 

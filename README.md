@@ -49,5 +49,8 @@ Then connect your site ([Next.js, Node.js, Cloudflare or your own](docs/connecto
 
 ## License
 
-GNU Affero General Public License 3.0 ([LICENSE](LICENSE)). The dashboard font Space Grotesk is under the SIL Open
-Font License 1.1 (`packages/ui/public/fonts/OFL.txt`).
+The receiver, storage, read API and dashboard (`packages/engine`, `packages/ui`) are under the GNU Affero General
+Public License 3.0 ([LICENSE](LICENSE)). The connectors that you add to your site (`packages/next`, `packages/node`,
+`packages/browser`) are under the MIT License (`LICENSE` in each package), so you can use them in any site, open or
+closed. The dashboard font Space Grotesk is under the SIL Open Font License 1.1
+(`packages/ui/public/fonts/OFL.txt`).

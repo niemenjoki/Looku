@@ -14,3 +14,5 @@ First public version.
 - Monthly email, `looku backup`, `looku all` (one process), client allowlist and HSTS for public servers.
 - Connectors: Next.js, Node.js http and Express, Cloudflare Worker example, browser collector.
 - Docker image and Compose file.
+- License: GNU AGPL 3.0 for the receiver and dashboard, MIT for the connectors (`@looku/next`, `@looku/node`,
+  `@looku/browser`).

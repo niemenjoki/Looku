@@ -10,4 +10,5 @@ Thank you for helping. Looku is a small project, so please open an issue before 
   receiver has no read routes.
 - Add a test for each change in behaviour.
 
-By contributing you agree that your contribution is licensed under the GNU AGPL 3.0, like the rest of the project.
+By contributing you agree that your contribution is licensed under the license of the package you change: the MIT
+License for `packages/next`, `packages/node` and `packages/browser`, the GNU AGPL 3.0 for everything else.
