@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { createToken, listTokens, revokeToken, setPassword } from "./api/auth.js";
 import { createApiServer } from "./api/server.js";
 import { openDatabase } from "./db.js";
+import { importHistory } from "./history.js";
 import { runMaintenance } from "./maintenance.js";
 import { createOrderIngest } from "./orders.js";
 import { buildMonthlyReview, renderReviewEmail, sendMonthlyReports, smtpSettings } from "./report-email.js";
@@ -29,6 +30,8 @@ const USAGE = `Usage: looku <command>
   ingest                 Start the receiver (POST /ingest, POST /orders)
   maintain               Nightly job: salts, rollups, retention
   orders:import <site-id> <file>        Import orders (JSON lines, same format as POST /orders)
+  history:import <site-id> <file> [--before <time>]
+                         Import page views, events and engagement from an earlier system (JSON lines)
   report:send [--month YYYY-MM] [--site <site-id>] [--dry-run]
                          Monthly email (default: last month)
   serve                  Start the read API and dashboard
@@ -319,6 +322,23 @@ async function main(argv) {
         });
       })();
       console.log(`${count} orders imported to ${site.site_id}.`);
+      db.close();
+      return;
+    }
+    case "history:import": {
+      const db = openDatabase(dbFile);
+      const site = getSite(db, positional[0]);
+      if (!site) {
+        throw new Error(`Unknown site: ${positional[0]}`);
+      }
+      const result = importHistory(db, site, fs.readFileSync(positional[1], "utf8"), {
+        before: typeof options.before === "string" ? options.before : null,
+      });
+      console.log(
+        `${result.pageview} page views, ${result.event} events, ${result.engagement} engagement rows imported to ` +
+          `${site.site_id}; ${result.skippedBefore} skipped at or after --before, ${result.skippedRetention} older ` +
+          `than the retention; ${result.daysRolledUp} days rolled up.`,
+      );
       db.close();
       return;
     }

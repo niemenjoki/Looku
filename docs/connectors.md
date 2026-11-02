@@ -99,6 +99,26 @@ await sendOrder({ id: "1001", status: "cancelled" });
 Only these fields are stored. Import order history with `looku orders:import <site> orders.jsonl` (one order per
 line). Set the purchase path (product, cart and checkout paths) in the dashboard settings.
 
+## Moving from another system
+
+`looku history:import <site> history.jsonl [--before <time>]` imports page views, events and engagement that another
+system collected, one JSON object per line:
+
+```json
+{"type":"pageview","ts":"2026-10-29T08:00:00Z","path":"/","visitor_hash":"…","referrer_host":"google.com","referrer_path":"/","utm_source":"","utm_medium":"","utm_campaign":"","utm_content":"","utm_term":""}
+{"type":"engagement","ts":"2026-10-29T08:02:00Z","path":"/","dwell_ms":12000,"max_scroll_pct":80}
+{"type":"event","ts":"2026-10-29T08:03:00Z","path":"/","name":"add_to_cart","target":"","value":null,"props":{},"items":[{"sku":"A1","quantity":1}]}
+```
+
+- Times are UTC (ISO 8601); Looku counts the day in the site's time zone. Device, browser and country stay empty.
+- `visitor_hash` is the earlier system's daily visitor identifier, never an IP address. Looku hashes it again with a
+  key that exists only during the import, so put each day's rows in one file. Without it, every page view counts as
+  a visitor. Events are not linked to visitors and keep only the day.
+- `--before` skips rows at or after the given time, e.g. the first page view Looku received itself, so nothing is
+  counted twice. Rows older than the site's retention are skipped.
+- The whole file is imported or nothing is, and the same file cannot be imported twice. Finished days are rolled up
+  right away.
+
 ## Read API
 
 The dashboard uses only `/api/v1`, described at `/api/v1/openapi.json`. Create a read key in the settings (or with

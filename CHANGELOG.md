@@ -11,6 +11,7 @@ First public version.
 - Modules: basic, shop (orders, purchase path, best sellers), campaigns, content (reading time, scroll, rising pages).
 - Read API `/api/v1` with OpenAPI description, read and admin keys, CSV export, filters and hourly series.
 - Dashboard: compact view, monthly review in sentences, settings; Finnish and English; light and dark.
+- `looku history:import` for page views, events and engagement from an earlier system.
 - Monthly email, `looku backup`, `looku all` (one process), client allowlist and HSTS for public servers.
 - Connectors: Next.js, Node.js http and Express, Cloudflare Worker example, browser collector.
 - Docker image and Compose file.
