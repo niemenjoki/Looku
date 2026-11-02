@@ -8,7 +8,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { createToken } from "../src/api/auth.js";
+import { createToken, hasPassword } from "../src/api/auth.js";
 import { createApiServer } from "../src/api/server.js";
 import { openDatabase } from "../src/db.js";
 import { createIngest } from "../src/ingest.js";
@@ -173,4 +173,21 @@ test("monthly email with visitors off speaks of page views only", async () => {
   const email = renderReviewEmail(site, buildMonthlyReview(db, getSite(db, "lieromaa"), "2026-10"));
   assert.match(email.text, /sivuja katsottiin 2 kertaa/);
   assert.doesNotMatch(email.text, /kävijää|istunno|^Kävijät$/m);
+});
+
+test("admin:password reads the password from stdin and stores it", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "looku-password-"));
+  const file = path.join(dir, "looku.db");
+  const child = spawn(process.execPath, [CLI, "admin:password"], { env: { ...process.env, LOOKU_DB: file } });
+  let output = "";
+  child.stdout.on("data", (chunk) => (output += chunk));
+  child.stderr.on("data", (chunk) => (output += chunk));
+  child.stdin.end("correct horse battery\n");
+  const [code] = await once(child, "exit");
+  assert.equal(code, 0, output);
+  assert.match(output, /Password set/);
+  const db = openDatabase(file);
+  assert.equal(hasPassword(db), true);
+  db.close();
+  fs.rmSync(dir, { recursive: true, force: true });
 });

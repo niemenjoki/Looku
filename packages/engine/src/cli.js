@@ -68,14 +68,18 @@ function readSecret(prompt) {
       process.stdout.write(prompt);
       rl._writeToOutput = () => {};
     }
+    // close() emits "close" synchronously, so the answer is resolved there and not before it.
+    let answer = "";
     rl.once("line", (line) => {
+      answer = line;
       rl.close();
+    });
+    rl.once("close", () => {
       if (process.stdin.isTTY) {
         process.stdout.write("\n");
       }
-      resolve(line);
+      resolve(answer);
     });
-    rl.once("close", () => resolve(""));
   });
 }
 
