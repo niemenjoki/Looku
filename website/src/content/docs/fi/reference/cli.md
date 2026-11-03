@@ -32,6 +32,7 @@ Palvelinkoneen tiedosto ei näy kontin sisällä. Jos haluat antaa tiedoston kom
 | `site:visitors <id> daily-hash\|off` | kävijät päivittäisellä tiivisteellä (oletus) tai ei lainkaan | `Visitors for <id>: off. Applies to new page views.` |
 | `site:country <id> on\|off` | tallennetaanko kävijän maa (oletus päällä) | `Country for <id>: off.` |
 | `site:retention <id> <months>` | kuinka kauan yksittäiset sivunäytöt säilytetään (oletus 25), minkä jälkeen jäljellä ovat vain päiväsummat | `Retention for <id>: 13 months. Applies from the next nightly job.` |
+| `site:timezone <id> <tz>` | vaihtaa sivuston aikavyöhykkeen, esimerkiksi `Europe/Helsinki`. Uudet sivunäytöt saavat päivänsä uuden aikavyöhykkeen mukaan; jo tallennetut päivät säilyttävät päivämääränsä | `Time zone for <id>: Europe/Helsinki. Applies to new page views; days already recorded keep their dates.` |
 
 ## Kojelaudan käyttöoikeudet
 

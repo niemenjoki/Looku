@@ -22,9 +22,9 @@ Keep them out of git, like any password. The Node.js connector sends data only w
 <Steps>
 
 1. **Copy two files** from the Looku repository into your project, for example into `lib/`:
-   - [`packages/next/src/index.js`](https://github.com/niemenjoki/Looku/blob/main/packages/next/src/index.js) as
+   - [`packages/next/src/index.js`](https://github.com/niemenjoki/Looku/blob/master/packages/next/src/index.js) as
      `lib/looku-next.js`,
-   - [`packages/node/src/index.js`](https://github.com/niemenjoki/Looku/blob/main/packages/node/src/index.js) as
+   - [`packages/node/src/index.js`](https://github.com/niemenjoki/Looku/blob/master/packages/node/src/index.js) as
      `lib/looku-node.js`.
 
    The second file imports the first as `@looku/next`. Open `lib/looku-node.js` and change that import to
@@ -65,7 +65,7 @@ its cache), so missing pages are not counted.
 ## Static sites on Cloudflare Workers or Pages
 
 A static site has no server of its own, so the connector runs in a Cloudflare Worker in front of it. The example in
-[`examples/cloudflare-worker/worker.js`](https://github.com/niemenjoki/Looku/blob/main/examples/cloudflare-worker/worker.js)
+[`examples/cloudflare-worker/worker.js`](https://github.com/niemenjoki/Looku/blob/master/examples/cloudflare-worker/worker.js)
 serves your site and sends a page view in the background after each successful HTML response.
 
 <Steps>

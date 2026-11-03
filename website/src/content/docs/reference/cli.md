@@ -31,6 +31,7 @@ A file on the host is not visible inside the container. To give one to a command
 | `site:visitors <id> daily-hash\|off` | visitors with the daily hash (default) or not at all | `Visitors for <id>: off. Applies to new page views.` |
 | `site:country <id> on\|off` | store the visitor's country (default on) | `Country for <id>: off.` |
 | `site:retention <id> <months>` | how long single page views are kept (default 25), after which only daily totals remain | `Retention for <id>: 13 months. Applies from the next nightly job.` |
+| `site:timezone <id> <tz>` | changes the site's time zone, for example `Europe/Helsinki`. New page views get their day in the new time zone; days already recorded keep their dates | `Time zone for <id>: Europe/Helsinki. Applies to new page views; days already recorded keep their dates.` |
 
 ## Dashboard access
 

@@ -22,9 +22,9 @@ Pidä ne poissa gitistä kuten mikä tahansa salasana. Node.js-liitin lähettä�
 <Steps>
 
 1. **Kopioi kaksi tiedostoa** Lookun repositoriosta projektiisi, esimerkiksi kansioon `lib/`:
-   - [`packages/next/src/index.js`](https://github.com/niemenjoki/Looku/blob/main/packages/next/src/index.js)
+   - [`packages/next/src/index.js`](https://github.com/niemenjoki/Looku/blob/master/packages/next/src/index.js)
      nimellä `lib/looku-next.js`,
-   - [`packages/node/src/index.js`](https://github.com/niemenjoki/Looku/blob/main/packages/node/src/index.js)
+   - [`packages/node/src/index.js`](https://github.com/niemenjoki/Looku/blob/master/packages/node/src/index.js)
      nimellä `lib/looku-node.js`.
 
    Toinen tiedosto tuo ensimmäisen nimellä `@looku/next`. Avaa `lib/looku-node.js` ja muuta tämä import muotoon
@@ -66,7 +66,7 @@ sivun uudelleen), joten puuttuvia sivuja ei lasketa.
 ## Staattiset sivustot Cloudflare Workersissa tai Pagesissa
 
 Staattisella sivustolla ei ole omaa palvelinta, joten liitin toimii sen edessä Cloudflare Workerissa. Esimerkki
-[`examples/cloudflare-worker/worker.js`](https://github.com/niemenjoki/Looku/blob/main/examples/cloudflare-worker/worker.js)
+[`examples/cloudflare-worker/worker.js`](https://github.com/niemenjoki/Looku/blob/master/examples/cloudflare-worker/worker.js)
 tarjoilee sivustosi ja lähettää sivunäytön taustalla jokaisen onnistuneen HTML-vastauksen jälkeen.
 
 <Steps>

@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-import { Steps } from "@astrojs/starlight/components";
+import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
 
 **Mitä saat:** Looku toimii virtuaalipalvelimella (VPS) osoitteessa `https://looku.example.com`. Caddy on
 verkkopalvelin. Se hakee HTTPS-varmenteen automaattisesti ja välittää pyynnöt eteenpäin: `/ingest` ja `/orders`
@@ -208,7 +208,8 @@ sivustollesi.
    docker compose run --rm ingest site:add myblog --domain example.com --timezone Europe/Helsinki
    ```
 
-   `--timezone` ratkaisee, milloin päivä vaihtuu tämän sivuston raporteissa, eikä sitä voi muuttaa myöhemmin.
+   `--timezone` ratkaisee, milloin päivä vaihtuu tämän sivuston raporteissa. Voit vaihtaa sen myöhemmin komennolla
+   `site:timezone`, mutta jo tallennetut päivät säilyttävät päivämääränsä.
    Tallenna komennon tulostama allekirjoitusavain (`Signing key (shown once):`) salasanojen hallintaan.
 
 3. **Aseta kojelaudan salasana.** Julkisella palvelimella käytä pitkää salasanaa, esimerkiksi neljää satunnaista
@@ -220,11 +221,24 @@ sivustollesi.
 
    Kirjoittaessa ruudulle ei tule mitään, ja salasana kysytään vain kerran.
 
-4. **Tarkista omalta tietokoneeltasi** (macOS:n, Linuxin tai WSL:n päätteessä):
+4. **Tarkista omalta tietokoneeltasi** (Windowsissa PowerShellissä komennolla `curl.exe`):
+
+   <Tabs syncKey="os">
+   <TabItem label="macOS ja Linux">
 
    ```bash
    curl -s -o /dev/null -w "%{http_code}\n" -X POST https://looku.example.com/ingest
    ```
+
+   </TabItem>
+   <TabItem label="Windows">
+
+   ```powershell
+   curl.exe -s -o NUL -w "%{http_code}\n" -X POST https://looku.example.com/ingest
+   ```
+
+   </TabItem>
+   </Tabs>
 
    Tulosteen pitäisi olla `401`: vastaanotin vastasi ja hylkäsi allekirjoittamattoman pyynnön, mikä on oikein. Jos
    tuloste on `000` tai varmennevirhe, katso [Vianetsintä](/looku/fi/operate/troubleshooting/#caddy-ei-saa-varmennetta).

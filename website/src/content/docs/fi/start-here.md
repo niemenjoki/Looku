@@ -17,7 +17,7 @@ Lookussa on kaksi osaa, ja niillä on eri säännöt sille, kuka niihin saa yhte
 - **Tavan, jolla sivustosi saa yhteyden Lookuun.** Sivustosi palvelin lähettää jokaisen sivunäytön Lookulle
   internetin kautta, joten Lookun vastaanottavalla osalla on oltava julkinen HTTPS-osoite. Ohjeissa näytetään kaksi
   tapaa: Cloudflare Tunnel (kotona ei avata portteja) tai käänteinen välityspalvelin VPS:llä.
-- **Noin tunnin** ensimmäiseen oikeaan asennukseen. Kokeilu omalla tietokoneella vie 15 minuuttia.
+- **Noin tunnin** ensimmäiseen oikeaan asennukseen. Kokeilu omalla tietokoneella vie noin 20 minuuttia.
 
 Sinun ei tarvitse osata Dockeria, tunneleita tai allekirjoituksia etukäteen. Jokainen ohje selittää ne siinä kohdassa,
 jossa niitä tarvitaan, ja [Näin Looku toimii](/looku/fi/concepts/) selittää kokonaisuuden.
@@ -70,8 +70,9 @@ välityspalvelimen vaihetta. Jos haluat käyttää Lookua ilman Dockeria, katso 
   tietueen todella tulleen sivustoltasi. Pidä avain salassa kuten salasana.
 
 **Pääte (terminaali), komentotulkki**
-: Tekstiikkuna, johon kirjoitat komentoja: macOS:ssä ja Linuxissa Terminal, Windowsissa Ubuntu (WSL) -ikkuna, katso
-  [Kokeile omalla koneella](/looku/fi/guides/try-locally/). Palvelimella avaat sen `ssh`-komennolla.
+: Tekstiikkuna, johon kirjoitat komentoja: macOS:ssä ja Linuxissa Terminal, Windowsissa PowerShell. Katso
+  [Kokeile omalla koneella](/looku/fi/guides/try-locally/#ennen-kuin-aloitat). Palvelimella avaat sen
+  `ssh`-komennolla, joka toimii myös PowerShellissä.
 
 **Docker, kontti, Compose**
 : Docker ajaa ohjelman eristetyssä laatikossa (kontissa), jossa on kaikki ohjelman tarvitsema, joten sinun ei

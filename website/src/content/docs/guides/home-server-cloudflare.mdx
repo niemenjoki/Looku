@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-import { Steps } from "@astrojs/starlight/components";
+import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
 
 **What you get:** Looku on your home server. Your site sends page views to `https://looku.example.com` (your own
 hostname), which reaches your server through a Cloudflare Tunnel. You do not open any ports in your router. The
@@ -37,7 +37,8 @@ moved. Paths were checked against Cloudflare's own documentation in November 202
    ssh you@192.168.1.10
    ```
 
-   Replace `you` with your user name on the server. Commands in parts 1 and 2 are run on the server; part 3 is mostly
+   Replace `you` with your user name on the server. On Windows, type this in PowerShell; `ssh` is built into
+   Windows 10 and 11. Commands in parts 1 and 2 are run on the server; part 3 is mostly
    in your browser.
 
 2. **Check Docker and Compose:**
@@ -141,7 +142,8 @@ moved. Paths were checked against Cloudflare's own documentation in November 202
    ```
 
    `--domain` is your site's address without `https://`. `--timezone` decides when a day changes in this site's
-   reports; use the same as above. It cannot be changed later, so check it. Compose first prints two lines about a temporary container
+   reports; use the same as above. You can change it later with `site:timezone`, but days already recorded keep their
+   dates, so check it now. Compose first prints two lines about a temporary container
    (`Container looku-ingest-run-… Created`); Looku's answer comes after them:
 
    ```
@@ -254,13 +256,27 @@ the only two addresses your site uses.
 
 </Steps>
 
-**Check it** from a terminal on any computer (macOS, Linux, WSL or the server itself; not Windows PowerShell). The
-rule can take a minute to apply:
+**Check it** from a terminal on any computer, or on the server itself. The rule can take a minute to apply. On
+Windows, type `curl.exe`, not `curl`: in PowerShell, `curl` is a different command.
+
+<Tabs syncKey="os">
+<TabItem label="macOS and Linux">
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" -X POST https://looku.example.com/ingest
 curl -s -o /dev/null -w "%{http_code}\n" https://looku.example.com/
 ```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+curl.exe -s -o NUL -w "%{http_code}\n" -X POST https://looku.example.com/ingest
+curl.exe -s -o NUL -w "%{http_code}\n" https://looku.example.com/
+```
+
+</TabItem>
+</Tabs>
 
 The first should print `401`: the request reached the receiver, which refused it because it was not signed. That is
 correct. The second should print `403`: Cloudflare blocked it. If the first prints `403`, check the rule's

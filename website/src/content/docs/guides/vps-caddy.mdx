@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-import { Steps } from "@astrojs/starlight/components";
+import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
 
 **What you get:** Looku on a virtual private server (VPS) at `https://looku.example.com`. Caddy, a web server, gets
 an HTTPS certificate automatically and passes requests on: `/ingest` and `/orders` to the receiver, everything else
@@ -205,7 +205,8 @@ site.
    docker compose run --rm ingest site:add myblog --domain example.com --timezone Europe/Helsinki
    ```
 
-   `--timezone` decides when a day changes in this site's reports and cannot be changed later. Save the signing key
+   `--timezone` decides when a day changes in this site's reports. You can change it later with `site:timezone`,
+   but days already recorded keep their dates. Save the signing key
    it prints (`Signing key (shown once):`) in your password manager.
 
 3. **Set the dashboard password.** On a public server, use a long one, for example four random words:
@@ -216,11 +217,24 @@ site.
 
    Nothing appears while you type, and it asks only once.
 
-4. **Check from your own computer** (in a macOS, Linux or WSL terminal):
+4. **Check from your own computer** (on Windows, in PowerShell with `curl.exe`):
+
+   <Tabs syncKey="os">
+   <TabItem label="macOS and Linux">
 
    ```bash
    curl -s -o /dev/null -w "%{http_code}\n" -X POST https://looku.example.com/ingest
    ```
+
+   </TabItem>
+   <TabItem label="Windows">
+
+   ```powershell
+   curl.exe -s -o NUL -w "%{http_code}\n" -X POST https://looku.example.com/ingest
+   ```
+
+   </TabItem>
+   </Tabs>
 
    It should print `401`: the receiver answered and refused an unsigned request, which is correct. If it prints
    `000` or a certificate error, see [Troubleshooting](/looku/operate/troubleshooting/#caddy-gets-no-certificate).

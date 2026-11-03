@@ -15,7 +15,7 @@ These are read by `compose.yaml`, not by Looku itself.
 
 | Setting | Default | What |
 |---|---|---|
-| `LOOKU_DATA_DIR` | `./data` | folder on the host for the database; back it up |
+| `LOOKU_DATA_DIR` | `./data` | folder on the host for the database; back it up. `looku-data` keeps the database in a Docker volume instead, for [trying Looku](/looku/guides/try-locally/) on Windows or macOS |
 | `LOOKU_DASHBOARD_BIND` | `127.0.0.1` | host address the dashboard port is published on: a LAN or Tailscale address keeps it private, `127.0.0.1` only for a proxy on the same host |
 | `LOOKU_DASHBOARD_PORT` | `8788` | host port of the dashboard |
 | `CLOUDFLARED_VERSION` | empty = `latest` | version of the Cloudflare tunnel image |
@@ -72,4 +72,4 @@ down. Preview it with `looku report:send --dry-run`.
 
 These are stored in the database and changed with commands, not environment variables: modules, visitors on or off,
 country and retention. The site's time zone, which decides when a day changes in its reports, is set with
-`site:add --timezone` and cannot be changed later. See [Commands](/looku/reference/cli/).
+`site:add --timezone` and changed with `site:timezone`. See [Commands](/looku/reference/cli/).

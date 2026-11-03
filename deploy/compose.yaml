@@ -68,3 +68,7 @@ services:
       TUNNEL_TOKEN: ${LOOKU_TUNNEL_TOKEN:-}
     depends_on:
       - ingest
+
+volumes:
+  # Used when LOOKU_DATA_DIR=looku-data: a Docker volume instead of a folder.
+  looku-data:

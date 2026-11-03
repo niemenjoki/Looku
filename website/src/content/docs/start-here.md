@@ -17,7 +17,7 @@ different rules about who may reach them.
 - **A way for your site to reach Looku.** Your site's server sends each page view to Looku over the internet, so the
   receiving part of Looku needs a public HTTPS address. The guides show two ways: a Cloudflare Tunnel (no open ports at
   home) or a reverse proxy on a VPS.
-- **About an hour** for the first real installation. Trying it on your own computer takes 15 minutes.
+- **About an hour** for the first real installation. Trying it on your own computer takes about 20 minutes.
 
 You do not need to know Docker, tunnels or signatures beforehand. Each guide explains them where they come up, and
 [How Looku works](/looku/concepts/) explains the whole picture.
@@ -66,8 +66,9 @@ To run Looku without Docker, see [Without Docker](/looku/guides/without-docker/)
   Keep the key secret, like a password.
 
 **Terminal, shell**
-: The text window where you type commands: Terminal on macOS and Linux, and on Windows the Ubuntu (WSL) window, see
-  [Try it locally](/looku/guides/try-locally/). On a server you open it with `ssh`.
+: The text window where you type commands: Terminal on macOS and Linux, PowerShell on Windows. See
+  [Try it locally](/looku/guides/try-locally/#before-you-start). On a server you open it with `ssh`, which also works
+  in PowerShell.
 
 **Docker, container, Compose**
 : Docker runs a program in an isolated box (a container) with everything it needs, so you do not install Node.js or

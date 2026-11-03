@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-import { Steps } from "@astrojs/starlight/components";
+import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
 
 **Mitä saat:** Lookun kotipalvelimellesi. Sivustosi lähettää sivunäytöt osoitteeseen `https://looku.example.com`
 (oma palvelinnimesi), joka ohjautuu palvelimellesi Cloudflare Tunnelin kautta. Et avaa reitittimeesi yhtään porttia.
@@ -37,7 +37,8 @@ valikko on siirtynyt. Polut on tarkistettu Cloudflaren omasta dokumentaatiosta m
    ssh you@192.168.1.10
    ```
 
-   Korvaa `you` käyttäjänimelläsi palvelimella. Osien 1 ja 2 komennot ajetaan palvelimella; osa 3 tehdään
+   Korvaa `you` käyttäjänimelläsi palvelimella. Windowsissa kirjoita tämä PowerShelliin; `ssh` on valmiina
+   Windows 10:ssä ja 11:ssä. Osien 1 ja 2 komennot ajetaan palvelimella; osa 3 tehdään
    enimmäkseen selaimessa.
 
 2. **Tarkista Docker ja Compose:**
@@ -141,7 +142,8 @@ valikko on siirtynyt. Polut on tarkistettu Cloudflaren omasta dokumentaatiosta m
    ```
 
    `--domain` on sivustosi osoite ilman `https://`-alkua. `--timezone` ratkaisee, milloin päivä vaihtuu tämän
-   sivuston raporteissa; käytä samaa kuin yllä. Sitä ei voi muuttaa myöhemmin, joten tarkista se. Compose tulostaa
+   sivuston raporteissa; käytä samaa kuin yllä. Voit vaihtaa sen myöhemmin komennolla `site:timezone`, mutta jo
+   tallennetut päivät säilyttävät päivämääränsä, joten tarkista se nyt. Compose tulostaa
    ensin kaksi riviä väliaikaisesta kontista (`Container looku-ingest-run-… Created`); Lookun vastaus tulee niiden
    jälkeen:
 
@@ -258,13 +260,27 @@ paitsi POST-pyynnöt osoitteisiin `/ingest` ja `/orders`**. Ne ovat ainoat kaksi
 
 </Steps>
 
-**Tarkista** päätteestä millä tahansa tietokoneella (macOS, Linux, WSL tai palvelin itse; ei Windowsin PowerShell).
-Säännön voimaantulo voi kestää minuutin:
+**Tarkista** päätteestä millä tahansa tietokoneella tai palvelimella itsellään. Säännön voimaantulo voi kestää
+minuutin. Kirjoita Windowsissa `curl.exe` eikä `curl`: PowerShellissä `curl` on eri komento.
+
+<Tabs syncKey="os">
+<TabItem label="macOS ja Linux">
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" -X POST https://looku.example.com/ingest
 curl -s -o /dev/null -w "%{http_code}\n" https://looku.example.com/
 ```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+curl.exe -s -o NUL -w "%{http_code}\n" -X POST https://looku.example.com/ingest
+curl.exe -s -o NUL -w "%{http_code}\n" https://looku.example.com/
+```
+
+</TabItem>
+</Tabs>
 
 Ensimmäisen pitäisi tulostaa `401`: pyyntö pääsi vastaanottimelle, joka torjui sen, koska sitä ei ollut
 allekirjoitettu. Se on oikein. Toisen pitäisi tulostaa `403`: Cloudflare esti sen. Jos ensimmäinen tulostaa `403`,

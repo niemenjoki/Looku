@@ -15,7 +15,7 @@ Nämä lukee `compose.yaml`, ei Looku itse.
 
 | Asetus | Oletus | Mitä |
 |---|---|---|
-| `LOOKU_DATA_DIR` | `./data` | tietokannan kansio palvelinkoneella; varmuuskopioi se |
+| `LOOKU_DATA_DIR` | `./data` | tietokannan kansio palvelinkoneella; varmuuskopioi se. `looku-data` pitää tietokannan sen sijaan Docker-taltiossa, kun [kokeilet Lookua](/looku/fi/guides/try-locally/) Windowsissa tai macOS:ssä |
 | `LOOKU_DASHBOARD_BIND` | `127.0.0.1` | palvelinkoneen osoite, jossa kojelaudan portti julkaistaan: lähiverkon tai Tailscalen osoite pitää sen yksityisenä, `127.0.0.1` vain samalla koneella olevaa välityspalvelinta varten |
 | `LOOKU_DASHBOARD_PORT` | `8788` | kojelaudan portti palvelinkoneella |
 | `CLOUDFLARED_VERSION` | tyhjä = `latest` | Cloudflare-tunnelin levykuvan versio |
@@ -72,4 +72,4 @@ aikana, jos Looku oli poissa käytöstä. Esikatsele sitä komennolla `looku rep
 
 Nämä tallennetaan tietokantaan ja niitä muutetaan komennoilla, ei ympäristömuuttujilla: moduulit, kävijät päällä tai
 pois, maa ja säilytysaika. Sivuston aikavyöhyke, joka ratkaisee, milloin päivä vaihtuu sen raporteissa, asetetaan
-komennolla `site:add --timezone`, eikä sitä voi muuttaa myöhemmin. Katso [Komennot](/looku/fi/reference/cli/).
+komennolla `site:add --timezone` ja vaihdetaan komennolla `site:timezone`. Katso [Komennot](/looku/fi/reference/cli/).
