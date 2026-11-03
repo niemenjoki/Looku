@@ -12,7 +12,7 @@ import { createToken, hasPassword } from "../src/api/auth.js";
 import { createApiServer } from "../src/api/server.js";
 import { openDatabase } from "../src/db.js";
 import { createIngest } from "../src/ingest.js";
-import { addSite, getSite, setVisitors } from "../src/sites.js";
+import { addSite, getSite, setTimezone, setVisitors } from "../src/sites.js";
 import { signBody } from "../src/signature.js";
 import { CHROME_UA, setup } from "./helpers.js";
 
@@ -190,4 +190,35 @@ test("admin:password reads the password from stdin and stores it", async () => {
   assert.equal(hasPassword(db), true);
   db.close();
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("site:timezone changes the day of new page views and keeps recorded days", async (t) => {
+  const { db } = setup();
+  const ingest = createIngest(db);
+  // 23:30 UTC is already the next day in Helsinki.
+  const late = new Date("2026-11-02T23:30:00Z");
+  ingest(getSite(db, "lieromaa"), { type: "pageview", ts: late.toISOString(), path: "/a", ip: "203.0.113.1", ua: CHROME_UA }, late);
+
+  assert.throws(() => setTimezone(db, "lieromaa", "Mars/Olympus"), /Unknown time zone/);
+  assert.throws(() => setTimezone(db, "nosuch", "UTC"), /Unknown site/);
+  setTimezone(db, "lieromaa", "UTC");
+  assert.equal(getSite(db, "lieromaa").timezone, "UTC");
+  ingest(getSite(db, "lieromaa"), { type: "pageview", ts: late.toISOString(), path: "/b", ip: "203.0.113.1", ua: CHROME_UA }, late);
+  const days = db.prepare("SELECT path, day FROM pageviews ORDER BY path").all().map((row) => `${row.path} ${row.day}`);
+  assert.deepEqual(days, ["/a 2026-11-03", "/b 2026-11-02"]);
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "looku-"));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const file = path.join(dir, "looku.db");
+  const live = openDatabase(file);
+  addSite(live, { siteId: "blog", domain: "example.com" });
+  live.close();
+  const run = spawn(process.execPath, [CLI, "site:timezone", "blog", "America/New_York"], { env: { ...process.env, LOOKU_DB: file } });
+  let out = "";
+  run.stdout.on("data", (chunk) => (out += chunk));
+  assert.equal((await once(run, "exit"))[0], 0);
+  assert.match(out, /Time zone for blog: America\/New_York/);
+  const after = openDatabase(file, { readonly: true });
+  assert.equal(getSite(after, "blog").timezone, "America/New_York");
+  after.close();
 });

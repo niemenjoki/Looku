@@ -93,6 +93,18 @@ export function setVisitors(db, siteId, mode) {
   }
 }
 
+// Page views already stored keep the day they were given; the new time zone
+// applies to new page views and to the reports' hour of day.
+export function setTimezone(db, siteId, timezone) {
+  if (!isValidTimeZone(timezone || "")) {
+    throw new Error(`Unknown time zone: ${timezone}. Use a name like Europe/Helsinki.`);
+  }
+  const result = db.prepare("UPDATE sites SET timezone = ? WHERE site_id = ?").run(timezone, siteId);
+  if (result.changes === 0) {
+    throw new Error(`Unknown site: ${siteId}`);
+  }
+}
+
 export function setRetention(db, siteId, months) {
   const value = Number(months);
   if (!Number.isInteger(value) || value < 1 || value > 120) {

@@ -15,7 +15,7 @@ import { buildMonthlyReview, renderReviewEmail, sendMonthlyReports, smtpSettings
 import { runMaintenanceInWorker } from "./maintenance-worker.js";
 import { createScheduler } from "./scheduler.js";
 import { createIngestServer } from "./server.js";
-import { addSite, getSite, listSites, rotateSigningKey, setModules, setRetention, setStoreCountry, setVisitors } from "./sites.js";
+import { addSite, getSite, listSites, rotateSigningKey, setModules, setRetention, setStoreCountry, setTimezone, setVisitors } from "./sites.js";
 import { dayKey } from "./time.js";
 
 const USAGE = `Usage: looku <command>
@@ -27,6 +27,7 @@ const USAGE = `Usage: looku <command>
   site:country <site-id> on|off         Store the visitor's country (default on)
   site:visitors <site-id> daily-hash|off   Count visitors with the daily hash (default) or not at all
   site:retention <site-id> <months>       Keep single page views this long (default 25), then daily totals
+  site:timezone <site-id> <tz>            Change the time zone of the site's days, e.g. Europe/Helsinki
   ingest                 Start the receiver (POST /ingest, POST /orders)
   maintain               Nightly job: salts, rollups, retention
   orders:import <site-id> <file>        Import orders (JSON lines, same format as POST /orders)
@@ -205,6 +206,16 @@ async function main(argv) {
       const db = openDatabase(dbFile);
       setRetention(db, positional[0], positional[1]);
       console.log(`Retention for ${positional[0]}: ${positional[1]} months. Applies from the next nightly job.`);
+      db.close();
+      return;
+    }
+    case "site:timezone": {
+      if (!positional[1]) {
+        throw new Error("Usage: looku site:timezone <site-id> <tz>");
+      }
+      const db = openDatabase(dbFile);
+      setTimezone(db, positional[0], positional[1]);
+      console.log(`Time zone for ${positional[0]}: ${positional[1]}. Applies to new page views; days already recorded keep their dates.`);
       db.close();
       return;
     }
