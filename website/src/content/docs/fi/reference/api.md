@@ -31,9 +31,13 @@ kotipalvelimella kotiverkkosi.
 
 ## Raportit
 
-Kaikki raporttipolut alkavat `/api/v1/sites/<site>/`. Valitse ajanjakso parametrilla `range` (`7d`, `28d`, `3m`,
-`12m`; oletus `28d`, päättyy tähän päivään sivuston aikavyöhykkeellä) tai parametreilla `from` ja `to`
-(`YYYY-MM-DD`).
+Kaikki raporttipolut alkavat `/api/v1/sites/<site>/`. Valitse ajanjakso parametrilla `range` (`24h` on viimeiset
+24 tuntia tähän hetkeen asti; `7d`, `28d`, `3m` ja `12m` päättyvät tähän päivään sivuston aikavyöhykkeellä; oletus
+`28d`), parametreilla `from` ja `to` (`YYYY-MM-DD`) tai aikaikkunalla `since` ja `until` (ISO 8601 -ajat, enintään
+31 päivän päässä toisistaan). Aikaikkunassa lukuaika ja ostoskoritapahtumat, jotka säilytetään vain päivän
+tarkkuudella, kattavat ne kokonaiset päivät, joihin ikkuna osuu.
+
+Polut palautetaan dekoodattuina eli luettavassa muodossa: `/opas/lämpö` eikä `/opas/l%C3%A4mp%C3%B6`.
 
 | Polku | Palauttaa |
 |---|---|

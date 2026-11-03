@@ -50,7 +50,9 @@ for (const lang of ["fi", "en"]) {
   for (const theme of ["light", "dark"]) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 860 }, deviceScaleFactor: 1, colorScheme: theme, locale: lang === "fi" ? "fi-FI" : "en-GB" });
     await context.addInitScript(([l, t]) => {
-      localStorage.setItem("looku", JSON.stringify({ site: "shop", range: "28d", compare: true, lang: l, theme: t }));
+      if (!localStorage.getItem("looku")) {
+        localStorage.setItem("looku", JSON.stringify({ site: "shop", compare: true, lang: l, theme: t, defaults: 2 }));
+      }
     }, [lang, theme]);
     const page = await context.newPage();
     const name = (n) => `${OUT}/${n}-${lang}-${theme}.png`;
@@ -65,6 +67,17 @@ for (const lang of ["fi", "en"]) {
     await page.waitForTimeout(1500);
     await page.screenshot({ path: name("overview") });
     if (process.env.FULL) await page.screenshot({ path: name("full"), fullPage: true });
+
+    // The front page above shows the default, the last 24 hours; the cards
+    // below show 28 days, which has more to see.
+    await page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem("looku"));
+      localStorage.setItem("looku", JSON.stringify({ ...saved, range: "28d" }));
+    });
+    await page.reload();
+    await page.waitForSelector("main section", { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: name("overview-28d") });
 
     for (const [key, headings] of Object.entries(SECTIONS[lang])) {
       await shootSections(page, name(key), headings);

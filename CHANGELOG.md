@@ -12,6 +12,9 @@ First public version.
 - Read API `/api/v1` with OpenAPI description, read and admin keys, CSV export, filters and hourly series.
 - Dashboard: compact view, monthly review in sentences, settings; Finnish and English; light and dark.
 - `looku history:import` for page views, events and engagement from an earlier system.
+- `looku site:timezone` changes a site's time zone after `site:add`.
+- Paths are stored decoded (`/opas/lämpö`, not `/opas/l%C3%A4mp%C3%B6`); older rows are converted once.
+- Range `24h`, the last 24 hours up to now, also the dashboard's default; time windows with `since` and `until`.
 - Monthly email, `looku backup`, `looku all` (one process), client allowlist and HSTS for public servers.
 - Connectors: Next.js, Node.js http and Express, Cloudflare Worker example, browser collector.
 - Docker image and Compose file.

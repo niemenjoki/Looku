@@ -31,8 +31,12 @@ server, your home network.
 
 ## Reports
 
-All report paths start with `/api/v1/sites/<site>/`. Choose the period with `range` (`7d`, `28d`, `3m`, `12m`;
-default `28d`, ending today in the site's time zone) or with `from` and `to` (`YYYY-MM-DD`).
+All report paths start with `/api/v1/sites/<site>/`. Choose the period with `range` (`24h` is the last 24 hours up
+to now; `7d`, `28d`, `3m` and `12m` end today in the site's time zone; default `28d`), with `from` and `to`
+(`YYYY-MM-DD`), or with a time window `since` and `until` (ISO 8601 times, at most 31 days apart). With a time window,
+reading time and cart events, which are kept by day only, cover the whole days the window touches.
+
+Paths are returned decoded, as people read them: `/opas/lämpö`, not `/opas/l%C3%A4mp%C3%B6`.
 
 | Path | Returns |
 |---|---|
