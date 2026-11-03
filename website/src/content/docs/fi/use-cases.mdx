@@ -9,6 +9,10 @@ Jokainen alla oleva resepti kertoo, mitä saat, mitä otat käyttöön ja mistä
 pohjasta: Looku on asennettu ja sivustosi liitetty. Opetusohjelmat vievät sinut sinne asti:
 [2. Ensimmäinen asennus kotipalvelimelle](/looku/fi/tutorials/home-server/) ja [3. Liitä sivustosi ja lue ensimmäiset lukusi](/looku/fi/tutorials/connect-your-site/).
 
+**Valitse kysymyksesi mukaan:** kuinka moni lukee sivustoani (1), mikä linkki tai julkaisu tuo kävijöitä (2), mikä
+myy (3), luetaanko kirjoituksiani (4), en halua avata kojelautaa (5), haluan tallentaa mahdollisimman vähän (6),
+haluan luvut muualle (7).
+
 Reseptejä voi yhdistellä. `site:modules` asettaa koko moduuliluettelon, joten luettele aina kaikki moduulit, jotka
 haluat, esimerkiksi `shop,campaigns,content`. `site:list` näyttää nykyiset. Moduulin ottaminen käyttöön tai pois
 käytöstä ei koskaan poista tietoja.
@@ -27,7 +31,8 @@ sosiaalinen media, muut sivustot), laitteet, selaimet ja maat.
 ## 2. Mikä uutiskirje tai julkaisu tuo kävijöitä
 
 **Saat:** jokaisesta kampanjasta tiedon siitä, kuinka monta käyntiä se toi, onko se uusi vai jo päättynyt ja
-(verkkokaupassa) kuinka monta tilausta siitä tuli.
+(verkkokaupassa) kuinka monta tilausta siitä tuli. Kampanjoiden nimet näkyvät jo perusluvuissa
+(**Kampanjat (UTM)**); moduuli lisää tämän kortin. Mukana ovat myös käynnit ajalta ennen kuin otit sen käyttöön.
 
 **Ota käyttöön:** kampanjamoduuli (lisää listaan myös muut moduulit, joita käytät):
 
@@ -84,8 +89,9 @@ kävijät, mistä he tulivat ja mitkä sivut nousivat. Kojelautaa ei tarvitse av
 
 <Screen name="report" alt="Kuukausikatsaus arkisin lausein tärkeimpine lukuineen." />
 
-**Ota käyttöön:** sähköpostiasetukset tiedostoon `.env` (sähköpostipalvelusi kertoo postipalvelimen osoitteen,
-käyttäjätunnuksen ja salasanan):
+**Ota käyttöön:** sähköpostiasetukset Lookun omaan `.env`-tiedostoon, joka on palvelimella sen `deploy`-kansiossa.
+Sähköpostipalvelusi kertoo postipalvelimensa (SMTP) osoitteen, portin, käyttäjätunnuksen ja salasanan; ne tulevat
+yhdelle riville:
 
 ```
 LOOKU_SMTP_URL=smtps://user:password@smtp.example.com:465

@@ -134,7 +134,7 @@ docker compose run --rm ingest site:rotate-key myblog
 
 The tunnel cannot reach the receiver.
 
-- `docker compose ps`: is `looku-tunnel-1` `Up`? If it is missing, start it with
+- `docker compose --profile tunnel ps`: is `looku-tunnel-1` `Up`? If it is missing, start it with
   `docker compose --profile tunnel up -d`.
 - In Cloudflare, the route's **Service URL** must be `http://ingest:8787`. `localhost` does not work, because inside
   the tunnel container `localhost` is the container itself.

@@ -15,7 +15,7 @@ These are read by `compose.yaml`, not by Looku itself.
 
 | Setting | Default | What |
 |---|---|---|
-| `LOOKU_DATA_DIR` | `./data` | folder on the host for the database; back it up. `looku-data` keeps the database in a Docker volume instead, for [trying Looku](/looku/tutorials/try-it/) on Windows or macOS |
+| `LOOKU_DATA_DIR` | `./data` | folder on the host for the database; back it up. `looku-data` keeps the database in a Docker volume instead, for [trying Looku](/looku/tutorials/try-it/) on a desktop computer |
 | `LOOKU_DASHBOARD_BIND` | `127.0.0.1` | host address the dashboard port is published on: a LAN or Tailscale address keeps it private, `127.0.0.1` only for a proxy on the same host |
 | `LOOKU_DASHBOARD_PORT` | `8788` | host port of the dashboard |
 | `CLOUDFLARED_VERSION` | empty = `latest` | version of the Cloudflare tunnel image |

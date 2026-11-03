@@ -10,6 +10,9 @@ järjestyksessä: [1. Kokeile Lookua omalla koneellasi](/looku/fi/tutorials/try-
 sinun pitäisi nähdä. Muut sivut ovat dokumentaatiota: lyhyempiä, ja niissä on kaikki vaihtoehdot.
 [Mitä Lookulla voi tehdä?](/looku/fi/use-cases/) kertoo, mitä otat käyttöön mihinkin tarpeeseen.
 
+Sanat kuten vastaanotin, liitin ja tunneli selitetään tämän sivun lopussa, kohdassa
+[Ohjeissa käytetyt sanat](#ohjeissa-käytetyt-sanat).
+
 Lue tämä sivu, vaikka olisit ylläpitänyt palvelimia ennenkin: Lookussa on kaksi osaa, ja niillä on eri säännöt
 sille, kuka niihin saa yhteyden.
 

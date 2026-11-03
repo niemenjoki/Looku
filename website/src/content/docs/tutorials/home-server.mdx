@@ -30,8 +30,9 @@ home.
 
 ## What you need
 
-- **A home server running Linux** with Docker installed: an old computer, a mini PC or a Raspberry Pi 4 or newer.
-  If Docker is not installed yet, install it with [Docker's guide for your Linux](https://docs.docker.com/engine/install/).
+- **A home server running Linux** with Docker and Git installed: an old computer, a mini PC or a Raspberry Pi 4 or
+  newer. If Docker is not installed yet, install it with
+  [Docker's guide for your Linux](https://docs.docker.com/engine/install/). Git: `sudo apt install git`.
 - **A domain on Cloudflare**, for example `example.com`. The Cloudflare account is free; a domain costs about 10 € a
   year. If your domain is with another company, add it to Cloudflare with their
   [guide to adding a site](https://developers.cloudflare.com/fundamentals/manage-domains/add-site/) first. That can
@@ -57,16 +58,18 @@ with a short name for your site. We show you how to find the server's address.
 
    Don't know the server's address? Run `hostname -I` on the server itself (with a keyboard and screen). The first
    number that starts with `192.168.` or `10.` is usually it. Ask your router to always give the server this address
-   (a "DHCP reservation" in the router's settings), or the dashboard's address may change one day.
+   (a "DHCP reservation" in the router's settings). Otherwise the address may change one day, and then the dashboard
+   does not start.
 
 2. **Check that Docker works:**
 
    ```bash
    docker compose version
+   docker ps
    ```
 
-   You should see `Docker Compose version v2.…` or a higher number. If you see `permission denied`, put `sudo` in
-   front of every `docker` command in this tutorial.
+   The first should print `Docker Compose version v2.…` or a higher number, the second a header line starting with
+   `CONTAINER ID`. If you see `permission denied`, put `sudo` in front of every `docker` command in this tutorial.
 
 </Steps>
 
@@ -91,7 +94,7 @@ with a short name for your site. We show you how to find the server's address.
    nano .env
    ```
 
-   Move with the arrow keys and change these three lines:
+   Move with the arrow keys and change these three lines (leave the others as they are):
 
    ```
    LOOKU_TIMEZONE=Europe/Helsinki
@@ -125,7 +128,8 @@ with a short name for your site. We show you how to find the server's address.
    ```
 
    The first time takes a few minutes. It ends with `Container looku-ingest-1 Started` and
-   `Container looku-dashboard-1 Started`. Looku now starts by itself whenever the server restarts.
+   `Container looku-dashboard-1 Started`. Looku now starts by itself whenever the server restarts. Check after a
+   minute with `docker compose ps`: both should say `Up` and `(healthy)`.
 
 5. **Add your site:**
 
@@ -133,7 +137,8 @@ with a short name for your site. We show you how to find the server's address.
    docker compose run --rm ingest site:add myblog --domain example.com --timezone Europe/Helsinki
    ```
 
-   `--domain` is your website's address without `https://`. Looku answers with the site's signing key:
+   `--domain` is your website's address without `https://` (with or without `www.`; Looku treats them the same).
+   Looku answers with the site's signing key:
 
    ```
    Site myblog added. Signing key (shown once):
@@ -150,12 +155,17 @@ with a short name for your site. We show you how to find the server's address.
    ```
 
    Type it after `New dashboard password:` and press Enter. Nothing appears while you type, and it asks only once.
+   It answers ``Password set. Restart `looku serve` to end existing logins.`` With Docker, "restart `looku serve`"
+   means `docker compose restart dashboard`; you only need it when you change the password later.
 
 7. **Open the dashboard** on your own computer: `http://192.168.1.10:8788`. Log in.
 
    <Screen name="login" alt="Looku's login page." />
 
    The dashboard is empty for now; it fills up once your site sends page views.
+
+   If the page does not open, or says `Unknown host`, check the three lines in `.env`, run `docker compose up -d`
+   (which applies changes to `.env`) and see [Troubleshooting](/looku/operate/troubleshooting/#dashboard-unknown-host).
 
 </Steps>
 
@@ -172,9 +182,10 @@ each step names the menu and a word to search for. (Checked in November 2026.)
 
 2. **Copy the tunnel's token.** Cloudflare now shows how to install the tunnel program on different systems. Choose
    **Docker**. You do not run the command it shows; Looku already has the tunnel program. Copy only the long text after
-   `--token` (it starts with `eyJ`). Keep this page open.
+   `--token` (it starts with `eyJ`). It is a secret, like a password. Keep this page open.
 
-3. **Give the token to Looku.** In the terminal on the server:
+3. **Give the token to Looku.** In the terminal on the server. (If you come back to this later, connect again with
+   `ssh you@192.168.1.10` and run `cd ~/looku/deploy` first.)
 
    ```bash
    nano .env
@@ -192,8 +203,9 @@ each step names the menu and a word to search for. (Checked in November 2026.)
    It says `Container looku-tunnel-1 Started`. The tunnel is a separate container that starts only when you ask for it
    with `--profile tunnel`.
 
-5. **Back in Cloudflare,** on the page where you copied the token, the tunnel should show as connected within a
-   minute. (Cloudflare calls the tunnel program a "connector".) Select **Continue**.
+5. **Back in Cloudflare,** on the page where you copied the token, the tunnel should show as connected (healthy)
+   within a minute. (Cloudflare calls the tunnel program a "connector".) Select **Continue**. You can always get back
+   to the tunnel from **Networking → Tunnels** by selecting its name.
 
 6. **Point your address at the receiver.** In the tunnel, open the **Routes** tab and select **Add route** →
    **Published application**. Fill in:
@@ -205,8 +217,8 @@ each step names the menu and a word to search for. (Checked in November 2026.)
    | Path | leave empty |
    | Service URL | `http://ingest:8787` |
 
-   Select **Add route**. Requests to `https://looku.example.com` now travel through the tunnel to the receiver, which
-   is called `ingest` inside Docker.
+   Select **Add route**. Cloudflare creates the address `looku.example.com` in your domain by itself. Requests to it
+   now travel through the tunnel to the receiver, which is called `ingest` inside Docker.
 
 </Steps>
 
@@ -257,9 +269,11 @@ curl.exe -s -o NUL -w "%{http_code}\n" https://looku.example.com/
 </TabItem>
 </Tabs>
 
-The first should print `401`: your test reached the receiver, which refused it because it was not signed. That is
-exactly right. The second should print `403`: Cloudflare blocked it. If you see something else, the
-[troubleshooting page](/looku/operate/troubleshooting/#cloudflare-502-or-530) explains each answer.
+| First | Second | What it means |
+|---|---|---|
+| `401` | `403` | Correct. Your test reached the receiver, which refused it because it was not signed, and Cloudflare blocked the other request. |
+| `403` | | The rule blocks the receiver too. Check the expression in part 4. |
+| `502` or `530` | | The tunnel does not reach the receiver. See [Troubleshooting](/looku/operate/troubleshooting/#cloudflare-502-or-530). |
 
 ## You're done
 

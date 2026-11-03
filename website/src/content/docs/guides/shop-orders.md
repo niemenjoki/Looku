@@ -17,7 +17,7 @@ first with `docker compose run --rm ingest site:list` (the `modules_json` column
 docker compose run --rm ingest site:modules myblog shop,campaigns
 ```
 
-You should see `Modules of myblog: perus, shop, campaigns`. `perus` (Finnish for basic) is always on.
+You should see `Modules of myblog: perus, shop, campaigns`. `perus` is the basic module, shown as **Core** in the dashboard; it is always on.
 
 ## Send an order
 

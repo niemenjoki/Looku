@@ -18,7 +18,8 @@ Verkkokaupan ja kampanjoiden tuloksia varten:
 docker compose run --rm ingest site:modules myblog shop,campaigns
 ```
 
-Näet tekstin `Modules of myblog: perus, shop, campaigns`. `perus` on aina päällä.
+Näet tekstin `Modules of myblog: perus, shop, campaigns`. `perus` on perusmoduuli,
+joka näkyy kojelaudassa nimellä **Perus**; se on aina päällä.
 
 ## Lähetä tilaus
 

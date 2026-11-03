@@ -11,10 +11,10 @@ import Screen from "../../../components/Screen.astro";
 In this tutorial you connect your website to Looku. After that, every page that someone opens on your site appears
 in your dashboard. Then we walk through the dashboard and what each part tells you.
 
-We use a **Next.js site on Vercel**, the most common setup. If your site is built differently (Node.js, Express, a
-static site behind Cloudflare), the connection step is in
-[Node.js, Express, Cloudflare or your own](/looku/guides/connect-other/); the dashboard tour below applies to every
-site.
+We use a **Next.js site on Vercel**, the most common setup. Next.js on your own server works the same way; only the
+place of the settings differs (step 3). If your site is built differently (Node.js, Express, a static site behind
+Cloudflare), the connection step is in [Node.js, Express, Cloudflare or your own](/looku/guides/connect-other/); the
+dashboard tour below applies to every site.
 
 **You need:** the installation from [2. Your first installation](/looku/tutorials/home-server/) and its three
 settings, your site's code on your computer, and access to its Vercel project. About 30 minutes.
@@ -31,13 +31,15 @@ nothing is stored in the visitor's browser.
 
 <Steps>
 
-1. **Copy the connector into your site.** It is one file. Download
-   [`packages/next/src/index.js`](https://github.com/niemenjoki/Looku/blob/master/packages/next/src/index.js) and save
-   it in your project as `lib/looku.js`: make a folder called `lib` next to `package.json` if there is none.
+1. **Copy the connector into your site.** It is one file. Open
+   [`packages/next/src/index.js`](https://github.com/niemenjoki/Looku/blob/master/packages/next/src/index.js) on
+   GitHub and select **Download raw file** (the download icon above the code). Save it in your project as
+   `lib/looku.js`: make a folder called `lib` next to `package.json` if there is none.
 
 2. **Add the proxy file.** Check your Next.js version: open `package.json` and look at the number after `"next"`.
-   Create the file in the same folder as `package.json` (if your pages are in `src/app`, put it in `src/` and write
-   `"../lib/looku.js"` in the `import` line).
+   If it starts with 16 or higher, use the first tab below; otherwise the second. Create the file in the same folder
+   as `package.json` (if your pages are in `src/app`, put it in `src/` and write `"../lib/looku.js"` in the `import`
+   line).
 
    <Tabs>
    <TabItem label="Next.js 16 and newer: proxy.js">
@@ -110,17 +112,27 @@ nothing is stored in the visitor's browser.
 
    The key stays in Vercel and never goes into your code.
 
-4. **Publish.** Commit and push `lib/looku.js` and the proxy file as you normally publish changes. Vercel builds a
-   new version with the settings. (If you added the settings after pushing, open **Deployments**, select the latest
+   **Not on Vercel?** On your own server, put the three lines in a file called `.env.local` next to `package.json`,
+   in the same `NAME=value` form. More ways: the **Your own server** tab in
+   [Connect a Next.js site](/looku/guides/connect-nextjs/).
+
+   **Want to test first?** You can try it on your computer before publishing: put the three lines in `.env.local`,
+   run `npm run build` and then `npm start`, and open `http://localhost:3000`. These are real page views from your
+   computer; they are few and do no harm. (`npm run dev` sends nothing on purpose.)
+
+4. **Publish.** Commit `lib/looku.js` and the proxy file and push them to the branch Vercel publishes from (usually
+   `main`), as you normally publish changes. Vercel builds a new version with the settings. (If you added the settings after pushing, open **Deployments**, select the latest
    one and choose **Redeploy**.)
 
-5. **Check.** Open your live site on your phone, click a couple of pages, and open the dashboard at home. Your visit
-   is there within a few seconds.
+5. **Check.** Open your live site on your phone, click a couple of pages, and open the dashboard at home (the
+   address from tutorial 2, for example `http://192.168.1.10:8788`). Your visit is there within a few seconds; the
+   default period, 28 days, includes today.
 
 </Steps>
 
 Only the production site sends page views. Your own `npm run dev` and Vercel's preview versions send nothing, so your
-work on the site does not show up as visitors.
+work on the site does not show up as visitors. Visits to addresses that do not exist (404) are counted too, so odd
+paths in the list are usually mistyped links. Bots are left out.
 
 Nothing appears? Go through [No page views appear](/looku/operate/troubleshooting/#no-page-views-appear); it checks
 each link in the chain.
@@ -145,12 +157,14 @@ the change against the period before, both as percentages and as the dashed line
 - **Pages / session:** how many pages a visit has on average.
 
 With **Filter** you look at one part of the site (a page group), one campaign or one kind of device at a time.
+**Hourly** shows the chart by the hour, and **Export CSV** downloads the numbers for a spreadsheet. The small label
+at the top right of each card (**CORE**, **CAMPAIGNS**…) tells which module it belongs to.
 
 ### Pages and where visitors come from
 
 <Screen name="pages" alt="The most viewed pages with view counts and changes." />
 
-**Top pages** is the list most people look at first. **Entry pages** tells where visits start, which is often a blog
+**Top pages** is the list most people look at first, and the percentage is the change from the previous period. **Entry pages** tells where visits start, which is often a blog
 post that someone found with a search engine, and **Exit pages** where they end.
 
 <Screen name="referrers" alt="Where visitors came from: search engines, direct visits and social media, with bars." />
@@ -163,8 +177,8 @@ not say where the visitor came from.
 
 <Screen name="devices" alt="Share of phones, computers and tablets." />
 
-Phones, computers and tablets, and further down browsers, systems and countries. If most of your visitors are on
-phones, that is where your site has to work best.
+Phones, computers and tablets, browsers and systems, and countries. If most of your visitors are on phones, that is
+where your site has to work best.
 
 ### Campaigns
 
@@ -174,23 +188,27 @@ When you share a link in a newsletter or a post, add a campaign tag to it, for e
 https://example.com/products/?utm_source=newsletter&utm_campaign=autumn-sale
 ```
 
-Looku then shows how many visits each campaign brought and, in a shop, how many orders. This needs the campaigns
-module (see [What you can do with Looku](/looku/use-cases/)).
+The campaign names appear in the basic numbers right away, in the **Campaigns (UTM)** list. The campaigns module
+adds the **Campaigns** card below, with each campaign's visits, whether it is new or has ended (in the **%** column,
+which otherwise shows the change), and in a shop its orders. To turn it on, see
+[What you can do with Looku](/looku/use-cases/#2-which-newsletter-or-post-brings-visitors).
 
 <Screen name="campaigns" alt="Campaigns with their sessions, status and orders." />
 
 ### The monthly review
 
-**Monthly review** at the top of the dashboard tells the month in sentences: how many visitors there were, where they
-came from, which pages rose. The same review can come to your email on the first day of each month.
+**Monthly review** at the top of the dashboard tells the month in sentences: how many visitors there were and where
+they came from, and further down the page which pages rose. The same review can come to your email on the first day
+of each month.
 
 <Screen name="report" alt="The monthly review: a headline, a paragraph in plain words, key numbers and a chart." />
 
 ### Settings
 
-In **Settings** you choose the dashboard's language and theme, and you can group pages, for example all
-`/products/` pages as "Products", so that you see how each part of the site does. In a shop you also set the pages
-of the purchase path here.
+In **Settings**, **Your view** sets the theme and language for this browser only, and the site's default language
+is set for everyone. You can group pages, for example all `/products/` pages as "Products", so that you see how each
+part of the site does, and choose which cards the dashboard shows and in which order. In a shop you also set the
+pages of the purchase path here.
 
 <Screen name="settings" alt="Settings: theme and language, page groups and purchase path." />
 

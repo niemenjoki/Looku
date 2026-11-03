@@ -9,8 +9,8 @@ import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
 import Screen from "../../../components/Screen.astro";
 
 In this tutorial you run Looku on your own computer together with a small demo shop. You click around the shop like
-a visitor would, and a minute later you see your own visits in Looku's dashboard. Nothing goes on the internet, and
-at the end you remove everything.
+a visitor would, and a minute later you see your own visits in Looku's dashboard. Nothing is published on the
+internet (you only download programs), and at the end you remove everything.
 
 It takes about 20 minutes, most of it waiting for downloads. You need a computer with Windows 10 or 11, macOS or
 Linux, and about 3 GB of free disk space. You do not need to know Docker or programming: every command is here, and
@@ -32,7 +32,8 @@ First, open a **terminal**, the window where you type commands:
 - **Linux:** open your terminal app.
 
 Keep it open; you will use it all the way through. The commands are the same on all three systems unless tabs show
-otherwise.
+otherwise. To copy a command from this page, use the copy button at the top right of each box, and paste it into the
+terminal: right click, or Ctrl+V on Windows, Cmd+V on macOS and Ctrl+Shift+V on Linux.
 
 Now install Docker:
 
@@ -70,13 +71,17 @@ Check that Docker answers:
 
 ```bash
 docker compose version
+docker ps
 ```
 
-You should see `Docker Compose version v2.…` or a higher number. If you get an error instead:
+The first should print `Docker Compose version v2.…` or a higher number, and the second a header line that starts
+with `CONTAINER ID`. If you get an error instead:
 
 - `cannot connect to the Docker daemon` or `error during connect`: Docker Desktop is not running yet (on Linux:
   `sudo systemctl start docker`).
 - `permission denied` (Linux): log out and back in, or restart the computer.
+- `'compose' is not a docker command` (Linux): Docker came from your distribution's own package. Install it with
+  Docker's guide linked above instead.
 
 Then check Git:
 
@@ -92,10 +97,11 @@ the offer to install the developer tools; on Linux, `sudo apt install git` (Fedo
 
 <Steps>
 
-1. **Download Looku.** This makes a folder called `looku` and moves you into its `deploy` folder, where the Docker
-   files are:
+1. **Download Looku.** This goes to your home folder, makes a folder called `looku` there and moves you into its
+   `deploy` folder, where the Docker files are:
 
    ```bash
+   cd ~
    git clone https://github.com/niemenjoki/Looku.git looku
    cd looku/deploy
    ```
@@ -173,7 +179,8 @@ the offer to install the developer tools; on Linux, `sudo apt install git` (Fedo
    k8Jd2mQx7RfTn4WcZp1LvB9sHy6GaE0uYoXiN5tCw3E
    ```
 
-   Your key is different. **Copy it now** (select it with the mouse and press Ctrl+C, or Cmd+C on a Mac). The demo
+   Your key is different. **Copy it now**: select it with the mouse and copy it (Ctrl+C on Windows, Cmd+C on macOS,
+   Ctrl+Shift+C on Linux, where Ctrl+C alone would stop a program). Paste it somewhere for a moment. The demo
    site signs each page view with this key, so Looku knows the page view is genuine. You need it in step 7. If you
    lose it, `docker compose run --rm ingest site:rotate-key demo` prints a new one.
 
@@ -183,7 +190,7 @@ the offer to install the developer tools; on Linux, `sudo apt install git` (Fedo
    docker compose run --rm ingest site:modules demo content,campaigns
    ```
 
-   It says `Modules of demo: perus, content, campaigns`. `perus` (Finnish for basic) is always on.
+   It says `Modules of demo: perus, content, campaigns`. `perus` is the basic module, shown as **Core** in the dashboard; it is always on.
 
 6. **Choose a dashboard password** of at least 10 characters:
 
@@ -194,7 +201,7 @@ the offer to install the developer tools; on Linux, `sudo apt install git` (Fedo
    It asks `New dashboard password:`. Type the password and press Enter. **Nothing appears while you type**, not even
    dots; that is on purpose. It asks only once, so type carefully. It answers
    ``Password set. Restart `looku serve` to end existing logins.`` You can ignore the second sentence: nobody is
-   logged in yet.
+   logged in yet. If the password is too short, it says so; if you made a typo, just run the command again.
 
 7. **Give the demo site its settings.** Go to the demo's folder and copy its example settings:
 
@@ -204,18 +211,18 @@ the offer to install the developer tools; on Linux, `sudo apt install git` (Fedo
    ```
 
    Open `.env.local` in the text editor as in step 2 (`notepad .env.local`, `open -e .env.local` or
-   `nano .env.local`). Delete everything in it and write these three lines, with your key from step 4 after
-   `LOOKU_SIGNING_KEY=`:
+   `nano .env.local`). Change two lines so that they read like this, with your key from step 4 after
+   `LOOKU_SIGNING_KEY=`. Leave the other lines as they are:
 
    ```
    LOOKU_ENDPOINT=http://ingest:8787
-   LOOKU_SITE_ID=demo
    LOOKU_SIGNING_KEY=PASTE-YOUR-KEY-HERE
    ```
 
-   No spaces around `=` and no quotes. Save. These three lines are all any website needs to talk to Looku: where the
-   receiver is, which site this is, and the key. Here the receiver's address is simply `ingest`, its name inside
-   Docker.
+   No spaces around `=` and no quotes (in nano, paste with Ctrl+Shift+V or a right click). Save. The file now has
+   the three settings that any website needs to talk to Looku: where the receiver is (`LOOKU_ENDPOINT`), which site
+   this is (`LOOKU_SITE_ID`, already `demo`) and the key. Here the receiver's address is simply `ingest`, its name
+   inside Docker.
 
 8. **Start the demo shop.** Go back to the `looku` folder and start the demo in a container. It is one long line;
    copy all of it:
@@ -226,8 +233,9 @@ the offer to install the developer tools; on Linux, `sudo apt install git` (Fedo
    ```
 
    This starts a container with Node.js next to Looku, copies the demo's code into it, and builds and starts the
-   demo. Nothing is written to your own folders. The first time takes a few minutes, and you will see a lot of text
-   scroll by, including `npm notice` lines; that is normal. It is ready when you see:
+   demo. Nothing is written to your own folders. You do not need to understand every part of the command. The first
+   time takes a few minutes, and a lot of text scrolls by, including `npm notice` lines and a note about Next.js
+   telemetry; both are normal and need nothing from you. It is ready when you see:
 
    ```
    - Local:         http://localhost:3000
@@ -240,7 +248,8 @@ the offer to install the developer tools; on Linux, `sudo apt install git` (Fedo
 
 ## Visit the shop
 
-Now be a visitor.
+Now be a visitor. The demo shop is in Finnish: **Etusivu** is the front page, **Tuotteet** the products and
+**Oppaat** the guides. Leave the **Kampanjalinkki** link alone; it starts a second demo campaign.
 
 <Steps>
 
@@ -254,7 +263,8 @@ Now be a visitor.
 2. Click through a few pages of the shop.
 
 3. At the bottom of the page, select **Salli** (Finnish for allow). This is the demo's consent question: only
-   visitors who allow it have their reading time measured. Then open the guides page, scroll down and stay a while.
+   visitors who allow it have their reading time measured. Then open **Oppaat** (the guides), scroll to the bottom
+   and stay on the page for about 30 seconds.
 
 </Steps>
 
@@ -270,13 +280,14 @@ traffic it looks like this:
 
 <Screen name="overview" alt="The dashboard with page views, visitors, sessions and pages per session, a chart, and the most viewed pages." />
 
-Scroll down. **Top pages** lists the pages you opened. Further down, the **Campaigns** report shows the campaign
-`demo` with your visit:
+Scroll down. **Top pages** lists the pages you opened. Further down, the **Campaigns** card (not the
+**Campaigns (UTM)** list, which is part of the basic numbers) shows the campaign `demo` with your visit:
 
 <Screen name="campaigns" alt="The campaigns report: each campaign with its sessions and orders." />
 
-The **Reading time and scroll** report has your guide page, because you allowed it. Pages you opened before selecting
-**Salli** are not there. Reading time can take a minute to appear.
+The **Reading time and scroll** card has your guide page, `/oppaat`, because you allowed it. Pages you opened before
+selecting **Salli** are not there. Reading time can take a minute to appear. The picture below is from a site with
+blog pages.
 
 <Screen name="content" alt="Reading time and scroll depth for each blog page." />
 
@@ -290,7 +301,8 @@ stored in your browser is your consent choice.
   run the long `docker run` command again.
 - Brave, and some browser settings, send a "do not track" signal, and Looku then skips you on purpose. Try another
   browser.
-- In the `deploy` folder, `docker compose logs ingest` shows the receiver's messages.
+- The receiver's own messages: open a second terminal window and run `cd ~/looku/deploy`, then
+  `docker compose logs ingest`.
 
 ## Clean up
 
@@ -305,6 +317,9 @@ stored in your browser is your consent choice.
    docker compose down -v
    docker image rm looku:local node:22-bookworm-slim
    ```
+
+   You see lines ending with `Removed` and `Deleted`. If you use the `node:22-bookworm-slim` image for something
+   else, leave it out of the last command.
 
 3. Delete the folder:
 

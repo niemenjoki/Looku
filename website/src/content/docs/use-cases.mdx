@@ -9,6 +9,10 @@ Each recipe below says what you get, what to turn on, and where the steps are. T
 installed and your site connected, which the tutorials take you through:
 [2. Your first installation](/looku/tutorials/home-server/) and [3. Connect your site](/looku/tutorials/connect-your-site/).
 
+**Pick by your question:** how many people read my site (1), which link or post brings visitors (2), what sells (3),
+are my articles read (4), I don't want to open a dashboard (5), I want to store as little as possible (6), I want
+the numbers elsewhere (7).
+
 Recipes can be combined. `site:modules` sets the whole list of modules, so always name every module you want, for
 example `shop,campaigns,content`; `site:list` shows the current ones. Turning a module on or off never deletes data.
 
@@ -26,7 +30,8 @@ engines, social media, other sites), devices, browsers and countries.
 ## 2. Which newsletter or post brings visitors
 
 **You get:** for each campaign, how many visits it brought, whether it is new or has ended, and (in a shop) how many
-orders came from it.
+orders came from it. Campaign names already appear in the basic numbers (**Campaigns (UTM)**); the module adds this
+card. Visits from before you turned it on are included.
 
 **Turn on:** the campaigns module (add the others you use to the list):
 
@@ -83,7 +88,8 @@ from and which pages rose. You do not need to open the dashboard.
 
 <Screen name="report" alt="The monthly review in plain sentences with key numbers." />
 
-**Turn on:** the email settings in `.env` (your email provider tells you the mail server address, user and password):
+**Turn on:** the email settings in Looku's own `.env` file, in its `deploy` folder on the server. Your email
+provider tells you its mail server (SMTP) address, port, user name and password; they go into one line:
 
 ```
 LOOKU_SMTP_URL=smtps://user:password@smtp.example.com:465

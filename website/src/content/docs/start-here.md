@@ -9,6 +9,9 @@ and [3. Connect your site](/looku/tutorials/connect-your-site/). They explain ea
 The other pages are the documentation: shorter, with all the options. [What you can do with Looku](/looku/use-cases/)
 shows what to turn on for your needs.
 
+Words such as receiver, connector or tunnel are explained at the end of this page, in
+[Words used in these guides](#words-used-in-these-guides).
+
 Read this page even if you have run servers before: Looku has two parts with different rules about who may reach
 them.
 

@@ -73,7 +73,7 @@ rest:
         value_template: "{{ value_json.data.pageviews }}"
 ```
 
-and in `secrets.yaml`: `looku_key: "Bearer lk_…"`. The `summary` answer looks like this, so other fields work the
+and in `secrets.yaml`: `looku_key: "Bearer lk_…"`. The `summary` answer looks like this (shortened), so other fields work the
 same way (`value_json.data.visitors`):
 
 ```json

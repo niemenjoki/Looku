@@ -20,8 +20,8 @@ Lookussa on kaksi osaa, joilla on eri tehtävät:
 
 - **Vastaanotin** ottaa vastaan sivunäytöt sivustosi palvelimelta. Sivustosi on jossain internetissä, joten
   vastaanotin tarvitsee julkisen osoitteen, esimerkiksi `https://looku.example.com`.
-- **Kojelaudalta** luet luvut. Vain sinä tarvitset sitä, joten se pysyy kotiverkossasi, osoitteessa kuten
-  `http://192.168.1.10:8788`.
+- **Kojelaudalta** luet luvut. Vain sinä tarvitset sitä, joten se pysyy kotiverkossasi, esimerkiksi
+  osoitteessa `http://192.168.1.10:8788`.
 
 Jotta vastaanotin saa julkisen osoitteen avaamatta kotireititintäsi, käytämme **Cloudflare Tunnelia**: pieni ohjelma
 palvelimellasi pitää yhteyden auki Cloudflareen, ja Cloudflare välittää osoitteeseen `looku.example.com` tulevat
@@ -29,9 +29,9 @@ pyynnöt sitä pitkin. Cloudflare myös pysäyttää kaiken, mikä ei ole sivun�
 
 ## Mitä tarvitset
 
-- **Linux-kotipalvelimen**, jossa on Docker: vanhan tietokoneen, minitietokoneen tai Raspberry Pi 4:n tai uudemman.
-  Jos Dockeria ei ole vielä asennettu, asenna se
-  [Dockerin ohjeen mukaan omalle Linuxillesi](https://docs.docker.com/engine/install/).
+- **Linux-kotipalvelimen**, jossa on Docker ja Git: vanhan tietokoneen, minitietokoneen tai Raspberry Pi 4:n tai
+  uudemman. Jos Dockeria ei ole vielä asennettu, asenna se
+  [Dockerin ohjeen mukaan omalle Linuxillesi](https://docs.docker.com/engine/install/). Git: `sudo apt install git`.
 - **Verkkotunnuksen Cloudflaressa**, esimerkiksi `example.com`. Cloudflare-tili on ilmainen; verkkotunnus maksaa
   noin 10 € vuodessa. Jos verkkotunnuksesi on toisella yrityksellä, lisää se ensin Cloudflareen Cloudflaren
   [sivuston lisäysohjeen](https://developers.cloudflare.com/fundamentals/manage-domains/add-site/) mukaan. Siihen voi
@@ -53,20 +53,23 @@ Korvaa alla olevissa komennoissa `192.168.1.10` palvelimesi osoitteella, `exampl
    ```
 
    Ensimmäisellä kerralla se kysyy, luotatko palvelimeen. Kirjoita `yes`. Sitten se kysyy salasanaasi. Kun kehotteessa
-   näkyy palvelimen nimi, jokainen kirjoittamasi komento ajetaan palvelimella.
+   (rivin alussa, johon kirjoitat komennon) näkyy palvelimen nimi, jokainen kirjoittamasi komento ajetaan
+   palvelimella.
 
    Etkö tiedä palvelimen osoitetta? Aja `hostname -I` palvelimella itsellään (näppäimistön ja näytön kanssa).
    Ensimmäinen numero, joka alkaa `192.168.` tai `10.`, on yleensä oikea. Pyydä reititintäsi antamaan palvelimelle
-   aina tämä osoite (reitittimen asetuksissa "DHCP-varaus"), muuten kojelaudan osoite voi jonain päivänä vaihtua.
+   aina tämä osoite (reitittimen asetuksissa "DHCP-varaus"). Muuten osoite voi jonain päivänä vaihtua, eikä kojelauta
+   silloin käynnisty.
 
 2. **Tarkista, että Docker toimii:**
 
    ```bash
    docker compose version
+   docker ps
    ```
 
-   Näet tekstin `Docker Compose version v2.…` tai suuremman numeron. Jos näet `permission denied`, lisää `sudo`
-   jokaisen tämän ohjeen `docker`-komennon eteen.
+   Ensimmäisen pitäisi tulostaa `Docker Compose version v2.…` tai suurempi numero, toisen otsikkorivi, joka alkaa
+   `CONTAINER ID`. Jos näet `permission denied`, lisää `sudo` jokaisen tämän ohjeen `docker`-komennon eteen.
 
 </Steps>
 
@@ -91,7 +94,7 @@ Korvaa alla olevissa komennoissa `192.168.1.10` palvelimesi osoitteella, `exampl
    nano .env
    ```
 
-   Liiku nuolinäppäimillä ja muuta nämä kolme riviä:
+   Liiku nuolinäppäimillä ja muuta nämä kolme riviä (jätä muut ennalleen):
 
    ```
    LOOKU_TIMEZONE=Europe/Helsinki
@@ -125,6 +128,7 @@ Korvaa alla olevissa komennoissa `192.168.1.10` palvelimesi osoitteella, `exampl
 
    Ensimmäinen kerta kestää muutaman minuutin. Lopussa näkyvät rivit `Container looku-ingest-1 Started` ja
    `Container looku-dashboard-1 Started`. Looku käynnistyy nyt itsestään aina, kun palvelin käynnistyy uudelleen.
+   Tarkista minuutin päästä komennolla `docker compose ps`: kummankin kohdalla pitäisi lukea `Up` ja `(healthy)`.
 
 5. **Lisää sivustosi:**
 
@@ -132,7 +136,8 @@ Korvaa alla olevissa komennoissa `192.168.1.10` palvelimesi osoitteella, `exampl
    docker compose run --rm ingest site:add myblog --domain example.com --timezone Europe/Helsinki
    ```
 
-   `--domain` on sivustosi osoite ilman `https://`-alkua. Looku vastaa sivuston allekirjoitusavaimella:
+   `--domain` on sivustosi osoite ilman `https://`-alkua (`www.`-alun kanssa tai ilman; Looku käsittelee ne samana).
+   Looku vastaa sivuston allekirjoitusavaimella:
 
    ```
    Site myblog added. Signing key (shown once):
@@ -150,13 +155,19 @@ Korvaa alla olevissa komennoissa `192.168.1.10` palvelimesi osoitteella, `exampl
    ```
 
    Kirjoita se kysymyksen `New dashboard password:` perään ja paina Enter. Mitään ei näy kirjoittaessasi, ja salasana
-   kysytään vain kerran.
+   kysytään vain kerran. Se vastaa ``Password set. Restart `looku serve` to end existing logins.`` Dockerissa
+   "restart `looku serve`" tarkoittaa komentoa `docker compose restart dashboard`; tarvitset sitä vain, kun vaihdat
+   salasanan myöhemmin.
 
 7. **Avaa kojelauta** omalla tietokoneellasi: `http://192.168.1.10:8788`. Kirjaudu sisään.
 
    <Screen name="login" alt="Lookun kirjautumissivu." />
 
    Kojelauta on vielä tyhjä. Se täyttyy, kun sivustosi alkaa lähettää sivunäyttöjä.
+
+   Jos sivu ei aukea tai siinä lukee `Unknown host`, tarkista `.env`-tiedoston kolme riviä, aja `docker compose up -d`
+   (se ottaa `.env`-tiedoston muutokset käyttöön) ja katso
+   [Vianetsintä](/looku/fi/operate/troubleshooting/#kojelauta-unknown-host).
 
 </Steps>
 
@@ -173,9 +184,10 @@ jokaisessa vaiheessa on valikon nimi ja hakusana. (Tarkistettu marraskuussa 2026
 
 2. **Kopioi tunnelin tunnus (token).** Cloudflare näyttää nyt, miten tunneliohjelma asennetaan eri järjestelmiin.
    Valitse **Docker**. Älä aja sen näyttämää komentoa: Lookussa on jo tunneliohjelma. Kopioi vain pitkä teksti
-   `--token`-sanan jälkeen (se alkaa `eyJ`). Pidä tämä sivu auki.
+   `--token`-sanan jälkeen (se alkaa `eyJ`). Se on salaisuus, kuten salasana. Pidä tämä sivu auki.
 
-3. **Anna tunnus Lookulle.** Palvelimen päätteessä:
+3. **Anna tunnus Lookulle.** Palvelimen päätteessä. (Jos palaat tähän myöhemmin, ota ensin uudelleen yhteys
+   komennolla `ssh you@192.168.1.10` ja aja `cd ~/looku/deploy`.)
 
    ```bash
    nano .env
@@ -193,8 +205,9 @@ jokaisessa vaiheessa on valikon nimi ja hakusana. (Tarkistettu marraskuussa 2026
    Näet tekstin `Container looku-tunnel-1 Started`. Tunneli on erillinen kontti, joka käynnistyy vain, kun pyydät
    sitä valinnalla `--profile tunnel`.
 
-5. **Palaa Cloudflareen** sivulle, jolta kopioit tunnuksen. Tunnelin pitäisi näkyä yhdistettynä minuutin kuluessa.
-   (Cloudflare kutsuu tunneliohjelmaa nimellä "connector".) Valitse **Continue**.
+5. **Palaa Cloudflareen** sivulle, jolta kopioit tunnuksen. Tunnelin pitäisi näkyä yhdistettynä (healthy) minuutin
+   kuluessa. (Cloudflare kutsuu tunneliohjelmaa nimellä "connector".) Valitse **Continue**. Tunneliin pääset aina
+   takaisin kohdasta **Networking → Tunnels** valitsemalla sen nimen.
 
 6. **Ohjaa osoitteesi vastaanottimeen.** Avaa tunnelin **Routes**-välilehti ja valitse **Add route** →
    **Published application**. Täytä:
@@ -206,15 +219,15 @@ jokaisessa vaiheessa on valikon nimi ja hakusana. (Tarkistettu marraskuussa 2026
    | Path | jätä tyhjäksi |
    | Service URL | `http://ingest:8787` |
 
-   Valitse **Add route**. Osoitteeseen `https://looku.example.com` tulevat pyynnöt kulkevat nyt tunnelin kautta
-   vastaanottimelle, jonka nimi Dockerin sisällä on `ingest`.
+   Valitse **Add route**. Cloudflare luo osoitteen `looku.example.com` verkkotunnukseesi itse. Siihen tulevat
+   pyynnöt kulkevat nyt tunnelin kautta vastaanottimelle, jonka nimi Dockerin sisällä on `ingest`.
 
 </Steps>
 
 ## Osa 4: Päästä läpi vain sivunäytöt
 
 Sivustosi lähettää vastaanottimelle täsmälleen kahdenlaisia pyyntöjä: POST-pyyntöjä osoitteeseen `/ingest`
-(sivunäytöt) ja osoitteeseen `/orders` (verkkokaupan tilaukset). Käsketään Cloudflarea estämään kaikki muu, jotta
+(sivunäytöt) ja osoitteeseen `/orders` (verkkokaupan tilaukset). Pyydetään Cloudflarea estämään kaikki muu, jotta
 mikään muu ei koskaan päädy kotiisi.
 
 <Steps>
@@ -226,16 +239,16 @@ mikään muu ei koskaan päädy kotiisi.
 
 3. Anna säännölle nimi `Looku: only POST /ingest and /orders`.
 
-4. Valitse kohdassa **When incoming requests match** **Edit expression** ja liitä tämä niin, että
+4. Valitse kohdan **When incoming requests match** alta **Edit expression** ja liitä tämä niin, että
    `looku.example.com`-osoitteen tilalla on oma osoitteesi:
 
    ```
    (http.host eq "looku.example.com" and not (http.request.method eq "POST" and http.request.uri.path in {"/ingest" "/orders"}))
    ```
 
-   Sanoin: "pyyntö osoitteeseen looku.example.com, joka ei ole POST-pyyntö osoitteeseen /ingest tai /orders".
+   Selkokielellä: "pyyntö osoitteeseen looku.example.com, joka ei ole POST-pyyntö osoitteeseen /ingest tai /orders".
 
-5. Valitse kohdassa **Then take action** **Block** ja valitse **Deploy**.
+5. Valitse kohdan **Then take action** alta **Block** ja valitse **Deploy**.
 
 </Steps>
 
@@ -260,9 +273,11 @@ curl.exe -s -o NUL -w "%{http_code}\n" https://looku.example.com/
 </TabItem>
 </Tabs>
 
-Ensimmäisen pitäisi tulostaa `401`: testisi pääsi vastaanottimelle, joka torjui sen, koska sitä ei ollut
-allekirjoitettu. Juuri niin pitääkin. Toisen pitäisi tulostaa `403`: Cloudflare esti sen. Jos näet jotain muuta,
-[vianetsintäsivu](/looku/fi/operate/troubleshooting/#cloudflare-502-tai-530) selittää jokaisen vastauksen.
+| Ensimmäinen | Toinen | Mitä se tarkoittaa |
+|---|---|---|
+| `401` | `403` | Oikein. Testisi pääsi vastaanottimelle, joka torjui sen, koska sitä ei ollut allekirjoitettu, ja Cloudflare esti toisen pyynnön. |
+| `403` | | Sääntö estää myös vastaanottimen. Tarkista osan 4 lauseke. |
+| `502` tai `530` | | Tunneli ei saa yhteyttä vastaanottimeen. Katso [Vianetsintä](/looku/fi/operate/troubleshooting/#cloudflare-502-tai-530). |
 
 ## Valmista tuli
 

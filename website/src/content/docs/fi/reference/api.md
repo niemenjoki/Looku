@@ -74,8 +74,8 @@ rest:
         value_template: "{{ value_json.data.pageviews }}"
 ```
 
-ja tiedostossa `secrets.yaml`: `looku_key: "Bearer lk_…"`. `summary`-vastaus näyttää tältä, joten muut kentät
-toimivat samalla tavalla (`value_json.data.visitors`):
+ja tiedostossa `secrets.yaml`: `looku_key: "Bearer lk_…"`. `summary`-vastaus näyttää tältä (lyhennettynä),
+joten muut kentät toimivat samalla tavalla (`value_json.data.visitors`):
 
 ```json
 {"meta":{"site":"myblog","timezone":"Europe/Helsinki","range":{"from":"2026-10-28","to":"2026-11-03"},"sample":false},

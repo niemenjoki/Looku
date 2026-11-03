@@ -9,8 +9,8 @@ import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
 import Screen from "../../../../components/Screen.astro";
 
 Tässä oppaassa käynnistät Lookun omalla tietokoneellasi yhdessä pienen demokaupan kanssa. Klikkailet kauppaa
-kuin kävijä, ja minuutin päästä näet omat käyntisi Lookun kojelaudassa. Mitään ei julkaista internetiin, ja lopuksi
-poistat kaiken.
+kuin kävijä, ja minuutin päästä näet omat käyntisi Lookun kojelaudassa. Mitään ei julkaista internetiin (lataat vain
+ohjelmia), ja lopuksi poistat kaiken.
 
 Siihen menee noin 20 minuuttia, josta suurin osa on latausten odottamista. Tarvitset tietokoneen, jossa on Windows 10
 tai 11, macOS tai Linux, ja noin 3 Gt vapaata levytilaa. Dockeria tai ohjelmointia ei tarvitse osata: kaikki komennot
@@ -33,7 +33,9 @@ Avaa ensin **pääte**, eli ikkuna, johon kirjoitat komentoja:
 - **Linux:** avaa pääteohjelmasi.
 
 Pidä pääte auki, koska käytät sitä koko ajan. Komennot ovat samat kaikissa kolmessa järjestelmässä, paitsi kun
-välilehdet näyttävät toisin.
+välilehdet näyttävät toisin. Kun kopioit komennon tältä sivulta, käytä kunkin laatikon oikean yläkulman
+kopiointipainiketta ja liitä komento päätteeseen: napsauta hiiren oikealla painikkeella, tai paina Windowsissa
+Ctrl+V, macOS:ssä Cmd+V ja Linuxissa Ctrl+Shift+V.
 
 Asenna nyt Docker:
 
@@ -72,13 +74,17 @@ Tarkista, että Docker vastaa:
 
 ```bash
 docker compose version
+docker ps
 ```
 
-Näet tekstin `Docker Compose version v2.…` tai suuremman numeron. Jos näet sen sijaan virheen:
+Ensimmäisen pitäisi tulostaa `Docker Compose version v2.…` tai suurempi numero ja toisen otsikkorivi, joka alkaa
+`CONTAINER ID`. Jos näet sen sijaan virheen:
 
 - `cannot connect to the Docker daemon` tai `error during connect`: Docker Desktop ei ole vielä käynnissä (Linuxissa:
   `sudo systemctl start docker`).
 - `permission denied` (Linux): kirjaudu ulos ja takaisin sisään tai käynnistä tietokone uudelleen.
+- `'compose' is not a docker command` (Linux): Docker on asennettu jakelusi omasta paketista. Asenna se sen sijaan
+  yllä linkitetyn Dockerin ohjeen mukaan.
 
 Tarkista sitten Git:
 
@@ -94,9 +100,11 @@ tarjous asentaa kehitystyökalut. Linuxissa aja `sudo apt install git` (Fedorass
 
 <Steps>
 
-1. **Lataa Looku.** Tämä luo kansion `looku` ja siirtää sinut sen `deploy`-kansioon, jossa Docker-tiedostot ovat:
+1. **Lataa Looku.** Tämä siirtyy kotikansioosi, luo sinne kansion `looku` ja siirtää sinut sen `deploy`-kansioon,
+   jossa Docker-tiedostot ovat:
 
    ```bash
+   cd ~
    git clone https://github.com/niemenjoki/Looku.git looku
    cd looku/deploy
    ```
@@ -173,9 +181,11 @@ tarjous asentaa kehitystyökalut. Linuxissa aja `sudo apt install git` (Fedorass
    k8Jd2mQx7RfTn4WcZp1LvB9sHy6GaE0uYoXiN5tCw3E
    ```
 
-   Sinun avaimesi on eri. **Kopioi se nyt** (valitse se hiirellä ja paina Ctrl+C, Macissa Cmd+C). Demosivusto
-   allekirjoittaa jokaisen sivunäytön tällä avaimella, joten Looku tietää sivunäytön olevan aito. Tarvitset avainta
-   vaiheessa 7. Jos se katoaa, `docker compose run --rm ingest site:rotate-key demo` tulostaa uuden.
+   Sinun avaimesi on eri. **Kopioi se nyt**: valitse se hiirellä ja kopioi (Windowsissa Ctrl+C, macOS:ssä Cmd+C,
+   Linuxissa Ctrl+Shift+C, koska siellä pelkkä Ctrl+C pysäyttäisi ohjelman). Liitä se hetkeksi jonnekin talteen.
+   Demosivusto allekirjoittaa jokaisen sivunäytön tällä avaimella, joten Looku tietää sivunäytön olevan aito.
+   Tarvitset avainta vaiheessa 7. Jos se katoaa, `docker compose run --rm ingest site:rotate-key demo` tulostaa
+   uuden.
 
 5. **Ota käyttöön kaksi lisäosaa,** kampanjat ja lukuaika:
 
@@ -183,7 +193,8 @@ tarjous asentaa kehitystyökalut. Linuxissa aja `sudo apt install git` (Fedorass
    docker compose run --rm ingest site:modules demo content,campaigns
    ```
 
-   Looku vastaa `Modules of demo: perus, content, campaigns`. `perus` on aina päällä.
+   Looku vastaa `Modules of demo: perus, content, campaigns`. `perus` on perusmoduuli, joka näkyy kojelaudassa
+   nimellä **Perus**; se on aina päällä.
 
 6. **Valitse kojelaudan salasana.** Sen pitää olla vähintään 10 merkkiä pitkä:
 
@@ -194,7 +205,8 @@ tarjous asentaa kehitystyökalut. Linuxissa aja `sudo apt install git` (Fedorass
    Komento kysyy `New dashboard password:`. Kirjoita salasana ja paina Enter. **Kirjoittaessa ruudulle ei tule
    mitään**, ei edes pisteitä; se on tarkoituksellista. Salasana kysytään vain kerran, joten kirjoita huolellisesti.
    Looku vastaa ``Password set. Restart `looku serve` to end existing logins.`` Jälkimmäisestä lauseesta ei tarvitse
-   välittää: kukaan ei ole vielä kirjautunut.
+   välittää: kukaan ei ole vielä kirjautunut. Jos salasana on liian lyhyt, komento kertoo sen; jos teit
+   kirjoitusvirheen, aja komento vain uudelleen.
 
 7. **Anna demosivustolle sen asetukset.** Siirry demon kansioon ja kopioi sen esimerkkiasetukset:
 
@@ -204,17 +216,18 @@ tarjous asentaa kehitystyökalut. Linuxissa aja `sudo apt install git` (Fedorass
    ```
 
    Avaa `.env.local` tekstieditorissa kuten vaiheessa 2 (`notepad .env.local`, `open -e .env.local` tai
-   `nano .env.local`). Poista kaikki sen sisältö ja kirjoita tilalle nämä kolme riviä niin, että
-   `LOOKU_SIGNING_KEY=`-kohdan perässä on vaiheen 4 avaimesi:
+   `nano .env.local`). Muuta kaksi riviä tällaisiksi niin, että `LOOKU_SIGNING_KEY=`-kohdan perässä on vaiheen 4
+   avaimesi. Jätä muut rivit ennalleen:
 
    ```
    LOOKU_ENDPOINT=http://ingest:8787
-   LOOKU_SITE_ID=demo
    LOOKU_SIGNING_KEY=LIITÄ-AVAIMESI-TÄHÄN
    ```
 
-   Ei välilyöntejä `=`-merkin ympärille eikä lainausmerkkejä. Tallenna. Nämä kolme riviä ovat kaikki, mitä mikä
-   tahansa sivusto tarvitsee keskustellakseen Lookun kanssa: missä vastaanotin on, mikä sivusto tämä on ja avain.
+   Ei välilyöntejä `=`-merkin ympärille eikä lainausmerkkejä (nanossa liitä painamalla Ctrl+Shift+V tai hiiren
+   oikealla painikkeella). Tallenna. Tiedostossa ovat nyt ne kolme asetusta, jotka mikä tahansa sivusto tarvitsee
+   keskustellakseen Lookun kanssa: missä vastaanotin on (`LOOKU_ENDPOINT`), mikä sivusto tämä on (`LOOKU_SITE_ID`,
+   valmiiksi `demo`) ja avain.
    Tässä vastaanottimen osoite on yksinkertaisesti `ingest`, sen nimi Dockerin sisällä.
 
 8. **Käynnistä demokauppa.** Palaa `looku`-kansioon ja käynnistä demo kontissa. Komento on yksi pitkä rivi, joten
@@ -226,8 +239,10 @@ tarjous asentaa kehitystyökalut. Linuxissa aja `sudo apt install git` (Fedorass
    ```
 
    Komento käynnistää Lookun viereen kontin, jossa on Node.js, kopioi demon koodin sen sisälle ja rakentaa ja
-   käynnistää demon. Omiin kansioihisi ei kirjoiteta mitään. Ensimmäinen kerta kestää muutaman minuutin, ja ruudulla
-   vierii paljon tekstiä, myös `npm notice` -alkuisia rivejä. Se on normaalia. Demo on valmis, kun näet:
+   käynnistää demon. Omiin kansioihisi ei kirjoiteta mitään. Komennon jokaista osaa ei tarvitse ymmärtää. Ensimmäinen
+   kerta kestää muutaman minuutin, ja ruudulla vierii paljon tekstiä, myös `npm notice` -alkuisia rivejä ja ilmoitus
+   Next.js:n telemetriasta. Molemmat ovat normaaleja, eikä sinun tarvitse tehdä niille mitään. Demo on valmis, kun
+   näet:
 
    ```
    - Local:         http://localhost:3000
@@ -240,7 +255,8 @@ tarjous asentaa kehitystyökalut. Linuxissa aja `sudo apt install git` (Fedorass
 
 ## Käy kaupassa
 
-Ole nyt kävijä.
+Ole nyt kävijä. Demokauppa on suomeksi: **Etusivu**, **Tuotteet** ja **Oppaat**. Jätä **Kampanjalinkki**-linkki
+rauhaan; se aloittaa toisen demokampanjan.
 
 <Steps>
 
@@ -254,7 +270,7 @@ Ole nyt kävijä.
 2. Klikkaile kaupan muutamaa sivua.
 
 3. Valitse sivun alareunasta **Salli**. Tämä on demon suostumuskysymys: lukuaika mitataan vain kävijöiltä, jotka
-   sallivat sen. Avaa sitten oppaat-sivu, vieritä alas ja viivy sillä hetki.
+   sallivat sen. Avaa sitten **Oppaat**, vieritä sivun loppuun ja viivy sivulla noin 30 sekuntia.
 
 </Steps>
 
@@ -270,13 +286,14 @@ sivustolla, jolla on kävijöitä, se näyttää tältä:
 
 <Screen name="overview" alt="Kojelauta, jossa näkyvät sivunäytöt, kävijät, käynnit ja sivuja käyntiä kohden, kaavio ja katsotuimmat sivut." />
 
-Vieritä alas. **Suosituimmat sivut** -luettelossa ovat sivut, jotka avasit. Alempana **Kampanjat**-raportissa näkyy
-kampanja `demo` ja sinun käyntisi:
+Vieritä alas. **Suosituimmat sivut** -luettelossa ovat sivut, jotka avasit. Alempana **Kampanjat**-kortissa (ei
+**Kampanjat (UTM)** -listassa, joka kuuluu peruslukuihin) näkyy kampanja `demo` ja sinun käyntisi:
 
 <Screen name="campaigns" alt="Kampanjaraportti: jokainen kampanja käynteineen ja tilauksineen." />
 
-**Lukuaika ja vieritys** -raportissa on oppaat-sivusi, koska sallit mittaamisen. Sivuja, jotka avasit ennen kuin
-valitsit **Salli**, siinä ei ole. Lukuajan ilmestymiseen voi mennä minuutti.
+**Lukuaika ja vieritys** -kortissa on oppaat-sivusi, `/oppaat`, koska sallit mittaamisen. Sivuja, jotka avasit
+ennen kuin valitsit **Salli**, siinä ei ole. Lukuajan ilmestymiseen voi mennä minuutti. Alla oleva kuva on
+sivustolta, jolla on blogisivuja.
 
 <Screen name="content" alt="Lukuaika ja vierityssyvyys jokaiselle blogisivulle." />
 
@@ -290,7 +307,8 @@ tallensi selaimeesi, on suostumusvalintasi.
   painamalla Ctrl+C ja aja pitkä `docker run` -komento uudelleen.
 - Brave ja jotkin selainasetukset lähettävät "älä seuraa" -signaalin, ja Looku ohittaa sinut silloin
   tarkoituksella. Kokeile toisella selaimella.
-- `deploy`-kansiossa `docker compose logs ingest` näyttää vastaanottimen viestit.
+- Vastaanottimen omat viestit: avaa toinen pääteikkuna ja aja `cd ~/looku/deploy` ja sitten
+  `docker compose logs ingest`.
 
 ## Siivoa jälkesi
 
@@ -305,6 +323,9 @@ tallensi selaimeesi, on suostumusvalintasi.
    docker compose down -v
    docker image rm looku:local node:22-bookworm-slim
    ```
+
+   Näet rivejä, jotka päättyvät sanoihin `Removed` ja `Deleted`. Jos käytät `node:22-bookworm-slim`-levykuvaa
+   johonkin muuhun, jätä se pois viimeisestä komennosta.
 
 3. Poista kansio:
 

@@ -138,7 +138,7 @@ docker compose run --rm ingest site:rotate-key myblog
 
 Tunneli ei saa yhteyttä vastaanottimeen.
 
-- `docker compose ps`: onko `looku-tunnel-1` tilassa `Up`? Jos se puuttuu, käynnistä se komennolla
+- `docker compose --profile tunnel ps`: onko `looku-tunnel-1` tilassa `Up`? Jos se puuttuu, käynnistä se komennolla
   `docker compose --profile tunnel up -d`.
 - Cloudflaressa reitin **Service URL** -arvon pitää olla `http://ingest:8787`. `localhost` ei toimi, koska
   tunnelikontin sisällä `localhost` on kontti itse.
