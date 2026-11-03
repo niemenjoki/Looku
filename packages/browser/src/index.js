@@ -12,6 +12,7 @@ let visible = 0;
 let scroll = 0;
 let sent = false;
 let original;
+let wrapper = null;
 
 function post(data) {
   const body = JSON.stringify(data);
@@ -68,12 +69,16 @@ export function start(options = {}) {
   addEventListener("pagehide", finish);
   addEventListener("popstate", onNavigate);
   // Client-side navigation in single-page apps (Next.js, React Router).
-  original = history.pushState;
-  history.pushState = function (...args) {
-    const result = original.apply(this, args);
-    onNavigate();
+  // Each wrapper calls the function it replaced and measures only while it is
+  // the current one, so a wrapper left in another script's chain does nothing.
+  const previous = history.pushState;
+  original = previous;
+  wrapper = function pushState(...args) {
+    const result = previous.apply(this, args);
+    if (wrapper === pushState) onNavigate();
     return result;
   };
+  history.pushState = wrapper;
 }
 
 // Ends the current measurement and stops, e.g. when consent is withdrawn.
@@ -85,7 +90,10 @@ export function stop() {
   removeEventListener("visibilitychange", onVisibility);
   removeEventListener("pagehide", finish);
   removeEventListener("popstate", onNavigate);
-  if (history.pushState !== original) history.pushState = original;
+  // Another script (e.g. the Next.js router) may have wrapped pushState after
+  // us; restoring the original would drop its wrapper, so ours stays inactive.
+  if (history.pushState === wrapper) history.pushState = original;
+  wrapper = null;
 }
 
 // Named event, e.g. event("add_to_cart", { items: [{ sku: "A1", quantity: 1 }] }).

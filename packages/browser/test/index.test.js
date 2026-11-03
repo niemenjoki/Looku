@@ -24,6 +24,7 @@ for (const name of ["localStorage", "sessionStorage"]) {
 Object.defineProperty(doc, "cookie", { get() { throw new Error("cookie used"); }, set() { throw new Error("cookie used"); } });
 
 const { event, start, stop } = await import("../src/index.js");
+const nativePushState = history.pushState;
 const body = async (i) => JSON.parse(await sent[i].blob.text());
 
 test("measures a page view once and sends no identifier", async (t) => {
@@ -54,6 +55,41 @@ test("measures a page view once and sends no identifier", async (t) => {
   event("ignored");
   assert.equal(sent.length, 3);
   assert.equal(listeners.size, 0);
+  assert.equal(history.pushState, nativePushState);
+});
+
+test("stop keeps a pushState wrapper that another script added after start", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: 0 });
+  sent.length = 0;
+  doc.visibilityState = "visible";
+  location.pathname = "/a";
+  start();
+  // A router wraps pushState after Looku, as Next.js does.
+  let routed = 0;
+  const looku = history.pushState;
+  const router = function (...args) { routed += 1; return looku.apply(this, args); };
+  history.pushState = router;
+
+  stop();
+  assert.equal(history.pushState, router);
+  assert.equal(sent.length, 1);
+  history.pushState({}, "", "/b");
+  assert.equal(routed, 1);
+  assert.equal(location.pathname, "/b");
+  assert.equal(sent.length, 1);
+
+  // Consent given again: one measurement per navigation, no loop through the
+  // inactive wrapper.
+  start();
+  t.mock.timers.tick(4000);
+  history.pushState({}, "", "/c");
+  assert.equal(routed, 2);
+  assert.equal(location.pathname, "/c");
+  assert.equal(sent.length, 2);
+  assert.deepEqual(await body(1), { type: "engagement", path: "/b", dwell_ms: 4000, max_scroll_pct: 0 });
+  stop();
+  assert.equal(history.pushState, router);
+  history.pushState = nativePushState;
 });
 
 test("a page opened in a background tab is timed from when it is shown", async (t) => {
