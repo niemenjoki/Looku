@@ -39,7 +39,7 @@ default `28d`, ending today in the site's time zone) or with `from` and `to` (`Y
 | `summary` | page views, visitors, sessions, pages per session; `compare=previous` adds the previous period |
 | `timeseries` | totals per `interval`: `hour` (at most 31 days), `day`, `week` or `month` |
 | `breakdown/<dimension>` | totals by `page`, `entry`, `exit`, `referrer`, `utm_source`, `utm_medium`, `utm_campaign`, `device`, `browser`, `os`, `country` or `page_group`; `limit` (default 50), `sort` |
-| `reports/<module>/<report>` | module reports: `shop/summary`, `shop/timeseries`, `shop/funnel`, `shop/products`, `campaigns/overview`, `content/engagement`, `content/rising` |
+| `reports/<module>/<report>` | module reports: `shop/summary`, `shop/timeseries`, `shop/funnel`, `shop/products`, `campaigns/overview`, `content/engagement`, `content/rising`. Only for modules that are on for the site (`site:modules`); otherwise the answer is `Unknown report.` |
 | `export.csv?report=…` | any of the above as CSV |
 
 `summary`, `timeseries` and `breakdown` also take filters: `page_group`, `utm_campaign`, `device`.

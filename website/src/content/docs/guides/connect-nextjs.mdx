@@ -33,6 +33,8 @@ the response, so the page is not slowed down. Nothing changes in your pages.
    cp ../looku/packages/next/src/index.js lib/looku.js
    ```
 
+   If you cloned Looku somewhere else, replace `../looku` with that folder.
+
 2. **Create the proxy file** in your project's root folder (next to `package.json`; if your pages are in `src/app`,
    put it in `src/`). Which file depends on your Next.js version: look for `"next"` in `package.json`.
 
@@ -143,7 +145,10 @@ the response, so the page is not slowed down. Nothing changes in your pages.
 
    Set the three settings as environment variables of the process that runs `next start`, the same way you set your
    other settings (a `.env.production` file that is not in git, your systemd service, Docker `environment:` or your
-   host's control panel). `NODE_ENV` must be `production`, which `next start` sets by itself. Then restart the site.
+   host's control panel). `.env.local` also works: `next start` reads it, so on your own server one file is
+   enough. `NODE_ENV` must be `production`, which `next start` sets by itself. After adding or changing a setting,
+   build and start again (`npm run build`, then `npm start`): with older Next.js versions the middleware gets the
+   values when it is built.
 
    </TabItem>
    </Tabs>

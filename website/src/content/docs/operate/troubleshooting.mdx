@@ -82,7 +82,8 @@ Go through these in order. The first one that fails is usually the cause.
    node looku-test.mjs
    ```
 
-   **Delete `looku-test.mjs` afterwards**, because it contains your signing key. `true` means Looku accepted it: a page view of `/looku-test` appears in the dashboard, and the problem is in how
+   Node may first print a warning about a module type (`MODULE_TYPELESS_PACKAGE_JSON`); it is harmless, so do not
+   change `package.json` because of it. **Delete `looku-test.mjs` afterwards**, because it contains your signing key. `true` means Looku accepted it: a page view of `/looku-test` appears in the dashboard, and the problem is in how
    the site gets its settings. `false` with step 3 answering `401` means the site id or key is wrong: check for extra
    spaces, or make a new key with `site:rotate-key`. The test also fails if the clock of the computer is more than
    five minutes off.

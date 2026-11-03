@@ -47,7 +47,7 @@ moved. Paths were checked against Cloudflare's own documentation in November 202
    docker compose version
    ```
 
-   You should see `Docker Compose version v2.…`. If you see `command not found` or `docker: 'compose' is not a docker
+   You should see `Docker Compose version v2.…` or a higher number. If you see `command not found` or `docker: 'compose' is not a docker
    command`, install Docker by following [Docker's guide for your Linux](https://docs.docker.com/engine/install/).
    If you see `permission denied`, put `sudo` in front of every `docker` command in this guide.
 
@@ -98,9 +98,11 @@ moved. Paths were checked against Cloudflare's own documentation in November 202
    - `LOOKU_DASHBOARD_BIND` is the address where the dashboard listens. Your home network address means that only
      devices at home can reach it. The default `127.0.0.1` would mean only the server itself.
    - `LOOKU_API_HOSTS` is the address you will type in your browser. The dashboard refuses other addresses, which
-     protects it against a trick called DNS rebinding.
+     protects it against a trick called DNS rebinding. If you also want to open it by a name (for example
+     `server.local:8788`), add that after a comma. If you change `LOOKU_DASHBOARD_PORT`, use the same port here.
 
-   Save with Ctrl+O and Enter, exit with Ctrl+X.
+   Save with Ctrl+O and Enter, exit with Ctrl+X. If you change `.env` later, run `docker compose up -d` in this
+   folder so that the containers get the new values.
 
 3. **Create the data folder.** Looku runs as user number 1000 inside the container, so the folder must belong to
    that user:
@@ -197,7 +199,8 @@ open to Cloudflare, and Cloudflare passes requests for `looku.example.com` throu
    nano .env
    ```
 
-   Paste the token after `LOOKU_TUNNEL_TOKEN=`, with no spaces or quotes. Save and exit.
+   The line `LOOKU_TUNNEL_TOKEN=` is at the end of the file. Paste the token after it, with no spaces or quotes (in a
+   terminal, paste with a right click or Ctrl+Shift+V, not Ctrl+V). Save and exit.
 
 4. **Start the tunnel container:**
 
@@ -210,7 +213,8 @@ open to Cloudflare, and Cloudflare passes requests for `looku.example.com` throu
 
 5. **Check the connection in Cloudflare.** Back in the browser, the tunnel should show as connected (healthy) within
    a minute. Cloudflare calls the `cloudflared` program a "connector"; it has nothing to do with Looku's connector
-   on your site. Select **Continue** (or open the tunnel from **Networking → Tunnels**).
+   on your site. On the Cloudflare page where you copied the token, select **Continue** (or open the tunnel from
+   **Networking → Tunnels**).
 
 6. **Route your hostname to the receiver.** In the tunnel, on the **Routes** tab, select **Add route** →
    **Published application** (search: "Published application"). Fill in:
@@ -298,7 +302,7 @@ Continue with [Connect a Next.js site](/looku/guides/connect-nextjs/) or
 
 ## Done when
 
-- `docker compose ps` shows `looku-ingest-1`, `looku-dashboard-1` and `looku-tunnel-1` as `Up`,
+- `docker compose --profile tunnel ps` shows `looku-ingest-1`, `looku-dashboard-1` and `looku-tunnel-1` as `Up`,
 - the two `curl` checks print `401` and `403`,
 - after you connect your site and open a page on it, the page view appears in the dashboard.
 

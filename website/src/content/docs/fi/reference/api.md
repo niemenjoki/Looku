@@ -40,7 +40,7 @@ Kaikki raporttipolut alkavat `/api/v1/sites/<site>/`. Valitse ajanjakso parametr
 | `summary` | sivunäytöt, kävijät, käynnit, sivuja käyntiä kohden; `compare=previous` lisää edellisen jakson |
 | `timeseries` | summat jaksoittain (`interval`): `hour` (enintään 31 päivää), `day`, `week` tai `month` |
 | `breakdown/<dimension>` | summat jaoteltuina: `page`, `entry`, `exit`, `referrer`, `utm_source`, `utm_medium`, `utm_campaign`, `device`, `browser`, `os`, `country` tai `page_group`; `limit` (oletus 50), `sort` |
-| `reports/<module>/<report>` | moduulien raportit: `shop/summary`, `shop/timeseries`, `shop/funnel`, `shop/products`, `campaigns/overview`, `content/engagement`, `content/rising` |
+| `reports/<module>/<report>` | moduulien raportit: `shop/summary`, `shop/timeseries`, `shop/funnel`, `shop/products`, `campaigns/overview`, `content/engagement`, `content/rising`. Vain sivustolla päällä oleville moduuleille (`site:modules`); muuten vastaus on `Unknown report.` |
 | `export.csv?report=…` | mikä tahansa yllä olevista CSV-muodossa |
 
 `summary`, `timeseries` ja `breakdown` hyväksyvät myös suodattimet: `page_group`, `utm_campaign`, `device`.

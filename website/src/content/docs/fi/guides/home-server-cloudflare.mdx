@@ -47,7 +47,7 @@ valikko on siirtynyt. Polut on tarkistettu Cloudflaren omasta dokumentaatiosta m
    docker compose version
    ```
 
-   Näet `Docker Compose version v2.…`. Jos näet `command not found` tai `docker: 'compose' is not a docker
+   Näet `Docker Compose version v2.…` tai suuremman numeron. Jos näet `command not found` tai `docker: 'compose' is not a docker
    command`, asenna Docker [Dockerin ohjeen mukaan omalle Linuxillesi](https://docs.docker.com/engine/install/).
    Jos näet `permission denied`, lisää `sudo` jokaisen tämän ohjeen `docker`-komennon eteen.
 
@@ -98,9 +98,11 @@ valikko on siirtynyt. Polut on tarkistettu Cloudflaren omasta dokumentaatiosta m
    - `LOOKU_DASHBOARD_BIND` on osoite, jossa kojelauta kuuntelee. Kotiverkon osoite tarkoittaa, että vain kotona
      olevat laitteet saavat siihen yhteyden. Oletus `127.0.0.1` tarkoittaisi, että vain palvelin itse saa.
    - `LOOKU_API_HOSTS` on osoite, jonka kirjoitat selaimeesi. Kojelauta torjuu muut osoitteet, mikä suojaa sitä
-     DNS rebinding -nimiseltä hyökkäykseltä.
+     DNS rebinding -nimiseltä hyökkäykseltä. Jos haluat avata sen myös nimellä (esimerkiksi `server.local:8788`),
+     lisää se pilkun jälkeen. Jos muutat asetusta `LOOKU_DASHBOARD_PORT`, käytä samaa porttia tässä.
 
-   Tallenna painamalla Ctrl+O ja Enter, poistu painamalla Ctrl+X.
+   Tallenna painamalla Ctrl+O ja Enter, poistu painamalla Ctrl+X. Jos muutat `.env`-tiedostoa myöhemmin, aja tässä
+   kansiossa `docker compose up -d`, jotta kontit saavat uudet arvot.
 
 3. **Luo tietokansio.** Looku toimii kontin sisällä käyttäjänä numero 1000, joten kansion on kuuluttava tälle
    käyttäjälle:
@@ -199,7 +201,8 @@ Cloudflareen, ja Cloudflare välittää osoitteeseen `looku.example.com` tulevat
    nano .env
    ```
 
-   Liitä tunnus `LOOKU_TUNNEL_TOKEN=`-kohdan perään ilman välilyöntejä tai lainausmerkkejä. Tallenna ja poistu.
+   Rivi `LOOKU_TUNNEL_TOKEN=` on tiedoston lopussa. Liitä tunnus sen perään ilman välilyöntejä tai lainausmerkkejä
+   (päätteessä liitetään hiiren oikealla painikkeella tai Ctrl+Shift+V, ei Ctrl+V). Tallenna ja poistu.
 
 4. **Käynnistä tunnelikontti:**
 
@@ -212,7 +215,8 @@ Cloudflareen, ja Cloudflare välittää osoitteeseen `looku.example.com` tulevat
 
 5. **Tarkista yhteys Cloudflaresta.** Palaa selaimeen. Tunnelin pitäisi näkyä yhdistettynä (healthy) minuutin
    kuluessa. Cloudflare kutsuu `cloudflared`-ohjelmaa nimellä "connector"; sillä ei ole mitään tekemistä
-   sivustossasi olevan Lookun liittimen kanssa. Valitse **Continue** (tai avaa tunneli kohdasta
+   sivustossasi olevan Lookun liittimen kanssa. Valitse sillä Cloudflaren sivulla, josta kopioit tunnuksen,
+   **Continue** (tai avaa tunneli kohdasta
    **Networking → Tunnels**).
 
 6. **Ohjaa palvelinnimesi vastaanottimeen.** Valitse tunnelin **Routes**-välilehdeltä **Add route** →
@@ -302,7 +306,8 @@ Jatka ohjeeseen [Liitä Next.js-sivusto](/looku/fi/guides/connect-nextjs/) tai
 
 ## Valmis, kun
 
-- `docker compose ps` näyttää `looku-ingest-1`-, `looku-dashboard-1`- ja `looku-tunnel-1`-kontin tilana `Up`,
+- `docker compose --profile tunnel ps` näyttää `looku-ingest-1`-, `looku-dashboard-1`- ja `looku-tunnel-1`-kontin
+  tilana `Up`,
 - kaksi `curl`-tarkistusta tulostavat `401` ja `403`,
 - kun olet liittänyt sivustosi ja avannut sillä sivun, sivunäyttö näkyy kojelaudassa.
 

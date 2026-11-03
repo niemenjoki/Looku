@@ -14,7 +14,7 @@ views appear in Looku's dashboard. Nothing is published on the internet and no r
 about 3 GB of free disk space, and an internet connection.
 
 This uses the same Docker Compose setup as a real installation, so the commands you learn here are the ones you use
-on a server later. When you are done, one command removes everything.
+on a server later. When you are done, a few commands remove everything.
 
 ## Before you start
 
@@ -65,8 +65,14 @@ be running whenever you use Looku on Windows or macOS. Check that Docker works:
 docker compose version
 ```
 
-You should see `Docker Compose version v2.…`. If you see an error with `cannot connect to the Docker daemon` or
-`error during connect`, Docker Desktop is not running yet.
+You should see `Docker Compose version v2.…` or a higher number. If you see an error instead:
+
+- `cannot connect to the Docker daemon` or `error during connect`: on Windows and macOS, Docker Desktop is not
+  running yet; on Linux, start Docker with `sudo systemctl start docker`.
+- `permission denied` (Linux): you have not logged out and back in after `usermod`. Do that, or restart the
+  computer.
+- `'compose' is not a docker command` (Linux): Docker came from your distribution's own package. Install it with
+  Docker's guide linked above instead.
 
 **Git** downloads the code. Check whether you have it:
 
@@ -91,7 +97,8 @@ Running `git --version` offers to install the command line developer tools. Acce
 </TabItem>
 <TabItem label="Linux">
 
-On Ubuntu and Debian: `sudo apt install git`.
+On Ubuntu and Debian: `sudo apt install git`. On Fedora: `sudo dnf install git`. Other distributions have a
+`git` package too.
 
 </TabItem>
 </Tabs>
@@ -143,7 +150,7 @@ On Ubuntu and Debian: `sudo apt install git`.
    </TabItem>
    </Tabs>
 
-   Change the first setting to:
+   Find the line that starts with `LOOKU_DATA_DIR=` (the lines starting with `#` are comments) and change it to:
 
    ```
    LOOKU_DATA_DIR=looku-data
@@ -168,7 +175,8 @@ On Ubuntu and Debian: `sudo apt install git`.
    docker compose ps
    ```
 
-   Both `looku-ingest-1` and `looku-dashboard-1` should show `Up`. If the first command says
+   Both `looku-ingest-1` and `looku-dashboard-1` should show `Up` (for the first minute it may also say
+   `health: starting`). If the first command says
    `port is already allocated`, another program uses port 8788: change `LOOKU_DASHBOARD_PORT` in `.env` to, for
    example, `8789`, run the command again, and use that port instead of 8788 below.
 
@@ -219,15 +227,16 @@ On Ubuntu and Debian: `sudo apt install git`.
    ```
 
    Open `.env.local` in the text editor as in step 2 (`notepad .env.local`, `open -e .env.local` or
-   `nano .env.local`) and change it to:
+   `nano .env.local`), delete everything in it, and write these three lines instead, with your own key after
+   `LOOKU_SIGNING_KEY=`:
 
    ```
    LOOKU_ENDPOINT=http://ingest:8787
    LOOKU_SITE_ID=demo
-   LOOKU_SIGNING_KEY=the key you copied in step 4
+   LOOKU_SIGNING_KEY=PASTE-YOUR-KEY-HERE
    ```
 
-   Save the file. These are the three settings every connector needs: where Looku's receiver is, which site this is,
+   No spaces around `=` and no quotes. Save the file. These are the three settings every connector needs: where Looku's receiver is, which site this is,
    and the key to sign with. `ingest` is the receiver's name inside Docker: the demo will run in a container next to
    Looku and finds the receiver by that name. A real site uses the receiver's public address instead.
 
@@ -258,9 +267,12 @@ The connector sends page views only from a production build (`npm run build` and
 
 <Steps>
 
-1. Open [http://localhost:3000](http://localhost:3000) in your browser and click through a few pages.
-2. Open [http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo](http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo).
-   This is a campaign link, like one you would put in a newsletter.
+1. Open a **private window** in your browser (Ctrl+Shift+N in Chrome and Edge, Ctrl+Shift+P in Firefox, Cmd+Shift+N
+   in Safari) and open
+   [http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo](http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo).
+   This is a campaign link, like one you would put in a newsletter. Looku credits a visit to the campaign it
+   started from, so open this link first.
+2. Click through a few pages of the demo site.
 3. At the bottom of the demo page, select **Salli** (allow) to give consent for measuring reading time, then scroll
    the guide page and stay on it for a while.
 4. Open the dashboard at [http://127.0.0.1:8788](http://127.0.0.1:8788) and log in with your password.
@@ -269,13 +281,19 @@ The connector sends page views only from a production build (`npm run build` and
 
 **It works if:**
 
-- the page views appear in the dashboard, and the campaign `demo` appears among the campaigns,
-- reading time appears only for pages you viewed after selecting "Salli",
-- your browser's storage for `localhost:3000` has nothing from Looku (the consent choice is the demo site's own).
+- the dashboard's front page shows your page views (choose the site `demo` and today if it asks),
+- the **Campaigns** report shows the campaign `demo` with one visit,
+- the **Reading time and scroll** report has data only for pages you viewed after selecting "Salli" (it can take a
+  minute).
 
-If the dashboard stays empty, see [No page views appear](/looku/operate/troubleshooting/#no-page-views-appear). If your
-browser sends Do Not Track or Global Privacy Control (Brave does by default), Looku skips your page views on purpose:
-try another browser.
+If the dashboard stays empty:
+
+- Look at the demo's window: an error there usually names the problem.
+- Check that the key in `.env.local` is exactly the one from step 4 (or from `site:rotate-key`, which replaces it).
+  After changing `.env.local`, stop the demo with Ctrl+C and run the `docker run` command of step 8 again.
+- If your browser sends Do Not Track or Global Privacy Control (Brave does by default), Looku skips your page views
+  on purpose: try another browser.
+- Look at the receiver's log in the `deploy` folder: `docker compose logs ingest`.
 
 ## Clean up
 
@@ -291,7 +309,8 @@ try another browser.
    docker image rm looku:local node:22-bookworm-slim
    ```
 
-   `down -v` removes the containers and the data volume; `image rm` frees the disk space used by the images.
+   `down -v` removes the containers and the data volume; `image rm` frees the disk space used by the images. If you
+   use `node:22-bookworm-slim` for something else too, leave it out of the command.
 
 3. **Delete the folder:**
 
@@ -321,6 +340,8 @@ try another browser.
 
    </TabItem>
    </Tabs>
+
+   If you downloaded the code somewhere else than your home folder, delete that `looku` folder instead.
 
 </Steps>
 

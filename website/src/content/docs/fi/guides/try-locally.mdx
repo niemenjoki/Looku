@@ -14,7 +14,7 @@ ilmestyvät Lookun kojelautaan. Mitään ei julkaista internetiin, eikä mihink�
 macOS tai Linux, noin 3 Gt vapaata levytilaa ja internetyhteyden.
 
 Kokeilu käyttää samaa Docker Compose -asennusta kuin oikea asennus, joten tässä opitut komennot ovat samoja, joita
-käytät myöhemmin palvelimella. Kun olet valmis, yksi komento poistaa kaiken.
+käytät myöhemmin palvelimella. Kun olet valmis, muutama komento poistaa kaiken.
 
 ## Ennen kuin aloitat
 
@@ -68,8 +68,14 @@ tilauksen. Sen pitää olla käynnissä aina, kun käytät Lookua Windowsissa ta
 docker compose version
 ```
 
-Näet tekstin `Docker Compose version v2.…`. Jos näet virheen, jossa lukee `cannot connect to the Docker daemon` tai
-`error during connect`, Docker Desktop ei ole vielä käynnissä.
+Näet tekstin `Docker Compose version v2.…` tai suuremman numeron. Jos näet sen sijaan virheen:
+
+- `cannot connect to the Docker daemon` tai `error during connect`: Windowsissa ja macOS:ssä Docker Desktop ei ole
+  vielä käynnissä; Linuxissa käynnistä Docker komennolla `sudo systemctl start docker`.
+- `permission denied` (Linux): et ole kirjautunut ulos ja takaisin sisään `usermod`-komennon jälkeen. Tee se tai
+  käynnistä tietokone uudelleen.
+- `'compose' is not a docker command` (Linux): Docker on asennettu jakelun omasta paketista. Asenna se sen sijaan
+  yllä linkitetyn Dockerin ohjeen mukaan.
 
 **Git** lataa koodin. Tarkista, onko se asennettu:
 
@@ -94,7 +100,8 @@ Sulje PowerShell, avaa se uudelleen ja aja `git --version` uudelleen.
 </TabItem>
 <TabItem label="Linux">
 
-Ubuntussa ja Debianissa: `sudo apt install git`.
+Ubuntussa ja Debianissa: `sudo apt install git`. Fedorassa: `sudo dnf install git`. Muissakin jakeluissa on
+`git`-paketti.
 
 </TabItem>
 </Tabs>
@@ -146,7 +153,7 @@ Ubuntussa ja Debianissa: `sudo apt install git`.
    </TabItem>
    </Tabs>
 
-   Muuta ensimmäinen asetus muotoon:
+   Etsi rivi, joka alkaa `LOOKU_DATA_DIR=` (`#`-merkillä alkavat rivit ovat kommentteja), ja muuta se muotoon:
 
    ```
    LOOKU_DATA_DIR=looku-data
@@ -172,7 +179,8 @@ Ubuntussa ja Debianissa: `sudo apt install git`.
    docker compose ps
    ```
 
-   Sekä `looku-ingest-1` että `looku-dashboard-1` näyttävät tilan `Up`. Jos ensimmäinen komento sanoo
+   Sekä `looku-ingest-1` että `looku-dashboard-1` näyttävät tilan `Up` (ensimmäisen minuutin ajan siinä voi lukea
+   myös `health: starting`). Jos ensimmäinen komento sanoo
    `port is already allocated`, jokin muu ohjelma käyttää porttia 8788: muuta `.env`-tiedostossa
    `LOOKU_DASHBOARD_PORT` esimerkiksi arvoon `8789`, aja komento uudelleen ja käytä alla sitä porttia 8788:n sijaan.
 
@@ -224,15 +232,16 @@ Ubuntussa ja Debianissa: `sudo apt install git`.
    ```
 
    Avaa `.env.local` tekstieditorissa kuten vaiheessa 2 (`notepad .env.local`, `open -e .env.local` tai
-   `nano .env.local`) ja muuta se muotoon:
+   `nano .env.local`), poista kaikki sen sisältö ja kirjoita tilalle nämä kolme riviä niin, että
+   `LOOKU_SIGNING_KEY=`-kohdan perässä on oma avaimesi:
 
    ```
    LOOKU_ENDPOINT=http://ingest:8787
    LOOKU_SITE_ID=demo
-   LOOKU_SIGNING_KEY=vaiheessa 4 kopioimasi avain
+   LOOKU_SIGNING_KEY=LIITÄ-AVAIMESI-TÄHÄN
    ```
 
-   Tallenna tiedosto. Nämä ovat kolme asetusta, jotka jokainen liitin tarvitsee: missä Lookun vastaanotin on, mikä
+   Ei välilyöntejä `=`-merkin ympärille eikä lainausmerkkejä. Tallenna tiedosto. Nämä ovat kolme asetusta, jotka jokainen liitin tarvitsee: missä Lookun vastaanotin on, mikä
    sivusto tämä on ja millä avaimella allekirjoitetaan. `ingest` on vastaanottimen nimi Dockerin sisällä: demo ajetaan
    kontissa Lookun vieressä, ja se löytää vastaanottimen tällä nimellä. Oikea sivusto käyttää sen sijaan
    vastaanottimen julkista osoitetta.
@@ -264,9 +273,12 @@ Liitin lähettää sivunäyttöjä vain tuotantoversiosta (`npm run build` ja `n
 
 <Steps>
 
-1. Avaa [http://localhost:3000](http://localhost:3000) selaimessa ja klikkaile muutamaa sivua.
-2. Avaa [http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo](http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo).
-   Tämä on kampanjalinkki, jollaisen laittaisit esimerkiksi uutiskirjeeseen.
+1. Avaa selaimessa **yksityinen ikkuna** (Chromessa ja Edgessä Ctrl+Shift+N, Firefoxissa Ctrl+Shift+P, Safarissa
+   Cmd+Shift+N) ja avaa siinä
+   [http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo](http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo).
+   Tämä on kampanjalinkki, jollaisen laittaisit esimerkiksi uutiskirjeeseen. Looku laskee käynnin sille kampanjalle,
+   josta käynti alkoi, joten avaa tämä linkki ensin.
+2. Klikkaile demosivuston muutamaa sivua.
 3. Valitse demosivun alareunasta **Salli**, jolloin annat suostumuksen lukuajan mittaamiseen. Vieritä sitten
    oppaat-sivua ja viivy sillä hetki.
 4. Avaa kojelauta osoitteessa [http://127.0.0.1:8788](http://127.0.0.1:8788) ja kirjaudu salasanallasi.
@@ -275,14 +287,20 @@ Liitin lähettää sivunäyttöjä vain tuotantoversiosta (`npm run build` ja `n
 
 **Toimii, jos:**
 
-- sivunäytöt näkyvät kojelaudassa ja kampanja `demo` näkyy kampanjoiden joukossa,
-- lukuaika näkyy vain sivuille, joita katsoit sen jälkeen, kun valitsit "Salli",
-- selaimesi tallennustilassa osoitteelle `localhost:3000` ei ole mitään Lookulta (suostumusvalinta on demosivuston
-  oma).
+- kojelaudan etusivu näyttää sivunäyttösi (valitse sivusto `demo` ja tämä päivä, jos se kysyy),
+- **Kampanjat**-raportissa näkyy kampanja `demo` ja yksi käynti,
+- **Lukuaika ja vieritys** -raportissa on tietoja vain sivuista, joita katsoit sen jälkeen, kun valitsit "Salli"
+  (siihen voi mennä minuutti).
 
-Jos kojelauta pysyy tyhjänä, katso [Sivunäyttöjä ei näy](/looku/fi/operate/troubleshooting/#sivunäyttöjä-ei-näy). Jos
-selaimesi lähettää Do Not Track- tai Global Privacy Control -signaalin (Brave tekee niin oletuksena), Looku ohittaa
-sivunäyttösi tarkoituksella: kokeile toisella selaimella.
+Jos kojelauta pysyy tyhjänä:
+
+- Katso demon ikkunaa: siellä näkyvä virhe kertoo yleensä ongelman.
+- Tarkista, että `.env.local`-tiedoston avain on täsmälleen vaiheen 4 avain (tai `site:rotate-key`-komennon antama,
+  joka korvaa sen). Kun olet muuttanut `.env.local`-tiedostoa, pysäytä demo painamalla Ctrl+C ja aja vaiheen 8
+  `docker run` -komento uudelleen.
+- Jos selaimesi lähettää Do Not Track- tai Global Privacy Control -signaalin (Brave tekee niin oletuksena), Looku
+  ohittaa sivunäyttösi tarkoituksella: kokeile toisella selaimella.
+- Katso vastaanottimen lokia `deploy`-kansiossa: `docker compose logs ingest`.
 
 ## Siivoa jälkesi
 
@@ -298,7 +316,8 @@ sivunäyttösi tarkoituksella: kokeile toisella selaimella.
    docker image rm looku:local node:22-bookworm-slim
    ```
 
-   `down -v` poistaa kontit ja tietotaltion; `image rm` vapauttaa levytilan, jota levykuvat käyttävät.
+   `down -v` poistaa kontit ja tietotaltion; `image rm` vapauttaa levytilan, jota levykuvat käyttävät. Jos käytät
+   `node:22-bookworm-slim`-levykuvaa muuhunkin, jätä se pois komennosta.
 
 3. **Poista kansio:**
 
@@ -328,6 +347,8 @@ sivunäyttösi tarkoituksella: kokeile toisella selaimella.
 
    </TabItem>
    </Tabs>
+
+   Jos latasit koodin muualle kuin kotikansioosi, poista sen sijaan se `looku`-kansio.
 
 </Steps>
 

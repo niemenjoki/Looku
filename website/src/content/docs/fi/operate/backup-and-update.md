@@ -46,8 +46,16 @@ Ilman Dockeria: `LOOKU_DB=/var/lib/looku/looku.db npx looku backup /backups/look
 
 ## Palautus
 
+Valitse ensin kopio. Listaa varmuuskopiot päivämäärineen kansiossa `~/looku/deploy`:
+
 ```bash
 cd ~/looku/deploy
+ls -l data/
+```
+
+Aja sitten nämä niin, että viidennellä rivillä on valitsemasi tiedoston nimi `backup-Mon.db`:n tilalla:
+
+```bash
 docker compose stop ingest dashboard
 sudo mv data/looku.db data/looku.db.broken
 sudo rm -f data/looku.db-wal data/looku.db-shm
@@ -56,8 +64,9 @@ sudo chown 1000:1000 data/looku.db
 docker compose start ingest dashboard
 ```
 
-Valitse haluamasi kopio komennolla `ls -l data/`. Tiedostot kuuluvat kontin käyttäjälle (1000), ja siksi tarvitaan
-`sudo`. `looku.db.broken` säilytetään, kunnes olet tarkistanut kojelaudan. Poista se sen jälkeen. Sivunäytöt, jotka
+Tiedostot kuuluvat kontin käyttäjälle (1000), ja siksi tarvitaan `sudo`. Tarkista tulos: kirjaudu kojelautaan sillä
+salasanalla, joka oli voimassa varmuuskopion aikaan. Sivustot ja luvut ovat sellaiset kuin varmuuskopion päivänä.
+`looku.db.broken` säilytetään, kunnes olet tarkistanut kojelaudan. Poista se sen jälkeen. Sivunäytöt, jotka
 lähetetään Lookun ollessa pysäytettynä, menetetään, joten pidä katko lyhyenä. Koska kopiossa ei ole päivän suolaa,
 palautuspäivän kävijät voivat tulla lasketuiksi kahdesti.
 
@@ -72,7 +81,9 @@ cd deploy
 docker compose up -d --build
 ```
 
-`git pull` lataa uuden version, ja `up -d --build` rakentaa uuden levykuvan ja korvaa kontit. Tietokannan muutokset
+`git pull` lataa uuden version, ja `up -d --build` rakentaa uuden levykuvan ja korvaa kontit. Vanha levykuva jää
+levylle nimettömänä; `docker image prune` poistaa tällaiset käyttämättömät levykuvat silloin tällöin (se kysyy
+ennen poistoa eikä koske levykuviin, joita kontit käyttävät). Tietokannan muutokset
 ajetaan itsestään, kun vastaanotin käynnistyy. Vastaanotin on poissa käytöstä muutaman sekunnin, ja sinä aikana
 lähetetyt sivunäytöt menetetään. Tarkista jälkeenpäin:
 

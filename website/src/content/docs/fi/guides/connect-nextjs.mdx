@@ -33,6 +33,8 @@ vastauksen jälkeen, joten sivu ei hidastu. Sivuihisi ei tarvitse muuttaa mitä�
    cp ../looku/packages/next/src/index.js lib/looku.js
    ```
 
+   Jos kloonasit Lookun muualle, korvaa `../looku` sillä kansiolla.
+
 2. **Luo proxy-tiedosto** projektisi juurikansioon (`package.json`-tiedoston viereen; jos sivusi ovat kansiossa
    `src/app`, laita se kansioon `src/`). Tiedosto riippuu Next.js-versiostasi: katso `"next"` tiedostosta
    `package.json`.
@@ -147,7 +149,9 @@ vastauksen jälkeen, joten sivu ei hidastu. Sivuihisi ei tarvitse muuttaa mitä�
    Aseta kolme asetusta ympäristömuuttujiksi sille prosessille, joka ajaa `next start` -komentoa, samalla tavalla kuin
    asetat muutkin asetuksesi (`.env.production`-tiedosto, joka ei ole gitissä, systemd-palvelusi, Dockerin
    `environment:` tai palveluntarjoajasi hallintapaneeli). `NODE_ENV`-arvon on oltava `production`, ja `next start`
-   asettaa sen itse. Käynnistä sitten sivusto uudelleen.
+   asettaa sen itse. Myös `.env.local` käy: `next start` lukee sen, joten omalla palvelimella yksi tiedosto riittää.
+   Kun lisäät tai muutat asetusta, rakenna ja käynnistä uudelleen (`npm run build`, sitten `npm start`): Next.js:n
+   vanhemmissa versioissa middleware saa arvot rakennusvaiheessa.
 
    </TabItem>
    </Tabs>

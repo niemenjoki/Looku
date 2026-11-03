@@ -84,7 +84,9 @@ Käy nämä läpi järjestyksessä. Ensimmäinen kohta, joka ei toimi, on yleens
    node looku-test.mjs
    ```
 
-   **Poista `looku-test.mjs` lopuksi**, koska siinä on allekirjoitusavaimesi. `true` tarkoittaa, että Looku hyväksyi sen: kojelautaan ilmestyy sivunäyttö sivulle `/looku-test`, ja vika on
+   Node voi ensin tulostaa varoituksen moduulin tyypistä (`MODULE_TYPELESS_PACKAGE_JSON`); se on harmiton, joten älä
+   muuta sen takia `package.json`-tiedostoa. **Poista `looku-test.mjs` lopuksi**, koska siinä on
+   allekirjoitusavaimesi. `true` tarkoittaa, että Looku hyväksyi sen: kojelautaan ilmestyy sivunäyttö sivulle `/looku-test`, ja vika on
    siinä, miten sivusto saa asetuksensa. Jos tulos on `false` ja kohdan 3 vastaus oli `401`, sivuston tunnus tai avain
    on väärin: tarkista, ettei mukana ole ylimääräisiä välilyöntejä, tai tee uusi avain komennolla `site:rotate-key`.
    Testi epäonnistuu myös, jos tietokoneen kello on yli viisi minuuttia väärässä.

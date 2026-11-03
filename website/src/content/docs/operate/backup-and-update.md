@@ -43,8 +43,16 @@ Without Docker: `LOOKU_DB=/var/lib/looku/looku.db npx looku backup /backups/look
 
 ## Restore
 
+First choose the copy. In `~/looku/deploy`, list the backups with their dates:
+
 ```bash
 cd ~/looku/deploy
+ls -l data/
+```
+
+Then run these, with your chosen file name instead of `backup-Mon.db` in the fifth line:
+
+```bash
 docker compose stop ingest dashboard
 sudo mv data/looku.db data/looku.db.broken
 sudo rm -f data/looku.db-wal data/looku.db-shm
@@ -53,9 +61,9 @@ sudo chown 1000:1000 data/looku.db
 docker compose start ingest dashboard
 ```
 
-Choose the copy you want with `ls -l data/`. The files belong to the container's user (1000), which is why `sudo`
-is needed. `looku.db.broken` is kept until you
-have checked the dashboard; delete it after that. Page views sent while Looku is stopped are lost, so keep the break short. Because the copy has no daily salt, visitors
+The files belong to the container's user (1000), which is why `sudo` is needed. Check the result: log in to the
+dashboard with the password that was valid when the backup was made. Your sites and numbers are as they were on the
+backup's date. `looku.db.broken` is kept until you have checked the dashboard; delete it after that. Page views sent while Looku is stopped are lost, so keep the break short. Because the copy has no daily salt, visitors
 on the day of the restore may be counted twice.
 
 ## Update Looku
@@ -69,7 +77,9 @@ cd deploy
 docker compose up -d --build
 ```
 
-`git pull` downloads the new version, and `up -d --build` builds a new image and replaces the containers. Database
+`git pull` downloads the new version, and `up -d --build` builds a new image and replaces the containers. The old
+image stays on the disk without a name; `docker image prune` removes such unused images now and then (it asks
+before removing, and it does not touch images that containers use). Database
 changes run by themselves when the receiver starts. The receiver is down for a few seconds, and page views sent during
 that time are lost. Check afterwards:
 
