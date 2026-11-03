@@ -1,0 +1,138 @@
+---
+title: Troubleshooting
+description: Symptom, cause and fix for the problems people most often run into with Looku.
+sidebar:
+  order: 2
+---
+
+Find your symptom below. Commands with `docker compose` are run on the Looku server in the `deploy` folder.
+
+## Looking at the logs
+
+Most answers start here. The last 50 lines of the receiver's log:
+
+```bash
+docker compose logs --tail 50 ingest
+```
+
+Use `dashboard`, `tunnel` or `caddy` instead of `ingest` for the other containers. `docker compose ps` shows whether
+each container is running (`Up`) and healthy.
+
+## No page views appear
+
+Go through these in order. The first one that fails is usually the cause.
+
+1. **Is the site running a production build with the settings?** The connector sends nothing from `npm run dev`, from
+   Vercel preview deployments, or when `NODE_ENV` is not `production`. On Vercel, settings apply only after a
+   redeploy.
+
+2. **Is your own browser sending Do Not Track or Global Privacy Control?** Brave, and Firefox with some settings, send
+   it by default, and Looku then skips you on purpose. Test with another browser or your phone.
+
+3. **Does the receiver answer?** From a macOS, Linux or WSL terminal on any computer:
+
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}\n" -X POST https://looku.example.com/ingest
+   ```
+
+   `401` is correct: the receiver answered. `403` means a firewall rule blocks it (check the
+   [Cloudflare rule](/looku/guides/home-server-cloudflare/#4-let-through-only-what-the-receiver-needs)). `000`,
+   `502` or `530`: the address does not reach the receiver; see the sections below.
+
+4. **Are the three settings right?** Send one test page view with your site's settings. In a macOS, Linux or WSL
+   terminal, in your site's folder, with the connector at `lib/looku.js`, and the three settings filled in:
+
+   ```bash
+   LOOKU_ENDPOINT=https://looku.example.com LOOKU_SITE_ID=myblog LOOKU_SIGNING_KEY=yourkey node -e 'import("./lib/looku.js").then(async (m) => console.log(await m.sendToLooku({ type: "pageview", ts: new Date().toISOString(), path: "/looku-test", ip: "203.0.113.1", ua: "Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0" }, { endpoint: process.env.LOOKU_ENDPOINT, siteId: process.env.LOOKU_SITE_ID, signingKey: process.env.LOOKU_SIGNING_KEY })))'
+   ```
+
+   `true` means Looku accepted it: a page view of `/looku-test` appears in the dashboard, and the problem is in how
+   the site gets its settings. `false` with step 3 answering `401` means the site id or key is wrong: check for extra
+   spaces, or make a new key with `site:rotate-key`. The test also fails if the clock of the computer is more than
+   five minutes off.
+
+5. **Is the page excluded?** API routes, files with a dot in the name, prefetches, bots and paths in `excludePaths`
+   are not counted.
+
+6. **Is the dashboard showing the right site and dates?** Choose the site and today in the dashboard.
+
+## Dashboard: "Unknown host"
+
+The address in your browser is not in `LOOKU_API_HOSTS`. Add it exactly as you type it, with the port, for example
+`192.168.1.10:8788` or `looku.example.com`. Separate several with commas. Then `docker compose up -d dashboard`.
+
+## Dashboard: "Forbidden"
+
+`LOOKU_API_ALLOW` is set and your address is not in it. Your home's public address may have changed (see the
+[VPS guide](/looku/guides/vps-caddy/#3-settings)). Behind a proxy, `LOOKU_TRUST_PROXY` must be the number of proxies;
+with a wrong number every visitor looks the same or empty, and everyone gets `Forbidden`. After a change,
+`docker compose up -d dashboard`.
+
+## Dashboard does not open at all (home server)
+
+- `docker compose ps`: is `looku-dashboard-1` `Up`?
+- Is `LOOKU_DASHBOARD_BIND` the server's address on the network you are on? `127.0.0.1` opens only on the server
+  itself.
+- Is your device on the home network (or Tailscale)? On mobile data the address does not open, by design.
+
+## "Wrong password" or "Too many failed logins"
+
+After 10 failed logins from one address in 15 minutes, logins from that address are refused for the rest of the 15
+minutes. Wait, then try again. If you have forgotten the password, set a new one on the server:
+
+```bash
+docker compose run --rm -it ingest admin:password
+```
+
+## Lost the signing key
+
+The key is shown only once. Make a new one; the old one stops working at once, so update your site's settings right
+after:
+
+```bash
+docker compose run --rm ingest site:rotate-key myblog
+```
+
+## Cloudflare 502 or 530
+
+The tunnel cannot reach the receiver.
+
+- `docker compose ps`: is `looku-tunnel-1` `Up`? If it is missing, start it with
+  `docker compose --profile tunnel up -d`.
+- In Cloudflare, the route's **Service URL** must be `http://ingest:8787`. `localhost` does not work, because inside
+  the tunnel container `localhost` is the container itself.
+- `docker compose logs --tail 50 tunnel` shows whether the token was accepted.
+
+## Caddy gets no certificate
+
+`docker compose logs --tail 50 caddy` shows the reason. Usually:
+
+- the DNS record does not point to the server yet (`nslookup looku.example.com`),
+- port 80 or 443 is closed in the provider's firewall or `ufw`,
+- the record is behind Cloudflare's orange cloud (use DNS only).
+
+## The data folder cannot be written
+
+The receiver's log says the database cannot be opened. The data folder must belong to user 1000:
+
+```bash
+sudo chown -R 1000:1000 data
+docker compose up -d
+```
+
+## Times or days look shifted
+
+Each site has its own time zone, set with `site:add --timezone` (default `Europe/Helsinki`). The nightly job and the
+monthly email use `LOOKU_TIMEZONE`. Check `docker compose run --rm ingest site:list`.
+
+## More visitors than another tool shows
+
+Looku recognises a visitor for one day only. A person who visits on three days counts as three visitors in a month,
+and the same person on a phone and a laptop counts twice. This is the price of not storing identifiers. Compare page
+views, which are counted the same way everywhere.
+
+## `npm install` fails
+
+- `npm error engine` or `Unsupported engine`: Node.js is too old; install version 22 or newer.
+- `gyp ERR!`: the SQLite library has to be built; install build tools (`sudo apt install python3 make g++`) and run
+  `npm install` again.

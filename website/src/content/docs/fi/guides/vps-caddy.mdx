@@ -1,0 +1,273 @@
+---
+title: VPS + Caddy
+description: Asenna Looku virtuaalipalvelimelle. Caddy hoitaa HTTPS:n, kojelauta on suojattu salasanalla ja avautuu vain omista verkoistasi, ja vastaanotin on avoin.
+sidebar:
+  order: 3
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+**Mitä saat:** Looku toimii virtuaalipalvelimella (VPS) osoitteessa `https://looku.example.com`. Caddy on
+verkkopalvelin. Se hakee HTTPS-varmenteen automaattisesti ja välittää pyynnöt eteenpäin: `/ingest` ja `/orders`
+menevät vastaanottimelle, kaikki muu kojelaudalle. Kojelaudassa on salasana, ja se avautuu vain sallimistasi
+verkoista.
+
+**Aika:** noin tunti. **Tarvitset:**
+
+- VPS:n, jossa on Ubuntu tai Debian, julkinen IP-osoite ja vähintään 1 Gt muistia (mikä tahansa palveluntarjoaja
+  käy; pienin paketti riittää),
+- verkkotunnuksen, johon voit lisätä DNS-tietueita,
+- kotisi internetyhteyden julkisen IP-osoitteen, jotta voit rajata, kuka pääsee kojelautaan (katso osa 3).
+
+Korvaa `example.com` omalla verkkotunnuksellasi, `203.0.113.10` VPS:n osoitteella ja `myblog` lyhyellä tunnuksella
+sivustollesi.
+
+## 1. Valmistele palvelin
+
+<Steps>
+
+1. **Ohjaa palvelinnimi VPS:lle.** Lisää DNS-palveluntarjoajasi hallinnassa **A record** eli A-tietue: nimi `looku`,
+   arvo `203.0.113.10`. Jos DNS on Cloudflaressa, aseta tietue toistaiseksi tilaan **DNS only** (harmaa pilvi).
+   Oranssista pilvestä kerrotaan kohdassa [Cloudflaren välityspalvelimen takana](#cloudflaren-välityspalvelimen-takana).
+
+   Tarkista muutaman minuutin kuluttua omalta tietokoneeltasi:
+
+   ```bash
+   nslookup looku.example.com
+   ```
+
+   Vastauksessa pitäisi olla `Address: 203.0.113.10`.
+
+2. **Kirjaudu VPS:lle:**
+
+   ```bash
+   ssh root@203.0.113.10
+   ```
+
+   Palveluntarjoaja kertoo käyttäjänimen (usein `root` tai `ubuntu`). Osaan 5 asti komennot ajetaan VPS:llä. Jos et
+   ole `root`, alla olevat komennot, jotka sitä vaativat, alkavat sanalla `sudo`.
+
+3. **Asenna Docker** Dockerin omalla skriptillä. Se lisää Dockerin pakettilähteen ja asentaa Dockerin ja Composen:
+
+   ```bash
+   curl -fsSL https://get.docker.com | sudo sh
+   sudo docker compose version
+   sudo apt install -y git ufw
+   ```
+
+   Toisen komennon pitäisi tulostaa `Docker Compose version v2.…`. Viimeinen asentaa gitin ja palomuurityökalun, jos
+   ne puuttuvat. Jos et ole `root`, lisää `sudo` jokaisen tämän ohjeen `docker`-komennon eteen.
+
+4. **Avaa vain tarvittavat portit.** Jos palveluntarjoajasi hallintapaneelissa on palomuuri, salli siellä portit 22
+   (ssh), 80 ja 443 (verkko). Palvelimella itsellään:
+
+   ```bash
+   sudo ufw allow 22/tcp && sudo ufw allow 80/tcp && sudo ufw allow 443/tcp && sudo ufw enable
+   ```
+
+   Vastaa `y`. Porttia 80 tarvitaan, vaikka kaikki käyttää HTTPS:ää: Caddy hakee varmenteen sen kautta.
+
+   :::note[Docker ja palomuuri]
+   Dockerin julkaisemat portit ohittavat `ufw`:n. Siksi kojelauta pidetään poissa internetistä osan 3 asetuksella
+   `LOOKU_DASHBOARD_BIND=127.0.0.1` eikä palomuurilla.
+   :::
+
+</Steps>
+
+## 2. Asenna Looku
+
+<Steps>
+
+1. **Lataa Looku:**
+
+   ```bash
+   cd ~
+   git clone https://github.com/niemenjoki/Looku.git looku
+   cd looku/deploy
+   ```
+
+2. **Lisää Caddy Lookun rinnalle.** Luo tiedosto, jonka Compose lukee `compose.yaml`-tiedoston lisäksi:
+
+   ```bash
+   nano compose.override.yaml
+   ```
+
+   Liitä:
+
+   ```yaml
+   services:
+     caddy:
+       image: caddy:2.11.7
+       restart: unless-stopped
+       ports:
+         - "80:80"
+         - "443:443"
+       volumes:
+         - ./Caddyfile:/etc/caddy/Caddyfile:ro
+         - caddy_data:/data
+         - caddy_config:/config
+       depends_on:
+         - ingest
+         - dashboard
+
+   volumes:
+     caddy_data:
+     caddy_config:
+   ```
+
+   Tallenna painamalla Ctrl+O ja Enter, poistu painamalla Ctrl+X. Compose yhdistää `compose.override.yaml`-tiedoston
+   automaattisesti. Siksi Caddy toimii samassa verkossa kuin Looku ja tavoittaa vastaanottimen nimellä `ingest` ja
+   kojelaudan nimellä `dashboard`. `caddy_data` säilyttää varmenteet uudelleenkäynnistysten yli.
+
+3. **Kerro Caddylle, mitä tehdä:**
+
+   ```bash
+   nano Caddyfile
+   ```
+
+   Liitä tämä omalla palvelinnimelläsi:
+
+   ```
+   looku.example.com {
+   	@receiver path /ingest /orders
+   	reverse_proxy @receiver ingest:8787
+   	reverse_proxy dashboard:8788
+   }
+   ```
+
+   Selkokielellä: osoitteessa `looku.example.com` lähetä `/ingest` ja `/orders` vastaanottimelle ja kaikki muu
+   kojelaudalle. Caddy hakee ja uusii HTTPS-varmenteen itse.
+
+</Steps>
+
+## 3. Asetukset
+
+<Steps>
+
+1. **Selvitä kotiverkkosi julkinen osoite.** Hae kotona tietokoneella verkosta "what is my IP" tai avaa reitittimesi
+   tilasivu. Osoite näyttää tältä: `198.51.100.7`. Monessa kotiliittymässä osoite pysyy samana kuukausia, mutta se
+   voi vaihtua. Jos kojelauta näyttää yhtäkkiä `Forbidden`, tarkista tämä ensin.
+
+2. **Luo asetustiedosto:**
+
+   ```bash
+   cp .env.example .env
+   nano .env
+   ```
+
+   Aseta nämä rivit (jätä muut ennalleen):
+
+   ```
+   LOOKU_TIMEZONE=Europe/Helsinki
+   LOOKU_DASHBOARD_BIND=127.0.0.1
+   LOOKU_API_HOSTS=looku.example.com
+   LOOKU_PUBLIC_ORIGIN=https://looku.example.com
+   LOOKU_COOKIE_SECURE=1
+   LOOKU_TRUST_PROXY=1
+   LOOKU_API_ALLOW=198.51.100.7
+   ```
+
+   Mitä ne tekevät:
+
+   - `LOOKU_DASHBOARD_BIND=127.0.0.1` pitää kojelaudan oman portin suljettuna internetiltä. Vain Caddy pääsee siihen.
+   - `LOOKU_API_HOSTS` ja `LOOKU_PUBLIC_ORIGIN` kertovat kojelaudalle sen julkisen osoitteen.
+   - `LOOKU_COOKIE_SECURE=1` lähettää kirjautumisevästeen vain HTTPS:n kautta ja käskee selaimia käyttämään aina
+     HTTPS:ää.
+   - `LOOKU_TRUST_PROXY=1` kertoo, että kojelaudan edessä on yksi välityspalvelin (Caddy). Silloin kojelauta lukee
+     kävijän todellisen osoitteen otsakkeesta, jonka Caddy lisää. Tämä on turvallista vain siksi, että portti on
+     suljettu muilta (`127.0.0.1` yllä).
+   - `LOOKU_API_ALLOW` on luettelo osoitteista, joista kojelaudan saa avata. Erota useampi pilkulla, esimerkiksi
+     kotisi ja puhelimesi VPN. Verkon voi kirjoittaa muodossa `198.51.100.0/24`. Muut saavat vastauksen `Forbidden`.
+     Tämä ei koske vastaanotinta: sivustosi voi aina lähettää sivunäyttöjä.
+
+3. **Luo datakansio:**
+
+   ```bash
+   mkdir -p data
+   sudo chown 1000:1000 data
+   ```
+
+</Steps>
+
+## 4. Käynnistä ja ota käyttöön
+
+<Steps>
+
+1. **Rakenna ja käynnistä:**
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+   Muutaman minuutin kuluttua näet tekstin `Started` konteille `looku-ingest-1`, `looku-dashboard-1` ja
+   `looku-caddy-1`.
+
+2. **Lisää sivustosi:**
+
+   ```bash
+   docker compose run --rm ingest site:add myblog --domain example.com --timezone Europe/Helsinki
+   ```
+
+   `--timezone` ratkaisee, milloin päivä vaihtuu tämän sivuston raporteissa, eikä sitä voi muuttaa myöhemmin.
+   Tallenna komennon tulostama allekirjoitusavain (`Signing key (shown once):`) salasanojen hallintaan.
+
+3. **Aseta kojelaudan salasana.** Julkisella palvelimella käytä pitkää salasanaa, esimerkiksi neljää satunnaista
+   sanaa:
+
+   ```bash
+   docker compose run --rm -it ingest admin:password
+   ```
+
+   Kirjoittaessa ruudulle ei tule mitään, ja salasana kysytään vain kerran.
+
+4. **Tarkista omalta tietokoneeltasi** (macOS:n, Linuxin tai WSL:n päätteessä):
+
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}\n" -X POST https://looku.example.com/ingest
+   ```
+
+   Tulosteen pitäisi olla `401`: vastaanotin vastasi ja hylkäsi allekirjoittamattoman pyynnön, mikä on oikein. Jos
+   tuloste on `000` tai varmennevirhe, katso [Vianetsintä](/looku/fi/operate/troubleshooting/#caddy-ei-saa-varmennetta).
+
+5. **Avaa kojelauta** kotoa osoitteessa `https://looku.example.com` ja kirjaudu sisään.
+
+</Steps>
+
+## 5. Liitä sivustosi
+
+Sivustosi tarvitsee nämä:
+
+```
+LOOKU_ENDPOINT=https://looku.example.com
+LOOKU_SITE_ID=myblog
+LOOKU_SIGNING_KEY=osan 4 avain
+```
+
+Jatka ohjeella [Liitä Next.js-sivusto](/looku/fi/guides/connect-nextjs/) tai
+[Node.js, Express, Cloudflare tai oma](/looku/fi/guides/connect-other/).
+
+## Cloudflaren välityspalvelimen takana
+
+Tämä ohje käyttää harmaata pilveä (DNS only), ja se on suositeltu valinta. Oranssilla pilvellä Cloudflare on toinen
+välityspalvelin Caddyn edessä. Caddy oletuksena korvaa osoiteotsakkeen sen sijaan, että lisäisi siihen, koska se ei
+luota Cloudflareen. Silloin kojelauta näkisi vain Cloudflaren osoitteen, ja `LOOKU_API_ALLOW` torjuisi sinut.
+
+Jos tarvitset oranssin pilven, Caddylle on kerrottava, että se luottaa Cloudflaren osoitealueisiin. Se tehdään
+asetuksella [`trusted_proxies`](https://caddyserver.com/docs/caddyfile/options#trusted-proxies), ja
+`LOOKU_TRUST_PROXY` on asetettava arvoon `2`. Tarkista lopuksi, että kojelauta avautuu sallitusta osoitteestasi ja
+näyttää muille `Forbidden`.
+
+## Kirjautumisen suojaus
+
+Epäonnistuneita kirjautumisia rajoitetaan: 10 osoitetta kohden 15 minuutissa ja yhteensä 200 15 minuutissa. Ilman
+`LOOKU_API_ALLOW`-asetusta kuka tahansa internetissä voisi käyttää yhteisen rajan loppuun ja estää sinua pääsemästä
+sisään. Siksi sallittujen listaa suositellaan. Katso [Tietoturva](/looku/fi/reference/security/).
+
+## Valmis, kun
+
+- `docker compose ps` näyttää `ingest`, `dashboard` ja `caddy` tilassa `Up`,
+- `curl` osoitteeseen `/ingest` tulostaa `401`,
+- kojelauta avautuu kotoa ja näyttää muualta `Forbidden` (kokeile puhelimella mobiilidatan kautta),
+- kun olet liittänyt sivustosi, kojelautaan ilmestyy sivunäyttö.
+
+Seuraavaksi: [varmuuskopiot ja päivitykset](/looku/fi/operate/backup-and-update/).

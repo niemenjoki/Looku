@@ -1,0 +1,270 @@
+---
+title: VPS + Caddy
+description: Install Looku on a virtual private server with Caddy for HTTPS, a password-protected dashboard limited to your own networks, and an open receiver.
+sidebar:
+  order: 3
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+**What you get:** Looku on a virtual private server (VPS) at `https://looku.example.com`. Caddy, a web server, gets
+an HTTPS certificate automatically and passes requests on: `/ingest` and `/orders` to the receiver, everything else
+to the dashboard. The dashboard has a password and opens only from the networks you allow.
+
+**Time:** about an hour. **You need:**
+
+- a VPS with Ubuntu or Debian, a public IP address and at least 1 GB of memory (any provider; the smallest plan is
+  enough),
+- a domain where you can add DNS records,
+- your home internet connection's public IP address, to limit who can open the dashboard (see part 3).
+
+Replace `example.com` with your domain, `203.0.113.10` with your VPS's address and `myblog` with a short id for your
+site.
+
+## 1. Prepare the server
+
+<Steps>
+
+1. **Point a hostname to the VPS.** At your DNS provider, add an **A record**: name `looku`, value `203.0.113.10`.
+   If your DNS is on Cloudflare, set the record to **DNS only** (grey cloud) for now; see
+   [Behind Cloudflare's proxy](#behind-cloudflares-proxy) for the orange cloud.
+
+   Check it from your own computer after a few minutes:
+
+   ```bash
+   nslookup looku.example.com
+   ```
+
+   The answer should include `Address: 203.0.113.10`.
+
+2. **Log in to the VPS:**
+
+   ```bash
+   ssh root@203.0.113.10
+   ```
+
+   Your provider tells you the user name (often `root` or `ubuntu`). Commands until part 5 are run on the VPS. If you
+   are not `root`, the commands below that need it start with `sudo`.
+
+3. **Install Docker** with Docker's own script, which adds Docker's package source and installs Docker and Compose:
+
+   ```bash
+   curl -fsSL https://get.docker.com | sudo sh
+   sudo docker compose version
+   sudo apt install -y git ufw
+   ```
+
+   The second command should print `Docker Compose version v2.…`. The last one installs git and the firewall tool if
+   they are missing. If you are not `root`, put `sudo` in front of every `docker` command in this guide.
+
+4. **Open only the ports you need.** If your provider has a firewall in its control panel, allow ports 22 (ssh),
+   80 and 443 (web) there. On the server itself:
+
+   ```bash
+   sudo ufw allow 22/tcp && sudo ufw allow 80/tcp && sudo ufw allow 443/tcp && sudo ufw enable
+   ```
+
+   Answer `y`. Port 80 is needed even though everything uses HTTPS: Caddy uses it to get the certificate.
+
+   :::note[Docker and the firewall]
+   Ports that Docker publishes bypass `ufw`. That is why the dashboard is kept off the internet with
+   `LOOKU_DASHBOARD_BIND=127.0.0.1` in part 3, not with the firewall.
+   :::
+
+</Steps>
+
+## 2. Install Looku
+
+<Steps>
+
+1. **Download Looku:**
+
+   ```bash
+   cd ~
+   git clone https://github.com/niemenjoki/Looku.git looku
+   cd looku/deploy
+   ```
+
+2. **Add Caddy next to Looku.** Create a file that Compose reads in addition to `compose.yaml`:
+
+   ```bash
+   nano compose.override.yaml
+   ```
+
+   Paste:
+
+   ```yaml
+   services:
+     caddy:
+       image: caddy:2.11.7
+       restart: unless-stopped
+       ports:
+         - "80:80"
+         - "443:443"
+       volumes:
+         - ./Caddyfile:/etc/caddy/Caddyfile:ro
+         - caddy_data:/data
+         - caddy_config:/config
+       depends_on:
+         - ingest
+         - dashboard
+
+   volumes:
+     caddy_data:
+     caddy_config:
+   ```
+
+   Save with Ctrl+O and Enter, exit with Ctrl+X. Compose merges `compose.override.yaml` automatically, so Caddy
+   runs in the same network as Looku and can reach the receiver by the name `ingest` and the dashboard by
+   `dashboard`. `caddy_data` keeps the certificates over restarts.
+
+3. **Tell Caddy what to do:**
+
+   ```bash
+   nano Caddyfile
+   ```
+
+   Paste, with your own hostname:
+
+   ```
+   looku.example.com {
+   	@receiver path /ingest /orders
+   	reverse_proxy @receiver ingest:8787
+   	reverse_proxy dashboard:8788
+   }
+   ```
+
+   In plain words: for `looku.example.com`, send `/ingest` and `/orders` to the receiver and everything else to the
+   dashboard. Caddy gets and renews the HTTPS certificate by itself.
+
+</Steps>
+
+## 3. Settings
+
+<Steps>
+
+1. **Find your home network's public address.** On a computer at home, search the web for "what is my IP", or open
+   your router's status page. It looks like `198.51.100.7`. Many home connections keep the same address for months,
+   but it can change; if you suddenly get `Forbidden` on the dashboard, check this first.
+
+2. **Create the settings file:**
+
+   ```bash
+   cp .env.example .env
+   nano .env
+   ```
+
+   Set these lines (leave the others):
+
+   ```
+   LOOKU_TIMEZONE=Europe/Helsinki
+   LOOKU_DASHBOARD_BIND=127.0.0.1
+   LOOKU_API_HOSTS=looku.example.com
+   LOOKU_PUBLIC_ORIGIN=https://looku.example.com
+   LOOKU_COOKIE_SECURE=1
+   LOOKU_TRUST_PROXY=1
+   LOOKU_API_ALLOW=198.51.100.7
+   ```
+
+   What they do:
+
+   - `LOOKU_DASHBOARD_BIND=127.0.0.1` keeps the dashboard's own port closed to the internet. Only Caddy reaches it.
+   - `LOOKU_API_HOSTS` and `LOOKU_PUBLIC_ORIGIN` tell the dashboard its public address.
+   - `LOOKU_COOKIE_SECURE=1` sends the login cookie only over HTTPS and tells browsers to always use HTTPS.
+   - `LOOKU_TRUST_PROXY=1` says there is one proxy (Caddy) in front of the dashboard, so the dashboard reads the
+     visitor's real address from the header Caddy adds. This is safe only because the port is closed to others
+     (`127.0.0.1` above).
+   - `LOOKU_API_ALLOW` is the list of addresses allowed to open the dashboard. Separate several with commas, for
+     example your home and your phone's VPN. A network can be written as `198.51.100.0/24`. Others get `Forbidden`.
+     The receiver is not affected: your site can always send page views.
+
+3. **Create the data folder:**
+
+   ```bash
+   mkdir -p data
+   sudo chown 1000:1000 data
+   ```
+
+</Steps>
+
+## 4. Start and set up
+
+<Steps>
+
+1. **Build and start:**
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+   After a few minutes you should see `Started` for `looku-ingest-1`, `looku-dashboard-1` and `looku-caddy-1`.
+
+2. **Add your site:**
+
+   ```bash
+   docker compose run --rm ingest site:add myblog --domain example.com --timezone Europe/Helsinki
+   ```
+
+   `--timezone` decides when a day changes in this site's reports and cannot be changed later. Save the signing key
+   it prints (`Signing key (shown once):`) in your password manager.
+
+3. **Set the dashboard password.** On a public server, use a long one, for example four random words:
+
+   ```bash
+   docker compose run --rm -it ingest admin:password
+   ```
+
+   Nothing appears while you type, and it asks only once.
+
+4. **Check from your own computer** (in a macOS, Linux or WSL terminal):
+
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}\n" -X POST https://looku.example.com/ingest
+   ```
+
+   It should print `401`: the receiver answered and refused an unsigned request, which is correct. If it prints
+   `000` or a certificate error, see [Troubleshooting](/looku/operate/troubleshooting/#caddy-gets-no-certificate).
+
+5. **Open the dashboard** at `https://looku.example.com` from home and log in.
+
+</Steps>
+
+## 5. Connect your site
+
+Your site needs:
+
+```
+LOOKU_ENDPOINT=https://looku.example.com
+LOOKU_SITE_ID=myblog
+LOOKU_SIGNING_KEY=the key from part 4
+```
+
+Continue with [Connect a Next.js site](/looku/guides/connect-nextjs/) or
+[Node.js, Express, Cloudflare or your own](/looku/guides/connect-other/).
+
+## Behind Cloudflare's proxy
+
+This guide uses the grey cloud (DNS only), and that is the recommended choice. With the orange cloud, Cloudflare is
+a second proxy in front of Caddy, and Caddy by default replaces the address header instead of adding to it, because
+it does not trust Cloudflare. The dashboard would then see only Cloudflare's address, and `LOOKU_API_ALLOW` would
+refuse you.
+
+If you need the orange cloud, Caddy must be told to trust Cloudflare's address ranges with the
+[`trusted_proxies`](https://caddyserver.com/docs/caddyfile/options#trusted-proxies) option, and
+`LOOKU_TRUST_PROXY` must be `2`. Check afterwards that the dashboard opens from your allowed address and shows
+`Forbidden` from others.
+
+## Login protection
+
+Failed logins are limited: 10 per address in 15 minutes, and 200 in total in 15 minutes. Without `LOOKU_API_ALLOW`,
+anyone on the internet could use up the total limit and keep you out, which is why the allowlist is recommended. See
+[Security](/looku/reference/security/).
+
+## Done when
+
+- `docker compose ps` shows `ingest`, `dashboard` and `caddy` as `Up`,
+- `curl` to `/ingest` prints `401`,
+- the dashboard opens from home and shows `Forbidden` from elsewhere (try with your phone on mobile data),
+- after you connect your site, a page view appears in the dashboard.
+
+Next: [backups and updates](/looku/operate/backup-and-update/).

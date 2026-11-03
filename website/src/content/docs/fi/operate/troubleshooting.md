@@ -1,0 +1,141 @@
+---
+title: Vianetsintä
+description: Oire, syy ja korjaus niihin ongelmiin, joihin Lookun kanssa useimmin törmätään.
+sidebar:
+  order: 2
+---
+
+Etsi oireesi alta. `docker compose` -komennot ajetaan Looku-palvelimella `deploy`-kansiossa.
+
+## Lokien katsominen
+
+Useimmat vastaukset löytyvät täältä. Vastaanottimen lokin viimeiset 50 riviä:
+
+```bash
+docker compose logs --tail 50 ingest
+```
+
+Muiden konttien lokit saat, kun kirjoitat `ingest`-sanan tilalle `dashboard`, `tunnel` tai `caddy`. `docker compose ps`
+näyttää, onko kukin kontti käynnissä (`Up`) ja kunnossa.
+
+## Sivunäyttöjä ei näy
+
+Käy nämä läpi järjestyksessä. Ensimmäinen kohta, joka ei toimi, on yleensä syy.
+
+1. **Ajetaanko sivustosta tuotantoversiota, jossa asetukset ovat mukana?** Liitin ei lähetä mitään, kun sivustoa ajetaan
+   komennolla `npm run dev`, Vercelin esikatseluversioista (preview deployments) eikä silloin, kun `NODE_ENV` ei ole
+   `production`. Vercelissä asetukset tulevat voimaan vasta uudelleenjulkaisun (redeploy) jälkeen.
+
+2. **Lähettääkö oma selaimesi Do Not Track- tai Global Privacy Control -signaalin?** Brave ja tietyillä asetuksilla
+   Firefox lähettävät sen oletuksena, ja silloin Looku ohittaa sinut tarkoituksella. Kokeile toisella selaimella tai
+   puhelimella.
+
+3. **Vastaako vastaanotin?** Millä tahansa tietokoneella macOS-, Linux- tai WSL-päätteessä:
+
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}\n" -X POST https://looku.example.com/ingest
+   ```
+
+   `401` on oikein: vastaanotin vastasi. `403` tarkoittaa, että palomuurisääntö estää pyynnön (tarkista
+   [Cloudflare-sääntö](/looku/fi/guides/home-server-cloudflare/#4-päästä-läpi-vain-vastaanottimen-tarvitsemat-pyynnöt)).
+   `000`, `502` tai `530`: osoite ei johda vastaanottimeen. Katso alempana olevat kohdat.
+
+4. **Ovatko kolme asetusta oikein?** Lähetä yksi testisivunäyttö sivustosi asetuksilla. Aja macOS-, Linux- tai
+   WSL-päätteessä sivustosi kansiossa, kun liitin on tiedostossa `lib/looku.js`, ja täytä kolme asetusta:
+
+   ```bash
+   LOOKU_ENDPOINT=https://looku.example.com LOOKU_SITE_ID=myblog LOOKU_SIGNING_KEY=yourkey node -e 'import("./lib/looku.js").then(async (m) => console.log(await m.sendToLooku({ type: "pageview", ts: new Date().toISOString(), path: "/looku-test", ip: "203.0.113.1", ua: "Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0" }, { endpoint: process.env.LOOKU_ENDPOINT, siteId: process.env.LOOKU_SITE_ID, signingKey: process.env.LOOKU_SIGNING_KEY })))'
+   ```
+
+   `true` tarkoittaa, että Looku hyväksyi sen: kojelautaan ilmestyy sivunäyttö sivulle `/looku-test`, ja vika on
+   siinä, miten sivusto saa asetuksensa. Jos tulos on `false` ja kohdan 3 vastaus oli `401`, sivuston tunnus tai avain
+   on väärin: tarkista, ettei mukana ole ylimääräisiä välilyöntejä, tai tee uusi avain komennolla `site:rotate-key`.
+   Testi epäonnistuu myös, jos tietokoneen kello on yli viisi minuuttia väärässä.
+
+5. **Onko sivu rajattu pois?** API-reittejä, tiedostoja, joiden nimessä on piste, esilatauksia, botteja ja
+   asetuksen `excludePaths` polkuja ei lasketa.
+
+6. **Näyttääkö kojelauta oikeaa sivustoa ja päiviä?** Valitse kojelaudassa sivusto ja tämä päivä.
+
+## Kojelauta: "Unknown host"
+
+Selaimesi osoite ei ole asetuksessa `LOOKU_API_HOSTS`. Lisää se täsmälleen niin kuin kirjoitat sen, porttinumeron
+kanssa, esimerkiksi `192.168.1.10:8788` tai `looku.example.com`. Erota useampi osoite pilkuilla. Aja sitten
+`docker compose up -d dashboard`.
+
+## Kojelauta: "Forbidden"
+
+`LOOKU_API_ALLOW` on asetettu, eikä osoitteesi ole siinä. Kotisi julkinen osoite on voinut vaihtua (katso
+[VPS-ohje](/looku/fi/guides/vps-caddy/#3-asetukset)). Välityspalvelimen takana asetuksen `LOOKU_TRUST_PROXY` pitää
+olla välityspalvelinten määrä. Väärällä luvulla jokainen kävijä näyttää samalta tai tyhjältä, ja kaikki saavat
+vastauksen `Forbidden`. Aja muutoksen jälkeen `docker compose up -d dashboard`.
+
+## Kojelauta ei aukea ollenkaan (kotipalvelin)
+
+- `docker compose ps`: onko `looku-dashboard-1` tilassa `Up`?
+- Onko `LOOKU_DASHBOARD_BIND` palvelimen osoite siinä verkossa, jossa olet? `127.0.0.1` aukeaa vain palvelimella
+  itsellään.
+- Onko laitteesi kotiverkossa (tai Tailscalessa)? Mobiilidatalla osoite ei aukea, ja se on tarkoituksellista.
+
+## "Wrong password" tai "Too many failed logins"
+
+Kun yhdestä osoitteesta on 15 minuutin aikana 10 epäonnistunutta kirjautumista, kirjautumiset siitä osoitteesta
+torjutaan noiden 15 minuutin loppuun asti. Odota ja yritä sitten uudelleen. Jos olet unohtanut salasanan, aseta uusi
+palvelimella:
+
+```bash
+docker compose run --rm -it ingest admin:password
+```
+
+## Allekirjoitusavain on kadonnut
+
+Avain näytetään vain kerran. Tee uusi. Vanha lakkaa toimimasta heti, joten päivitä sivustosi asetukset heti perään:
+
+```bash
+docker compose run --rm ingest site:rotate-key myblog
+```
+
+## Cloudflare 502 tai 530
+
+Tunneli ei saa yhteyttä vastaanottimeen.
+
+- `docker compose ps`: onko `looku-tunnel-1` tilassa `Up`? Jos se puuttuu, käynnistä se komennolla
+  `docker compose --profile tunnel up -d`.
+- Cloudflaressa reitin **Service URL** -arvon pitää olla `http://ingest:8787`. `localhost` ei toimi, koska
+  tunnelikontin sisällä `localhost` on kontti itse.
+- `docker compose logs --tail 50 tunnel` näyttää, hyväksyttiinkö tunnus (token).
+
+## Caddy ei saa varmennetta
+
+`docker compose logs --tail 50 caddy` näyttää syyn. Yleensä syy on jokin näistä:
+
+- DNS-tietue ei vielä osoita palvelimeen (`nslookup looku.example.com`),
+- portti 80 tai 443 on kiinni palveluntarjoajan palomuurissa tai `ufw`:ssä,
+- tietue on Cloudflaren oranssin pilven takana (käytä asetusta DNS only).
+
+## Datakansioon ei voi kirjoittaa
+
+Vastaanottimen lokissa lukee, ettei tietokantaa voi avata. Datakansion pitää kuulua käyttäjälle 1000:
+
+```bash
+sudo chown -R 1000:1000 data
+docker compose up -d
+```
+
+## Kellonajat tai päivät näyttävät siirtyneiltä
+
+Jokaisella sivustolla on oma aikavyöhykkeensä, joka asetetaan komennolla `site:add --timezone` (oletus
+`Europe/Helsinki`). Yöajo ja kuukausisähköposti käyttävät asetusta `LOOKU_TIMEZONE`. Tarkista komennolla
+`docker compose run --rm ingest site:list`.
+
+## Kävijöitä on enemmän kuin toisessa työkalussa
+
+Looku tunnistaa kävijän vain yhden päivän ajan. Henkilö, joka käy sivustolla kolmena päivänä, lasketaan kuukaudessa
+kolmeksi kävijäksi, ja sama henkilö puhelimella ja kannettavalla lasketaan kahdesti. Tämä on hinta siitä, ettei
+tunnisteita tallenneta. Vertaa sivunäyttöjä, jotka lasketaan kaikkialla samalla tavalla.
+
+## `npm install` epäonnistuu
+
+- `npm error engine` tai `Unsupported engine`: Node.js on liian vanha. Asenna versio 22 tai uudempi.
+- `gyp ERR!`: SQLite-kirjasto pitää kääntää. Asenna käännöstyökalut (`sudo apt install python3 make g++`) ja aja
+  `npm install` uudelleen.

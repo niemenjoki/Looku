@@ -6,3 +6,5 @@ data/
 .env*
 !**/.env.example
 .next/
+website/dist/
+website/.astro/

@@ -1,0 +1,54 @@
+---
+title: Looku
+description: Cookieless, server-side web analytics that you host yourself.
+template: splash
+hero:
+  tagline: Cookieless, server-side web analytics that you host yourself. Your site's server records the page views, so nothing is stored in the visitor's browser and no script is needed.
+  actions:
+    - text: Start here
+      link: /looku/start-here/
+      icon: right-arrow
+    - text: Try it in 15 minutes
+      link: /looku/guides/try-locally/
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+<CardGrid>
+  <Card title="Server-side page views" icon="seti:default">
+    Pages, referrers, campaigns, devices and countries for every visitor, recorded by your site's server. No cookie,
+    no tracking script.
+  </Card>
+  <Card title="Your server, your data" icon="laptop">
+    One SQLite file and one Docker image. The dashboard can stay on your home network. Nothing is sent to the authors
+    of Looku.
+  </Card>
+  <Card title="Visitors without identifiers" icon="random">
+    Visitors and sessions come from a hash that changes every day, or you turn visitors off per site.
+  </Card>
+  <Card title="Modules" icon="puzzle">
+    Shop (orders, purchase path, best sellers), campaigns, and content (reading time and scroll depth from visitors
+    who consented).
+  </Card>
+  <Card title="Plain-language review" icon="document">
+    A monthly review in sentences in the dashboard and by email, in Finnish or English.
+  </Card>
+  <Card title="Read API" icon="setting">
+    `/api/v1` with an OpenAPI description, for your own dashboards or Home Assistant.
+  </Card>
+</CardGrid>
+
+## Is Looku for you?
+
+Looku fits a site owner who has (or wants) a small server, such as a home server or a cheap virtual server, and whose
+site runs on a server of its own: Next.js, Node.js, Express, or a static site behind Cloudflare. It does not fit a
+site where you can only paste a script into the page, such as a hosted website builder.
+
+Looku is not a cookie banner tool and does not make anything legal by itself. Read
+[Privacy and the law](/looku/privacy/) before you use it.
+
+## Licence
+
+The receiver, storage, read API and dashboard are under the GNU AGPL 3.0. The connectors that you add to your site
+are under the MIT licence, so you can use them in any site, open or closed.

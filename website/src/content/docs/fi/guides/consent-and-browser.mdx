@@ -1,0 +1,128 @@
+---
+title: Lukuaika ja suostumus
+description: Mittaa lukuaikaa, vieritystä ja nimettyjä tapahtumia suostumuksen antaneilta kävijöiltä valinnaisella selainkeräimellä.
+sidebar:
+  order: 3
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+Sivunäytöt eivät tarvitse selaimessa mitään. Lukuaikaa, vieritystä ja tapahtumia, kuten "lisätty ostoskoriin", voi
+mitata vain selaimessa, joten niihin tarvitaan pieni skripti, **selainkeräin**. EU:ssa selaimessa toimiva skripti,
+joka lähettää tietoja, tarvitsee kävijän suostumuksen. Siksi Looku käynnistää sen vasta, kun sivustosi on kysynyt
+ja kävijä on vastannut kyllä. Kysyminen on sivustosi tehtävä.
+
+**Mitä saat:** suostumuksen antaneista kävijöistä tiedon siitä, kuinka kauan kutakin sivua luettiin ja kuinka pitkälle
+sitä vieritettiin (sisältömoduuli), sekä omat nimetyt tapahtumasi. **Tarvitset:** liitetyn
+[Next.js-sivuston](/looku/fi/guides/connect-nextjs/) ja päällä olevan `content`-moduulin:
+
+```bash
+docker compose run --rm ingest site:modules myblog content
+```
+
+(Aja komento `deploy`-kansiossasi. Jos sivustolla on muitakin moduuleja, luettele ne kaikki:
+`site:modules myblog content,shop`.)
+
+## Miten se toimii
+
+```
+ Kävijän selain ──suostumus──▶ keräin käynnistyy
+       │  lähettää lukuajan, kun kävijä poistuu sivulta
+       ▼
+ Sivustosi:  POST /api/looku   (sama osoite kuin sivustollasi)
+       │  tarkistaa pyynnön, poistaa IP-osoitteen ja user agentin, allekirjoittaa
+       ▼
+ Lookun vastaanotin
+```
+
+Keräin lähettää tiedot omalle sivustollesi eikä Lookuun, joten kävijän selain ei koskaan ota yhteyttä Lookuun.
+Sivustosi reitti välittää tiedot eteenpäin ilman IP-osoitetta ja user agentia, ja Looku tallentaa vain päivän, ei
+kellonaikaa. Keräin ei tallenna selaimeen mitään.
+
+<Steps>
+
+1. **Kopioi keräin** [`packages/browser/src/index.js`](https://github.com/niemenjoki/Looku/blob/main/packages/browser/src/index.js)
+   projektiisi nimellä `lib/looku-browser.js`. Sillä ei ole riippuvuuksia.
+
+2. **Lisää reitti**, joka ottaa tiedot vastaan, `app/api/looku/route.js`:
+
+   ```js
+   import { createCollectHandler } from "../../../lib/looku.js";
+
+   export const POST = createCollectHandler();
+   ```
+
+   Import viittaa liittimeen, jonka kopioit ohjeessa [Liitä Next.js-sivusto](/looku/fi/guides/connect-nextjs/).
+   Muuta `../`-osien määrä sen mukaan, missä `lib`-kansiosi on. Reitti hyväksyy pyynnöt vain oman sivustosi sivuilta.
+
+3. **Käynnistä keräin suostumuksen jälkeen.** Kutsu siinä kohdassa, jossa sivustosi käsittelee suostumusvalinnan,
+   `start()`, kun kävijä suostuu, ja `stop()`, kun hän peruu suostumuksen. Alla on pienin mahdollinen esimerkki, jos
+   sinulla ei vielä ole suostumustyökalua. Tallenna se projektisi juureen nimellä `components/Consent.js`:
+
+   ```jsx
+   "use client";
+   import { useEffect, useState } from "react";
+   import { start, stop } from "../lib/looku-browser.js";
+
+   export default function Consent() {
+     const [choice, setChoice] = useState(null);
+
+     useEffect(() => {
+       const saved = localStorage.getItem("consent-reading");
+       setChoice(saved);
+       if (saved === "yes") start();
+     }, []);
+
+     const decide = (value) => {
+       localStorage.setItem("consent-reading", value);
+       setChoice(value);
+       if (value === "yes") start();
+       else stop();
+     };
+
+     if (choice !== null) {
+       return <button onClick={() => decide(choice === "yes" ? "no" : "yes")}>Change measurement choice</button>;
+     }
+     return (
+       <p>
+         May we measure how long pages are read?{" "}
+         <button onClick={() => decide("yes")}>Allow</button> <button onClick={() => decide("no")}>Deny</button>
+       </p>
+     );
+   }
+   ```
+
+   Lisää sitten tiedostoon `app/layout.js` alkuun `import Consent from "../components/Consent.js";` ja
+   `<body>`-elementin sisään `{children}`-kohdan jälkeen `<Consent />`. Tämä esimerkki muistaa valinnan kävijän
+   selaimessa. Silloin sivustosi muistaa kävijän tekemän valinnan, eikä Looku tallenna mitään. Jos käytät
+   suostumustyökalua, kutsu sen sijaan `start()` ja `stop()` sen takaisinkutsuista.
+
+4. **Julkaise ja tarkista.** Avaa sivustosi, salli mittaus, lue sivua hetki ja siirry sitten toiselle sivulle tai
+   sulje välilehti. Kojelaudan sisältönäkymä näyttää lukuajan.
+
+</Steps>
+
+## Tapahtumat
+
+Kun `start()` on kutsuttu, voit lähettää nimettyjä tapahtumia:
+
+```js
+import { event } from "../lib/looku-browser.js";
+
+event("add_to_cart", { items: [{ sku: "A1", quantity: 1 }] });
+event("newsletter_signup", { target: "footer" });
+```
+
+Nimissä voi olla enintään 40 merkkiä: pieniä kirjaimia, numeroita sekä merkit `_`, `.` ja `-`. `target` (teksti),
+`value` (luku), `items` (tuotteet) ja `props` (pieni objekti) ovat valinnaisia. **Älä laita niihin henkilötietoja**:
+ei nimiä, sähköpostiosoitteita eikä tilausnumeroita, jotka voi yhdistää henkilöön. Ennen `start()`-kutsua ja
+`stop()`-kutsun jälkeen `event()` ei tee mitään.
+
+## Hyvä tietää
+
+- Keräin mittaa yhden sivun kerrallaan ja lähettää tiedot, kun sivu piilotetaan tai siltä poistutaan. Tämä koskee
+  myös selaimen sisäisiä siirtymiä Next.js:ssä ja muissa yhden sivun sovelluksissa.
+- Aikaa lasketaan vain, kun sivu on näkyvissä: taustalle auki jätetty välilehti ei kasvata lukuaikaa.
+- Kävijöitä, jotka lähettävät Do Not Track- tai Global Privacy Control -signaalin, ei mitata, vaikka he antaisivat
+  suostumuksen.
+- Tietosuojaselosteessasi on kerrottava tästä. Katso [Tietosuoja ja laki](/looku/fi/privacy/).

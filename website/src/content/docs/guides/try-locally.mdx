@@ -1,0 +1,198 @@
+---
+title: Try it locally
+description: Run Looku and a small demo site on your own computer in about 15 minutes, without touching a real site.
+sidebar:
+  order: 1
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+**What you get:** Looku and a small demo site running on your own computer. You browse the demo site, and the page
+views appear in Looku's dashboard. Nothing is published on the internet and no real site is touched.
+
+**Time:** about 15 minutes. **You need:** a computer with macOS, Linux or Windows, and an internet connection for
+the downloads.
+
+When you are done, you can delete everything by deleting one folder.
+
+## Before you start
+
+You need two programs, Git and Node.js (and WSL on Windows). If you have them already, skip to [Get Looku](#get-looku).
+
+**Windows:** Looku's commands are written for a Linux shell. Install WSL, which runs Ubuntu inside Windows: open
+PowerShell as administrator, run `wsl --install`, and restart the computer when asked. Then open **Ubuntu** from the
+Start menu and do everything below in that window. Addresses such as `http://127.0.0.1:8788` work in your normal
+Windows browser.
+
+**Git** downloads the code. Check whether you have it:
+
+```bash
+git --version
+```
+
+You should see something like `git version 2.43.0`. If you see `command not found`, install it: on Ubuntu
+`sudo apt install git`, on macOS run `git --version` again and accept the offer to install the developer tools.
+
+**Node.js 22 or newer** runs Looku. Check:
+
+```bash
+node --version
+```
+
+You should see `v22.` or a higher number, for example `v22.20.0`. If you see a lower number or `command not found`,
+install Node.js with nvm, which installs it for your user only, without administrator rights:
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+```
+
+Close the terminal window, open a new one, and run:
+
+```bash
+nvm install 22
+```
+
+The last line should say `Now using node v22.…`.
+
+## Get Looku
+
+<Steps>
+
+1. **Download the code.** This creates a folder called `looku` in the folder you are in (your home folder if you
+   just opened the terminal):
+
+   ```bash
+   git clone https://github.com/niemenjoki/Looku.git looku
+   cd looku
+   ```
+
+   `cd looku` moves you into the folder. All the following commands are run there unless a step says otherwise.
+
+2. **Install Looku's libraries.** This downloads what Looku needs into `node_modules` inside the folder:
+
+   ```bash
+   npm install
+   ```
+
+   It takes under a minute. The last lines say how many packages were added (`added … packages`).
+   Warnings (`npm warn`) are normal; an error (`npm error`) is not, see [Troubleshooting](/looku/operate/troubleshooting/).
+
+3. **Create the data folder.** Looku keeps all its data in one file, `data/looku.db`, inside this folder:
+
+   ```bash
+   mkdir -p data
+   ```
+
+   Nothing is printed. Run the `npx looku` commands below in the `looku` folder, so that they find this file.
+
+4. **Add the demo site.** `demo` is the site id, `localhost` is the demo site's address, and the time zone decides
+   when a day changes in the reports (use your own, for example `America/New_York`):
+
+   ```bash
+   npx looku site:add demo --domain localhost --timezone Europe/Helsinki
+   ```
+
+   You should see:
+
+   ```
+   Site demo added. Signing key (shown once):
+   k8Jd2mQx7RfTn4WcZp1LvB9sHy6GaE0uYoXiN5tCw3E
+   ```
+
+   Your key is different. **Copy it now** (select it and copy), you need it in step 8. If you lose it, run
+   `npx looku site:rotate-key demo` to get a new one.
+
+5. **Turn on two more modules,** content (reading time) and campaigns:
+
+   ```bash
+   npx looku site:modules demo content,campaigns
+   ```
+
+   You should see `Modules of demo: perus, content, campaigns`. `perus` (basic) is always on.
+
+6. **Set the dashboard password.** It must be at least 10 characters long:
+
+   ```bash
+   npx looku admin:password
+   ```
+
+   It asks `New dashboard password:`. Type the password and press Enter. **Nothing appears while you type**, not even
+   dots; that is on purpose. It asks only once, so type carefully. You should see
+   ``Password set. Restart `looku serve` to end existing logins.`` (Nothing to restart yet.) If you mistyped, run the
+   command again.
+
+7. **Start Looku:**
+
+   ```bash
+   npx looku all
+   ```
+
+   You should see `Looku receiver and dashboard on http://127.0.0.1:8788`. Looku now runs in this window, so leave it
+   open. `looku all` runs both parts of Looku on one port, which is fine on your own computer.
+
+8. **Open a second terminal window** for the demo site. Go to the demo's folder (if you cloned into your home folder,
+   the path is `~/looku/examples/next-demo`) and create its settings file:
+
+   ```bash
+   cd ~/looku/examples/next-demo
+   cp .env.example .env.local
+   ```
+
+   Open `.env.local` in a text editor (for example `nano .env.local`) and change it to:
+
+   ```
+   LOOKU_ENDPOINT=http://127.0.0.1:8788
+   LOOKU_SITE_ID=demo
+   LOOKU_SIGNING_KEY=the key you copied in step 4
+   ```
+
+   In nano, save with Ctrl+O and Enter, and exit with Ctrl+X. These are the three settings every connector needs:
+   where Looku is, which site this is, and the key to sign with.
+
+9. **Build and start the demo site:**
+
+   ```bash
+   npm install
+   npm run build
+   npm start
+   ```
+
+   The build takes about a minute. The last line should be `✓ Ready in …`, and above it
+   `- Local: http://localhost:3000`. The connector sends data only from a production build, which is why the demo is
+   built and started instead of run with `npm run dev`.
+
+</Steps>
+
+## See it work
+
+<Steps>
+
+1. Open [http://localhost:3000](http://localhost:3000) in your browser and click through a few pages.
+2. Open [http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo](http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo).
+   This is a campaign link, like one you would put in a newsletter.
+3. At the bottom of the demo page, select **Salli** (allow) to give consent for measuring reading time, then scroll
+   the guide page and stay on it for a while.
+4. Open the dashboard at [http://127.0.0.1:8788](http://127.0.0.1:8788) and log in with your password.
+
+</Steps>
+
+**It works if:**
+
+- the page views appear in the dashboard, and the campaign `demo` appears among the campaigns,
+- reading time appears only for pages you viewed after selecting "Salli",
+- your browser's storage for `localhost:3000` has nothing from Looku (the consent choice is the demo site's own).
+
+If the dashboard stays empty, see [No page views appear](/looku/operate/troubleshooting/#no-page-views-appear).
+
+## Clean up
+
+Stop both programs with Ctrl+C in their windows. To remove everything, delete the folder:
+
+```bash
+cd ~
+rm -rf ~/looku
+```
+
+## Next
+
+Choose a real setup in [Start here](/looku/start-here/#choose-a-setup).

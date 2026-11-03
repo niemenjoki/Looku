@@ -1,0 +1,184 @@
+---
+title: Liitä Next.js-sivusto
+description: Lisää Lookun liitin Next.js-sivustoon, aseta sen kolme asetusta paikallisesti ja Vercelissä ja tarkista, että sivunäytöt saapuvat.
+sidebar:
+  order: 1
+---
+
+import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+
+**Mitä saat:** jokainen sivupyyntö Next.js-sivustollesi lähettää sivunäytön Lookuun sivustosi palvelimelta. Sivuillesi
+ei lisätä skriptiä.
+
+**Aika:** 20 minuuttia. **Tarvitset:** asennetun Lookun ([Aloita tästä](/looku/fi/start-here/)) ja asennuksesta
+nämä: vastaanottimen osoite (esimerkiksi `https://looku.example.com`), sivuston tunnus ja allekirjoitusavain.
+
+## Miten se toimii
+
+Next.js voi ajaa pienen funktion ennen jokaista sivua. Sen nimi on **proxy** (Next.js 15:ssä ja vanhemmissa
+**middleware**). Lookun liitin toimii siinä: se lukee pyynnön, muodostaa sivunäytön ja lähettää sen Lookuun taustalla
+vastauksen jälkeen, joten sivu ei hidastu. Sivuihisi ei tarvitse muuttaa mitään.
+
+<Steps>
+
+1. **Kopioi liitin projektiisi.** Liitin on yksi tiedosto, jolla ei ole riippuvuuksia. npm-pakettia ei ole vielä
+   julkaistu, joten kopioi
+   [`packages/next/src/index.js`](https://github.com/niemenjoki/Looku/blob/main/packages/next/src/index.js)
+   Lookun repositoriosta projektiisi nimellä `lib/looku.js` (luo `lib`-kansio, jos sinulla ei ole sellaista).
+
+   Jos kloonasit Lookun sivustosi viereen, aja sivustosi kansiossa:
+
+   ```bash
+   mkdir -p lib
+   cp ../looku/packages/next/src/index.js lib/looku.js
+   ```
+
+2. **Luo proxy-tiedosto** projektisi juurikansioon (`package.json`-tiedoston viereen; jos sivusi ovat kansiossa
+   `src/app`, laita se kansioon `src/`). Tiedosto riippuu Next.js-versiostasi: katso `"next"` tiedostosta
+   `package.json`.
+
+   Jos sinulla on jo proxy- tai middleware-tiedosto, lisää funktioosi `import` ja rivi
+   `trackPageview(request, event);`. Tarkista myös, että `matcher` jättää pois `api`:n, `_next`:n, pisteen sisältävät
+   tiedostot ja esilataukset kuten alla. Muuten kuvat ja esilataukset lasketaan sivunäytöiksi.
+
+   <Tabs>
+   <TabItem label="Next.js 16 ja uudemmat: proxy.js">
+
+   ```js
+   import { NextResponse } from "next/server";
+   import { trackPageview } from "./lib/looku.js";
+
+   export function proxy(request, event) {
+     trackPageview(request, event);
+     return NextResponse.next();
+   }
+
+   export const config = {
+     matcher: [
+       {
+         source: "/((?!api|_next/static|_next/image|.*[.]).*)",
+         missing: [
+           { type: "header", key: "next-router-prefetch" },
+           { type: "header", key: "purpose", value: "prefetch" },
+           { type: "header", key: "sec-purpose", value: "(.*)prefetch(.*)" },
+         ],
+       },
+     ],
+   };
+   ```
+
+   </TabItem>
+   <TabItem label="Next.js 15 ja vanhemmat: middleware.js">
+
+   ```js
+   import { NextResponse } from "next/server";
+   import { trackPageview } from "./lib/looku.js";
+
+   export function middleware(request, event) {
+     trackPageview(request, event);
+     return NextResponse.next();
+   }
+
+   export const config = {
+     matcher: [
+       {
+         source: "/((?!api|_next/static|_next/image|.*[.]).*)",
+         missing: [
+           { type: "header", key: "next-router-prefetch" },
+           { type: "header", key: "purpose", value: "prefetch" },
+           { type: "header", key: "sec-purpose", value: "(.*)prefetch(.*)" },
+         ],
+       },
+     ],
+   };
+   ```
+
+   </TabItem>
+   </Tabs>
+
+   `matcher` ratkaisee, mille pyynnöille proxy ajetaan: sivuille, mutta ei API-reiteille, Next.js:n omille
+   tiedostoille, tiedostoille, joiden nimessä on piste (kuvat, `robots.txt`), eikä esilatauksille (sivuille, jotka
+   selain lataa etukäteen, vaikka kävijä ei avaa niitä). Kopioi se sellaisenaan. Piste on kirjoitettu muotoon `[.]`
+   tarkoituksella: JavaScript-merkkijonossa `\.` muuttuu tavalliseksi pisteeksi, joka vastaa mitä tahansa merkkiä, ja
+   silloin vain etusivu laskettaisiin.
+
+   Jos proxy-tiedostosi on kansiossa `src/`, import on `"../lib/looku.js"`, kun `lib` on juuressa, tai
+   `"./lib/looku.js"`, kun `lib` on kansiossa `src/`.
+
+3. **Lisää kolme asetusta paikallista testausta varten.** Luo tai avaa projektin juuressa tiedosto `.env.local`:
+
+   ```
+   LOOKU_ENDPOINT=https://looku.example.com
+   LOOKU_SITE_ID=myblog
+   LOOKU_SIGNING_KEY=allekirjoitusavaimesi
+   ```
+
+   Tarkista, että `.env.local` on tiedostossa `.gitignore` (Next.js-projekteissa se on siellä oletuksena), jotta
+   avain ei koskaan päädy gitiin.
+
+4. **Testaa paikallisesti tuotantoversiolla.** Liitin lähettää tietoja vain tuotannossa, joten `npm run dev` ei
+   lähetä mitään (tarkoituksella: muuten oma kehitystyösi näkyisi kävijöinä):
+
+   ```bash
+   npm run build
+   npm start
+   ```
+
+   Avaa `http://localhost:3000` ja pari sivua ja avaa sitten Lookun kojelauta. Käyntiesi pitäisi näkyä muutamassa
+   sekunnissa. Tämä lähettää koneeltasi oikeita sivunäyttöjä Lookuusi. Niitä on vähän, eivätkä ne haittaa.
+
+5. **Lisää asetukset sinne, missä sivusto toimii.**
+
+   <Tabs>
+   <TabItem label="Vercel">
+
+   Valitse Vercelin kojelaudassa projektisi ja sitten **Settings → Environment Variables** (hakusana: "Environment
+   Variables"; tarkistettu Vercelin dokumentaatiosta marraskuussa 2026). Lisää `LOOKU_ENDPOINT`, `LOOKU_SITE_ID` ja
+   `LOOKU_SIGNING_KEY` yksi kerrallaan: **Name**, **Value**, ja valitse ympäristöistä vain **Production**. Valitse
+   jokaisen jälkeen **Save**.
+
+   Asetukset koskevat vain uusia julkaisuja, joten **julkaise uudelleen**: tee commit ja push tiedostoille
+   `lib/looku.js` ja proxy-tiedosto, tai avaa kohdassa **Deployments** uusin julkaisu ja valitse **Redeploy**.
+   Esikatselujulkaisut eivät lähetä mitään, vaikka lisäisit asetukset myös niihin.
+
+   </TabItem>
+   <TabItem label="Oma palvelin">
+
+   Aseta kolme asetusta ympäristömuuttujiksi sille prosessille, joka ajaa `next start` -komentoa, samalla tavalla kuin
+   asetat muutkin asetuksesi (`.env.production`-tiedosto, joka ei ole gitissä, systemd-palvelusi, Dockerin
+   `environment:` tai palveluntarjoajasi hallintapaneeli). `NODE_ENV`-arvon on oltava `production`, ja `next start`
+   asettaa sen itse. Käynnistä sitten sivusto uudelleen.
+
+   </TabItem>
+   </Tabs>
+
+6. **Tarkista.** Avaa julkaistu sivustosi puhelimella ja sitten Lookun kojelauta. Käynnin pitäisi näkyä muutamassa
+   sekunnissa.
+
+</Steps>
+
+## Valinnat
+
+Anna valinnat kolmantena argumenttina: `trackPageview(request, event, { excludePaths: ["/admin"] })`.
+
+| Valinta | Oletus | Mitä tekee |
+|---|---|---|
+| `excludePaths` | `[]` | polut, joita ei lasketa. Tekstinä annettu polku jätetään pois kaikkine alapolkuineen (`"/admin"` jättää pois myös polun `/admin/users`), ja säännöllistä lauseketta (`/^\/draft-/`) verrataan polkuun |
+| `optOutCookie` | ei mitään | `{ name: "looku_optout", value: "1" }`: selainta, jolla on tämä eväste tällä arvolla, ei lasketa. Esimerkiksi omasi, jotta et laske itseäsi. Aseta eväste selaimesi kehittäjätyökaluilla tai omalla sivulla. |
+| `respectDoNotTrack` | `true` | ohittaa kävijät, jotka lähettävät Do Not Track- tai Global Privacy Control -signaalin |
+| `requireAcceptLanguage` | `true` | ohittaa pyynnöt, joissa ei ole `Accept-Language`-otsaketta. Oikeat selaimet lähettävät sen aina, monet botit eivät |
+| `enabled` | vain tuotannossa | `true` tai `false` ohittaa oletuksen |
+
+## Hyvä tietää
+
+- **Puuttuvat sivut lasketaan.** Proxy ajetaan ennen kuin Next.js tietää, onko sivu olemassa, joten käynti
+  väärin kirjoitetussa osoitteessa (404) on myös sivunäyttö.
+- **Selaimen sisäiset siirtymät lasketaan.** Kun kävijä napsauttaa linkkiä, Next.js pyytää palvelimelta seuraavan
+  sivun tiedot, ja proxy ajetaan myös sille pyynnölle. `matcher` ohittaa esilataukset.
+- **Botit** ohitetaan niiden user agent -tunnisteen perusteella, samoin pyynnöt, joissa ei ole `Accept-Language`-otsaketta.
+
+## Seuraavaksi
+
+- Lukuaika ja vieritys suostumuksen antaneilta kävijöiltä: [Selainkeräin](/looku/fi/guides/consent-and-browser/).
+- Verkkokaupan tilaukset: [Verkkokaupan tilaukset](/looku/fi/guides/shop-orders/).
+- Eikö mitään saavu? [Sivunäyttöjä ei näy](/looku/fi/operate/troubleshooting/#sivunäyttöjä-ei-näy).

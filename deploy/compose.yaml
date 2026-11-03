@@ -5,7 +5,7 @@
 #
 #   docker compose up -d --build
 #   docker compose run --rm ingest site:add example --domain example.com
-#   docker compose run --rm -T dashboard admin:password < password.txt
+#   docker compose run --rm -it ingest admin:password
 #
 # The receiver (ingest) is not published: a reverse proxy or tunnel on the
 # same network forwards POST /ingest and POST /orders to http://ingest:8787.

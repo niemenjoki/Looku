@@ -1,0 +1,32 @@
+/* Looku brand on Starlight: Yö palette and Space Grotesk, as in the dashboard (packages/ui/public/style.css). */
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("../assets/space-grotesk-latin-wght.woff2") format("woff2");
+}
+
+:root {
+  --sl-font: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sl-color-accent-low: #1a2340;
+  --sl-color-accent: #8db0ff;
+  --sl-color-accent-high: #d6e2ff;
+  --sl-color-black: #141c33;
+  --sl-color-gray-6: #1a2340;
+  --sl-color-gray-5: #2c3860;
+  --sl-color-gray-4: #4a5470;
+  --sl-color-gray-3: #a9b6d6;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #e8ecf5;
+  --sl-color-accent: #2f4fa2;
+  --sl-color-accent-high: #141c33;
+  --sl-color-white: #141c33;
+  --sl-color-gray-7: #f4f6fb;
+  --sl-color-gray-6: #e8ecf5;
+  --sl-color-gray-5: #d5dbe8;
+  --sl-color-gray-4: #a9b6d6;
+  --sl-color-gray-3: #4a5470;
+}

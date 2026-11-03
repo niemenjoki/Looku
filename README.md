@@ -14,9 +14,26 @@ server, for example on your home network.
 - **Read API** (`/api/v1`, OpenAPI) for your own dashboards or Home Assistant.
 - **One SQLite file**, one Docker image, no external services.
 
-Looku is not a cookie banner tool and does not make anything legal by itself. See [privacy and the law](docs/privacy.md).
+Looku is not a cookie banner tool and does not make anything legal by itself. See [privacy and the law](https://niemenjoki.github.io/looku/privacy/).
+
+## Documentation
+
+**[niemenjoki.github.io/looku](https://niemenjoki.github.io/looku/)**, in English and Finnish. Step-by-step guides for beginners and a
+reference for the rest:
+
+- [Start here](https://niemenjoki.github.io/looku/start-here/): what you need and which setup suits you
+- [Try it locally](https://niemenjoki.github.io/looku/guides/try-locally/) in 15 minutes, without touching a real site
+- Install on a [home server with Cloudflare](https://niemenjoki.github.io/looku/guides/home-server-cloudflare/) or a
+  [VPS with Caddy](https://niemenjoki.github.io/looku/guides/vps-caddy/)
+- [Connect a Next.js site](https://niemenjoki.github.io/looku/guides/connect-nextjs/), or [Node.js, Express, Cloudflare or your own](https://niemenjoki.github.io/looku/guides/connect-other/)
+- [Privacy and the law](https://niemenjoki.github.io/looku/privacy/): what is collected, the open legal question, a privacy notice template
+- [Suomeksi](https://niemenjoki.github.io/looku/fi/)
+
+The pages are Markdown files in [`website/src/content/docs`](website/src/content/docs), so they can also be read here.
 
 ## Quick start
+
+For readers who know Docker; the guides above explain each step.
 
 ```bash
 cd deploy
@@ -24,16 +41,10 @@ cp .env.example .env
 mkdir -p data && sudo chown 1000:1000 data
 docker compose up -d --build
 docker compose run --rm ingest site:add example --domain example.com
-docker compose run --rm -it dashboard admin:password
+docker compose run --rm -it ingest admin:password
 ```
 
-Then connect your site ([Next.js, Node.js, Cloudflare or your own](docs/connectors.md)) and open the dashboard
-(`http://127.0.0.1:8788` by default).
-
-- [Installing](docs/install.md): home server, public server, one process; backup and update
-- [Connecting a site](docs/connectors.md): connectors, browser collector, shop orders, read API
-- [Privacy and the law](docs/privacy.md): what is collected, the open legal question, a privacy notice template
-- [Suomeksi](docs/fi/README.md)
+Then [connect your site](https://niemenjoki.github.io/looku/guides/connect-nextjs/) and open the dashboard (`http://127.0.0.1:8788` by default).
 
 ## Packages
 
@@ -45,7 +56,8 @@ Then connect your site ([Next.js, Node.js, Cloudflare or your own](docs/connecto
 | `packages/node` | Node.js http and Express connector |
 | `packages/browser` | browser collector for consenting visitors |
 
-`npm install` and `npm test` in the root run all tests (Node.js 22 or newer).
+`npm install` and `npm test` in the root run all tests (Node.js 22 or newer). The documentation site is in
+`website` (`npm install` and `npm run dev` there; Node.js 22.22 or newer).
 
 ## License
 

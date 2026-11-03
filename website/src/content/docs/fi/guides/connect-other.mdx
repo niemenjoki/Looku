@@ -1,0 +1,115 @@
+---
+title: Node.js, Express, Cloudflare tai oma
+description: Liitä Node.js- tai Express-palvelin tai staattinen sivusto Cloudflare Workersissa tai Pagesissa, tai kirjoita oma liitin.
+sidebar:
+  order: 2
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+Jokainen liitin tarvitsee samat kolme asetusta Looku-asennuksestasi:
+
+```
+LOOKU_ENDPOINT=https://looku.example.com
+LOOKU_SITE_ID=myblog
+LOOKU_SIGNING_KEY=allekirjoitusavaimesi
+```
+
+Pidä ne poissa gitistä kuten mikä tahansa salasana. Node.js-liitin lähettää tietoja vain, kun `NODE_ENV=production`.
+
+## Node.js ja Express
+
+<Steps>
+
+1. **Kopioi kaksi tiedostoa** Lookun repositoriosta projektiisi, esimerkiksi kansioon `lib/`:
+   - [`packages/next/src/index.js`](https://github.com/niemenjoki/Looku/blob/main/packages/next/src/index.js)
+     nimellä `lib/looku-next.js`,
+   - [`packages/node/src/index.js`](https://github.com/niemenjoki/Looku/blob/main/packages/node/src/index.js)
+     nimellä `lib/looku-node.js`.
+
+   Toinen tiedosto tuo ensimmäisen nimellä `@looku/next`. Avaa `lib/looku-node.js` ja muuta tämä import muotoon
+   `"./looku-next.js"`.
+
+2. **Lisää middleware** Express-sovellukseesi ennen reittejäsi:
+
+   ```js
+   import express from "express";
+   import { lookuMiddleware } from "./lib/looku-node.js";
+
+   const app = express();
+   app.use(lookuMiddleware({ trustProxy: true }));
+   ```
+
+   Pelkässä `http`-palvelimessa kutsu sen sijaan `trackNodeRequest(req, res)` pyynnönkäsittelijän alussa.
+
+3. **Aseta `trustProxy` ympäristösi mukaan.** Liitin tarvitsee kävijän IP-osoitteen kävijöiden laskemiseen. Se, mistä
+   liitin osoitteen lukee, riippuu siitä, mitä sovelluksesi edessä on:
+
+   | Sovelluksesi edessä | Valinta |
+   |---|---|
+   | ei mitään, kävijät yhdistävät suoraan | jätä `trustProxy` pois |
+   | yksi käänteinen välityspalvelin (nginx, Caddy), joka asettaa `X-Forwarded-For`-otsakkeen | `trustProxy: true` (tai `1`) |
+   | kaksi välityspalvelinta | `trustProxy: 2` |
+   | pelkkä Cloudflare | `ipHeaders: ["cf-connecting-ip"]` eikä `trustProxy`-valintaa |
+
+   Väärä asetus ei riko sivustoasi, mutta kävijät lasketaan silloin väärin: joko kaikki näyttävät
+   välityspalvelimelta (yksi kävijä), tai kävijä voi väärentää osoitteen.
+
+4. **Käynnistä sovelluksesi uudelleen** kolmella asetuksella ja asetuksella `NODE_ENV=production`, avaa sivu ja
+   tarkista kojelauta.
+
+</Steps>
+
+Tämä liitin laskee vain onnistuneet HTML-vastaukset (tila 2xx tai 304, kun selain tarkistaa välimuistissaan olevan
+sivun uudelleen), joten puuttuvia sivuja ei lasketa.
+
+## Staattiset sivustot Cloudflare Workersissa tai Pagesissa
+
+Staattisella sivustolla ei ole omaa palvelinta, joten liitin toimii sen edessä Cloudflare Workerissa. Esimerkki
+[`examples/cloudflare-worker/worker.js`](https://github.com/niemenjoki/Looku/blob/main/examples/cloudflare-worker/worker.js)
+tarjoilee sivustosi ja lähettää sivunäytön taustalla jokaisen onnistuneen HTML-vastauksen jälkeen.
+
+<Steps>
+
+1. Kopioi `examples/cloudflare-worker/worker.js` Worker-projektiisi ja `packages/next/src/index.js` sen viereen
+   nimellä `looku-next.js`.
+2. Lisää `LOOKU_ENDPOINT` ja `LOOKU_SITE_ID` muuttujiksi ja `LOOKU_SIGNING_KEY` salaisuudeksi. Wranglerilla:
+   `npx wrangler secret put LOOKU_SIGNING_KEY`, joka kysyy arvon. Cloudflaren kojelaudassa avaa Worker ja siirry
+   kohtaan **Settings → Variables and Secrets** (hakusana: "Variables and Secrets").
+3. Julkaise ja avaa sivu.
+
+</Steps>
+
+Kävijän osoitteena luotetaan vain Cloudflaren omaan `cf-connecting-ip`-otsakkeeseen, koska Cloudflare asettaa sen
+aina itse.
+
+## Oma liitin
+
+Mikä tahansa ohjelmointikieli käy. Lähetä jokaisesta sivunäytöstä:
+
+```
+POST https://looku.example.com/ingest
+Content-Type: application/json
+X-Looku-Site: myblog
+X-Looku-Signature: t=1762160000,v1=5f2c…
+```
+
+ja JSON-runko:
+
+```json
+{ "type": "pageview", "ts": "2026-11-03T10:00:00.000Z", "path": "/hello", "referrer": "https://google.com/",
+  "ip": "198.51.100.7", "ua": "Mozilla/5.0 …", "country": "FI", "utm_source": "news" }
+```
+
+- `t` on nykyhetki Unix-sekunteina.
+- `v1` on HMAC-SHA256 tekstistä `<t>.<body>` (luku, piste ja täsmälleen lähettämäsi rungon tavut).
+  Avaimena on allekirjoitusavain, ja tulos kirjoitetaan pienillä kirjaimilla heksadesimaalina.
+- `path`, `ip` ja `ua` ovat pakollisia. `country` (kaksi kirjainta) ja `utm_`-kentät ovat valinnaisia.
+- Jokainen allekirjoitus hyväksytään kerran ja vain viiden minuutin sisällä ajasta `t`, joten lähettäjän kellon on
+  oltava oikeassa.
+
+Vastaukset: `202` hyväksytty, `400` virheellinen runko (syy on vastauksessa), `401` väärä allekirjoitus, sivuston
+tunnus tai aika, `409` sama allekirjoitus on jo käytetty, `413` liian suuri.
+
+Ohita itse botit, esilataukset ja tiedostopyynnöt, ja kunnioita Do Not Track -toivetta. Tiedoston
+`packages/next/src/index.js` funktiot `sendToLooku` ja `buildPageview` ovat täydellinen mallitoteutus.

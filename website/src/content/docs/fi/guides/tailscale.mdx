@@ -1,0 +1,65 @@
+---
+title: Kojelauta Tailscalen kautta
+description: Avaa kotipalvelimen kojelauta mistä tahansa Tailscalen kautta julkaisematta sitä internetiin.
+sidebar:
+  order: 4
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+**Mitä saat:** [kotipalvelinasennuksen](/looku/fi/guides/home-server-cloudflare/) kojelauta aukeaa myös kodin
+ulkopuolella omilla laitteillasi Tailscalen kautta. Tailscale on laitteidesi välinen yksityinen verkko; mitään ei
+julkaista internetiin. Muutos ei vaikuta vastaanottimeen.
+
+**Aika:** 15 minuuttia. **Tarvitset:** valmiin kotipalvelinasennuksen ja ilmaisen Tailscale-tilin.
+
+<Steps>
+
+1. **Asenna Tailscale palvelimelle** (palvelimella, `ssh`-yhteydellä):
+
+   ```bash
+   curl -fsSL https://tailscale.com/install.sh | sh
+   sudo tailscale up
+   ```
+
+   Toinen komento tulostaa linkin. Avaa se selaimessasi ja kirjaudu sisään; palvelin liittyy Tailscale-verkkoosi.
+
+2. **Selvitä palvelimen Tailscale-osoite:**
+
+   ```bash
+   tailscale ip -4
+   ```
+
+   Komento tulostaa osoitteen, joka alkaa `100.`, esimerkiksi `100.101.102.103`.
+
+3. **Asenna Tailscale puhelimeesi ja kannettavaasi** osoitteesta [tailscale.com/download](https://tailscale.com/download)
+   ja kirjaudu samalla tilillä.
+
+4. **Anna kojelaudan kuunnella molemmissa verkoissa.** Muuta tiedostossa `~/looku/deploy/.env`:
+
+   ```
+   LOOKU_DASHBOARD_BIND=0.0.0.0
+   LOOKU_API_HOSTS=192.168.1.10:8788,100.101.102.103:8788
+   LOOKU_API_ALLOW=192.168.1.0/24,100.64.0.0/10
+   ```
+
+   Selkokielellä: kuuntele kaikissa palvelimen verkoissa, hyväksy selaimessa molemmat osoitteet, mutta päästä sisään
+   vain kotiverkkosi laitteet (`192.168.1.0/24`, kaikki, jotka alkavat `192.168.1.`) ja Tailscalen laitteet
+   (`100.64.0.0/10`, Tailscalen käyttämä osoitealue). Käytä oman kotiverkkosi osoitealuetta.
+
+5. **Ota muutos käyttöön.** Tämä luo kojelaudan kontin uudelleen uusilla asetuksilla; vastaanotin pysyy käynnissä:
+
+   ```bash
+   cd ~/looku/deploy
+   docker compose up -d dashboard
+   ```
+
+   Näet `✔ Container looku-dashboard-1  Started`.
+
+</Steps>
+
+**Tarkista:** kun Tailscale on päällä ja puhelimesi käyttää mobiilidataa, avaa `http://100.101.102.103:8788`.
+Kirjautumissivun pitäisi tulla näkyviin. Kun Tailscale on pois päältä, sivun ei pitäisi aueta lainkaan.
+
+Jos käytät Tailscalen MagicDNS-nimeä (esimerkiksi `http://homeserver:8788`), lisää se myös `LOOKU_API_HOSTS`-asetukseen,
+muuten kojelauta vastaa `Unknown host`.

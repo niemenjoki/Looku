@@ -1,0 +1,65 @@
+---
+title: Dashboard over Tailscale
+description: Open a home server's dashboard from anywhere through Tailscale, without publishing it on the internet.
+sidebar:
+  order: 4
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+**What you get:** the dashboard of the [home server setup](/looku/guides/home-server-cloudflare/) opens also away from
+home, on your own devices, through Tailscale. Tailscale is a private network between your devices; nothing is
+published on the internet. The receiver is not affected.
+
+**Time:** 15 minutes. **You need:** the home server setup done, and a free Tailscale account.
+
+<Steps>
+
+1. **Install Tailscale on the server** (on the server, with `ssh`):
+
+   ```bash
+   curl -fsSL https://tailscale.com/install.sh | sh
+   sudo tailscale up
+   ```
+
+   The second command prints a link. Open it in your browser and log in; the server joins your Tailscale network.
+
+2. **Find the server's Tailscale address:**
+
+   ```bash
+   tailscale ip -4
+   ```
+
+   It prints an address starting with `100.`, for example `100.101.102.103`.
+
+3. **Install Tailscale on your phone and laptop** from [tailscale.com/download](https://tailscale.com/download) and
+   log in with the same account.
+
+4. **Let the dashboard listen on both networks.** In `~/looku/deploy/.env`, change:
+
+   ```
+   LOOKU_DASHBOARD_BIND=0.0.0.0
+   LOOKU_API_HOSTS=192.168.1.10:8788,100.101.102.103:8788
+   LOOKU_API_ALLOW=192.168.1.0/24,100.64.0.0/10
+   ```
+
+   In plain words: listen on every network the server has, accept both addresses in the browser, but let in only
+   devices on your home network (`192.168.1.0/24`, everything starting with `192.168.1.`) and on Tailscale
+   (`100.64.0.0/10`, the range Tailscale uses). Use your own home network's range.
+
+5. **Apply the change.** This recreates the dashboard container with the new settings; the receiver keeps running:
+
+   ```bash
+   cd ~/looku/deploy
+   docker compose up -d dashboard
+   ```
+
+   You should see `✔ Container looku-dashboard-1  Started`.
+
+</Steps>
+
+**Check:** with Tailscale on and your phone on mobile data, open `http://100.101.102.103:8788`. The login page should
+appear. With Tailscale off, the page should not open at all.
+
+If you use Tailscale's MagicDNS name (for example `http://homeserver:8788`), add it to `LOOKU_API_HOSTS` too, or the
+dashboard answers `Unknown host`.

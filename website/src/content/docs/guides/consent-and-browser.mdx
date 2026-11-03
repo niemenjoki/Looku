@@ -1,0 +1,125 @@
+---
+title: Reading time and consent
+description: Measure reading time, scroll depth and named events from visitors who consent, with the optional browser collector.
+sidebar:
+  order: 3
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+Page views need nothing in the browser. Reading time, scroll depth and events such as "added to cart" can only be
+measured in the browser, so they need a small script, the **browser collector**. Because a script in the browser that
+sends data needs the visitor's consent in the EU, Looku runs it only after your site has asked and the visitor has
+said yes. Asking is your site's job.
+
+**What you get:** for consenting visitors, how long each page was read and how far it was scrolled (content module),
+and your own named events. **You need:** a connected [Next.js site](/looku/guides/connect-nextjs/) and the `content`
+module turned on:
+
+```bash
+docker compose run --rm ingest site:modules myblog content
+```
+
+(Run it in your `deploy` folder. If the site has other modules, list them all: `site:modules myblog content,shop`.)
+
+## How it works
+
+```
+ Visitor's browser ──consent──▶ collector starts
+       │  sends reading time when the visitor leaves the page
+       ▼
+ Your site:  POST /api/looku   (same address as your site)
+       │  checks the request, removes IP address and user agent, signs
+       ▼
+ Looku receiver
+```
+
+The collector sends to your own site, not to Looku, so the visitor's browser never contacts Looku. Your site's route
+forwards the data without the IP address or user agent, and Looku stores only the day, not the time. The collector
+stores nothing in the browser.
+
+<Steps>
+
+1. **Copy the collector** [`packages/browser/src/index.js`](https://github.com/niemenjoki/Looku/blob/main/packages/browser/src/index.js)
+   into your project as `lib/looku-browser.js`. It has no dependencies.
+
+2. **Add the route** that receives the data, `app/api/looku/route.js`:
+
+   ```js
+   import { createCollectHandler } from "../../../lib/looku.js";
+
+   export const POST = createCollectHandler();
+   ```
+
+   The import goes to the connector you copied in [Connect a Next.js site](/looku/guides/connect-nextjs/); adjust the
+   number of `../` to where your `lib` folder is. The route accepts requests only from your own site's pages.
+
+3. **Start the collector after consent.** Where your site handles the consent choice, call `start()` when the visitor
+   agrees and `stop()` when they withdraw. A minimal example, if you do not have a consent tool yet. Save it as
+   `components/Consent.js` in your project root:
+
+   ```jsx
+   "use client";
+   import { useEffect, useState } from "react";
+   import { start, stop } from "../lib/looku-browser.js";
+
+   export default function Consent() {
+     const [choice, setChoice] = useState(null);
+
+     useEffect(() => {
+       const saved = localStorage.getItem("consent-reading");
+       setChoice(saved);
+       if (saved === "yes") start();
+     }, []);
+
+     const decide = (value) => {
+       localStorage.setItem("consent-reading", value);
+       setChoice(value);
+       if (value === "yes") start();
+       else stop();
+     };
+
+     if (choice !== null) {
+       return <button onClick={() => decide(choice === "yes" ? "no" : "yes")}>Change measurement choice</button>;
+     }
+     return (
+       <p>
+         May we measure how long pages are read?{" "}
+         <button onClick={() => decide("yes")}>Allow</button> <button onClick={() => decide("no")}>Deny</button>
+       </p>
+     );
+   }
+   ```
+
+   Then in `app/layout.js`, add `import Consent from "../components/Consent.js";` at the top and `<Consent />` inside
+   `<body>`, after `{children}`. This example remembers the choice in the visitor's browser; that is your site
+   remembering a choice the visitor made, not Looku storing anything. If you use a consent tool, call `start()` and
+   `stop()` from its callbacks instead.
+
+4. **Deploy and check.** Open your site, allow, read a page for a while, then go to another page or close the tab.
+   In the dashboard, the content view shows the reading time.
+
+</Steps>
+
+## Events
+
+After `start()`, send named events:
+
+```js
+import { event } from "../lib/looku-browser.js";
+
+event("add_to_cart", { items: [{ sku: "A1", quantity: 1 }] });
+event("newsletter_signup", { target: "footer" });
+```
+
+Names are up to 40 characters: lowercase letters, numbers, `_`, `.` and `-`. `target` (text), `value` (a number), `items` (products) and
+`props` (a small object) are optional. **Do not put personal data in them**: no names, emails or order numbers that
+can be linked to a person. Before `start()` and after `stop()`, `event()` does nothing.
+
+## Good to know
+
+- The collector measures one page at a time and sends when the page is hidden or left, also on client-side
+  navigation in Next.js and other single-page apps.
+- Time is counted only while the page is visible: a tab left open in the background does not add reading time.
+- Visitors who send Do Not Track or Global Privacy Control are not measured, even if they consent.
+- Your privacy notice must describe this; see [Privacy and the law](/looku/privacy/).

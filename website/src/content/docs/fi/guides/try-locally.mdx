@@ -1,0 +1,200 @@
+---
+title: Kokeile omalla koneella
+description: Käynnistä Looku ja pieni esittelysivusto omalla tietokoneellasi noin 15 minuutissa koskematta oikeaan sivustoon.
+sidebar:
+  order: 1
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+**Mitä saat:** Looku ja pieni esittelysivusto toimivat omalla tietokoneellasi. Selaat esittelysivustoa, ja
+sivunäytöt näkyvät Lookun kojelaudassa. Mitään ei julkaista internetiin, eikä mihinkään oikeaan sivustoon kosketa.
+
+**Aika:** noin 15 minuuttia. **Tarvitset:** tietokoneen, jossa on macOS, Linux tai Windows, sekä internetyhteyden
+latauksia varten.
+
+Kun olet valmis, voit poistaa kaiken poistamalla yhden kansion.
+
+## Ennen kuin aloitat
+
+Tarvitset kaksi ohjelmaa, Gitin ja Node.js:n (ja Windowsissa WSL:n). Jos sinulla on ne jo, siirry kohtaan
+[Lataa Looku](#lataa-looku).
+
+**Windows:** Lookun komennot on kirjoitettu Linuxin komentotulkille. Asenna WSL, joka ajaa Ubuntua Windowsin sisällä:
+avaa PowerShell järjestelmänvalvojana, aja `wsl --install` ja käynnistä tietokone uudelleen, kun sitä pyydetään.
+Avaa sitten **Ubuntu** Käynnistä-valikosta ja tee kaikki alla olevat vaiheet siinä ikkunassa. Osoitteet, kuten
+`http://127.0.0.1:8788`, toimivat tavallisessa Windows-selaimessasi.
+
+**Git** lataa koodin. Tarkista, onko se asennettu:
+
+```bash
+git --version
+```
+
+Näet jotain tällaista: `git version 2.43.0`. Jos näet `command not found`, asenna Git: Ubuntussa
+`sudo apt install git`, macOS:ssä aja `git --version` uudelleen ja hyväksy tarjous asentaa kehitystyökalut.
+
+**Node.js 22 tai uudempi** ajaa Lookua. Tarkista:
+
+```bash
+node --version
+```
+
+Näet `v22.` tai suuremman numeron, esimerkiksi `v22.20.0`. Jos näet pienemmän numeron tai `command not found`,
+asenna Node.js nvm:llä. Se asentaa Node.js:n vain omalle käyttäjällesi ilman järjestelmänvalvojan oikeuksia:
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+```
+
+Sulje pääteikkuna, avaa uusi ja aja:
+
+```bash
+nvm install 22
+```
+
+Viimeisellä rivillä pitäisi lukea `Now using node v22.…`.
+
+## Lataa Looku
+
+<Steps>
+
+1. **Lataa koodi.** Tämä luo kansion `looku` siihen kansioon, jossa olet (kotikansioosi, jos avasit päätteen
+   juuri):
+
+   ```bash
+   git clone https://github.com/niemenjoki/Looku.git looku
+   cd looku
+   ```
+
+   `cd looku` siirtää sinut kansioon. Kaikki seuraavat komennot ajetaan siellä, ellei vaiheessa sanota muuta.
+
+2. **Asenna Lookun kirjastot.** Tämä lataa Lookun tarvitsemat tiedostot kansion sisälle `node_modules`-kansioon:
+
+   ```bash
+   npm install
+   ```
+
+   Se kestää alle minuutin. Viimeiset rivit kertovat, montako pakettia lisättiin (`added … packages`).
+   Varoitukset (`npm warn`) ovat normaaleja; virhe (`npm error`) ei ole, katso [Vianetsintä](/looku/fi/operate/troubleshooting/).
+
+3. **Luo tietokansio.** Looku pitää kaikki tietonsa yhdessä tiedostossa, `data/looku.db`, tämän kansion sisällä:
+
+   ```bash
+   mkdir -p data
+   ```
+
+   Mitään ei tulostu. Aja alla olevat `npx looku` -komennot `looku`-kansiossa, jotta ne löytävät tämän tiedoston.
+
+4. **Lisää esittelysivusto.** `demo` on sivuston tunnus, `localhost` on esittelysivuston osoite, ja aikavyöhyke
+   ratkaisee, milloin päivä vaihtuu raporteissa (käytä omaasi, esimerkiksi `America/New_York`):
+
+   ```bash
+   npx looku site:add demo --domain localhost --timezone Europe/Helsinki
+   ```
+
+   Näet:
+
+   ```
+   Site demo added. Signing key (shown once):
+   k8Jd2mQx7RfTn4WcZp1LvB9sHy6GaE0uYoXiN5tCw3E
+   ```
+
+   Sinun avaimesi on eri. **Kopioi se nyt** (valitse ja kopioi), tarvitset sitä vaiheessa 8. Jos hukkaat sen, saat
+   uuden komennolla `npx looku site:rotate-key demo`.
+
+5. **Ota käyttöön kaksi muuta moduulia,** sisältö (lukuaika) ja kampanjat:
+
+   ```bash
+   npx looku site:modules demo content,campaigns
+   ```
+
+   Näet `Modules of demo: perus, content, campaigns`. `perus` (perusmoduuli) on aina käytössä.
+
+6. **Aseta kojelaudan salasana.** Sen on oltava vähintään 10 merkkiä pitkä:
+
+   ```bash
+   npx looku admin:password
+   ```
+
+   Komento kysyy `New dashboard password:`. Kirjoita salasana ja paina Enter. **Mitään ei näy kirjoittaessasi**, ei
+   edes pisteitä; se on tarkoituksellista. Salasana kysytään vain kerran, joten kirjoita huolellisesti. Näet
+   ``Password set. Restart `looku serve` to end existing logins.`` (Mitään ei tarvitse vielä käynnistää uudelleen.)
+   Jos kirjoitit väärin, aja komento uudelleen.
+
+7. **Käynnistä Looku:**
+
+   ```bash
+   npx looku all
+   ```
+
+   Näet `Looku receiver and dashboard on http://127.0.0.1:8788`. Looku toimii nyt tässä ikkunassa, joten jätä se
+   auki. `looku all` ajaa Lookun molemmat osat samassa portissa, mikä sopii omalle tietokoneelle.
+
+8. **Avaa toinen pääteikkuna** esittelysivustoa varten. Siirry esittelysivuston kansioon (jos kloonasit
+   kotikansioosi, polku on `~/looku/examples/next-demo`) ja luo sen asetustiedosto:
+
+   ```bash
+   cd ~/looku/examples/next-demo
+   cp .env.example .env.local
+   ```
+
+   Avaa `.env.local` tekstieditorissa (esimerkiksi `nano .env.local`) ja muuta se tällaiseksi:
+
+   ```
+   LOOKU_ENDPOINT=http://127.0.0.1:8788
+   LOOKU_SITE_ID=demo
+   LOOKU_SIGNING_KEY=vaiheessa 4 kopioimasi avain
+   ```
+
+   Nanossa tallenna painamalla Ctrl+O ja Enter ja poistu painamalla Ctrl+X. Nämä ovat ne kolme asetusta, jotka
+   jokainen liitin tarvitsee: missä Looku on, mikä sivusto tämä on ja millä avaimella allekirjoitetaan.
+
+9. **Rakenna ja käynnistä esittelysivusto:**
+
+   ```bash
+   npm install
+   npm run build
+   npm start
+   ```
+
+   Rakentaminen kestää noin minuutin. Viimeisen rivin pitäisi olla `✓ Ready in …` ja sen yläpuolella
+   `- Local: http://localhost:3000`. Liitin lähettää tietoja vain tuotantoversiosta (production build). Siksi
+   esittelysivusto rakennetaan ja käynnistetään eikä sitä ajeta komennolla `npm run dev`.
+
+</Steps>
+
+## Katso, että se toimii
+
+<Steps>
+
+1. Avaa [http://localhost:3000](http://localhost:3000) selaimessasi ja selaa muutamaa sivua.
+2. Avaa [http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo](http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo).
+   Tämä on kampanjalinkki, sellainen, jonka laittaisit uutiskirjeeseen.
+3. Valitse esittelysivun alareunasta **Salli**, jolloin annat suostumuksen lukuajan mittaamiseen. Vieritä sitten
+   ohjesivua ja pysy sillä hetken aikaa.
+4. Avaa kojelauta osoitteessa [http://127.0.0.1:8788](http://127.0.0.1:8788) ja kirjaudu salasanallasi.
+
+</Steps>
+
+**Kaikki toimii, jos:**
+
+- sivunäytöt näkyvät kojelaudassa ja kampanja `demo` näkyy kampanjoiden joukossa,
+- lukuaika näkyy vain sivuille, joita katsoit sen jälkeen, kun valitsit "Salli",
+- selaimesi tallennustilassa ei ole osoitteelle `localhost:3000` mitään Lookulta (suostumusvalinta on
+  esittelysivuston oma).
+
+Jos kojelauta pysyy tyhjänä, katso [Sivunäyttöjä ei näy](/looku/fi/operate/troubleshooting/#sivunäyttöjä-ei-näy).
+
+## Siivoa jälkesi
+
+Pysäytä molemmat ohjelmat painamalla Ctrl+C niiden ikkunoissa. Jos haluat poistaa kaiken, poista kansio:
+
+```bash
+cd ~
+rm -rf ~/looku
+```
+
+## Seuraavaksi
+
+Valitse oikea asennustapa sivulla [Aloita tästä](/looku/fi/start-here/#valitse-asennustapa).

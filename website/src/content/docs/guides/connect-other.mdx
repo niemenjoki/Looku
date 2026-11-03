@@ -1,0 +1,113 @@
+---
+title: Node.js, Express, Cloudflare or your own
+description: Connect a Node.js or Express server, a static site on Cloudflare Workers or Pages, or write your own connector.
+sidebar:
+  order: 2
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+Every connector needs the same three settings from your Looku installation:
+
+```
+LOOKU_ENDPOINT=https://looku.example.com
+LOOKU_SITE_ID=myblog
+LOOKU_SIGNING_KEY=your signing key
+```
+
+Keep them out of git, like any password. The Node.js connector sends data only when `NODE_ENV=production`.
+
+## Node.js and Express
+
+<Steps>
+
+1. **Copy two files** from the Looku repository into your project, for example into `lib/`:
+   - [`packages/next/src/index.js`](https://github.com/niemenjoki/Looku/blob/main/packages/next/src/index.js) as
+     `lib/looku-next.js`,
+   - [`packages/node/src/index.js`](https://github.com/niemenjoki/Looku/blob/main/packages/node/src/index.js) as
+     `lib/looku-node.js`.
+
+   The second file imports the first as `@looku/next`. Open `lib/looku-node.js` and change that import to
+   `"./looku-next.js"`.
+
+2. **Add the middleware** to your Express app, before your routes:
+
+   ```js
+   import express from "express";
+   import { lookuMiddleware } from "./lib/looku-node.js";
+
+   const app = express();
+   app.use(lookuMiddleware({ trustProxy: true }));
+   ```
+
+   For a plain `http` server, call `trackNodeRequest(req, res)` at the start of the request handler instead.
+
+3. **Set `trustProxy` to match your setup.** The connector needs the visitor's IP address to count visitors, and
+   where it reads it from depends on what is in front of your app:
+
+   | In front of your app | Option |
+   |---|---|
+   | nothing, visitors connect directly | leave `trustProxy` out |
+   | one reverse proxy (nginx, Caddy) that sets `X-Forwarded-For` | `trustProxy: true` (or `1`) |
+   | two proxies | `trustProxy: 2` |
+   | Cloudflare only | `ipHeaders: ["cf-connecting-ip"]` and no `trustProxy` |
+
+   Getting this wrong does not break your site, but visitors are then counted wrongly: either everyone looks like the
+   proxy (one visitor), or a visitor could fake an address.
+
+4. **Restart** your app with the three settings and `NODE_ENV=production`, open a page and check the dashboard.
+
+</Steps>
+
+This connector counts only successful HTML responses (status 2xx, or 304 when the browser revalidates a page from
+its cache), so missing pages are not counted.
+
+## Static sites on Cloudflare Workers or Pages
+
+A static site has no server of its own, so the connector runs in a Cloudflare Worker in front of it. The example in
+[`examples/cloudflare-worker/worker.js`](https://github.com/niemenjoki/Looku/blob/main/examples/cloudflare-worker/worker.js)
+serves your site and sends a page view in the background after each successful HTML response.
+
+<Steps>
+
+1. Copy `examples/cloudflare-worker/worker.js` into your Worker project, and
+   `packages/next/src/index.js` next to it as `looku-next.js`.
+2. Add `LOOKU_ENDPOINT` and `LOOKU_SITE_ID` as variables and `LOOKU_SIGNING_KEY` as a secret. With Wrangler:
+   `npx wrangler secret put LOOKU_SIGNING_KEY`, which asks for the value. In the Cloudflare dashboard, open the Worker
+   and go to **Settings → Variables and Secrets** (search: "Variables and Secrets").
+3. Deploy and open a page.
+
+</Steps>
+
+Only Cloudflare's own `cf-connecting-ip` header is trusted for the visitor's address, because Cloudflare always sets
+it itself.
+
+## Your own connector
+
+Any language works. For each page view, send:
+
+```
+POST https://looku.example.com/ingest
+Content-Type: application/json
+X-Looku-Site: myblog
+X-Looku-Signature: t=1762160000,v1=5f2c…
+```
+
+with a JSON body:
+
+```json
+{ "type": "pageview", "ts": "2026-11-03T10:00:00.000Z", "path": "/hello", "referrer": "https://google.com/",
+  "ip": "198.51.100.7", "ua": "Mozilla/5.0 …", "country": "FI", "utm_source": "news" }
+```
+
+- `t` is the current time in Unix seconds.
+- `v1` is HMAC-SHA256 of the text `<t>.<body>` (the number, a dot, and the exact body bytes you send), with the
+  signing key as the key, written as lowercase hex.
+- `path`, `ip` and `ua` are required. `country` (two letters) and the `utm_` fields are optional.
+- Each signature is accepted once and only within five minutes of `t`, so the sender's clock must be right.
+
+Answers: `202` accepted, `400` invalid body (the reason is in the response), `401` wrong signature, site id or time,
+`409` the same signature was already used, `413` too large.
+
+Skip bots, prefetches and requests for files yourself, and respect Do Not Track. `sendToLooku` and `buildPageview` in
+`packages/next/src/index.js` are a complete reference implementation.

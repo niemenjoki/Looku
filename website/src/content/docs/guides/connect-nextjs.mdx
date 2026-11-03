@@ -1,0 +1,180 @@
+---
+title: Connect a Next.js site
+description: Add Looku's connector to a Next.js site, set its three settings locally and on Vercel, and check that page views arrive.
+sidebar:
+  order: 1
+---
+
+import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+
+**What you get:** every page request to your Next.js site sends a page view to Looku, from your site's server. No
+script is added to your pages.
+
+**Time:** 20 minutes. **You need:** Looku installed ([Start here](/looku/start-here/)), and from the installation:
+the receiver's address (for example `https://looku.example.com`), your site id and the signing key.
+
+## How it works
+
+Next.js can run a small function before each page, called the **proxy** (in Next.js 15 and older, **middleware**).
+Looku's connector runs there: it reads the request, builds a page view and sends it to Looku in the background after
+the response, so the page is not slowed down. Nothing changes in your pages.
+
+<Steps>
+
+1. **Copy the connector into your project.** The connector is one file with no dependencies. The npm package is not
+   published yet, so copy
+   [`packages/next/src/index.js`](https://github.com/niemenjoki/Looku/blob/main/packages/next/src/index.js) from the
+   Looku repository into your project as `lib/looku.js` (create the `lib` folder if you do not have one).
+
+   If you cloned Looku next to your site, from your site's folder:
+
+   ```bash
+   mkdir -p lib
+   cp ../looku/packages/next/src/index.js lib/looku.js
+   ```
+
+2. **Create the proxy file** in your project's root folder (next to `package.json`; if your pages are in `src/app`,
+   put it in `src/`). Which file depends on your Next.js version: look for `"next"` in `package.json`.
+
+   If you already have a proxy or middleware file, add the `import` and the `trackPageview(request, event);` line to
+   your function, and check that your `matcher` also leaves out `api`, `_next`, files with a dot and prefetches as
+   below; otherwise images and prefetches are counted as page views.
+
+   <Tabs>
+   <TabItem label="Next.js 16 and newer: proxy.js">
+
+   ```js
+   import { NextResponse } from "next/server";
+   import { trackPageview } from "./lib/looku.js";
+
+   export function proxy(request, event) {
+     trackPageview(request, event);
+     return NextResponse.next();
+   }
+
+   export const config = {
+     matcher: [
+       {
+         source: "/((?!api|_next/static|_next/image|.*[.]).*)",
+         missing: [
+           { type: "header", key: "next-router-prefetch" },
+           { type: "header", key: "purpose", value: "prefetch" },
+           { type: "header", key: "sec-purpose", value: "(.*)prefetch(.*)" },
+         ],
+       },
+     ],
+   };
+   ```
+
+   </TabItem>
+   <TabItem label="Next.js 15 and older: middleware.js">
+
+   ```js
+   import { NextResponse } from "next/server";
+   import { trackPageview } from "./lib/looku.js";
+
+   export function middleware(request, event) {
+     trackPageview(request, event);
+     return NextResponse.next();
+   }
+
+   export const config = {
+     matcher: [
+       {
+         source: "/((?!api|_next/static|_next/image|.*[.]).*)",
+         missing: [
+           { type: "header", key: "next-router-prefetch" },
+           { type: "header", key: "purpose", value: "prefetch" },
+           { type: "header", key: "sec-purpose", value: "(.*)prefetch(.*)" },
+         ],
+       },
+     ],
+   };
+   ```
+
+   </TabItem>
+   </Tabs>
+
+   The `matcher` decides which requests run the proxy: pages, but not API routes, Next.js's own files, files with a
+   dot in the name (images, `robots.txt`) or prefetches (pages the browser loads in advance without the visitor
+   opening them). Copy it as it is: the dot is written `[.]` on purpose, because `\.` in a JavaScript string becomes a
+   plain dot that matches any character, and then only the front page would be counted.
+
+   If your proxy file is in `src/`, the import is `"../lib/looku.js"` when `lib` is in the root, or
+   `"./lib/looku.js"` when `lib` is in `src/`.
+
+3. **Add the three settings for local testing.** Create or open `.env.local` in the project root:
+
+   ```
+   LOOKU_ENDPOINT=https://looku.example.com
+   LOOKU_SITE_ID=myblog
+   LOOKU_SIGNING_KEY=your signing key
+   ```
+
+   Check that `.env.local` is in `.gitignore` (Next.js projects have it there by default), so that the key never ends
+   up in git.
+
+4. **Test it locally with a production build.** The connector sends data only in production, so `npm run dev` sends
+   nothing (on purpose: your own development would otherwise show up as visitors):
+
+   ```bash
+   npm run build
+   npm start
+   ```
+
+   Open `http://localhost:3000` and a couple of pages, then open the Looku dashboard. Your visits should appear
+   within a few seconds. This sends real page views from your computer to your Looku; they are few and do no harm.
+
+5. **Add the settings where the site runs.**
+
+   <Tabs>
+   <TabItem label="Vercel">
+
+   In the Vercel dashboard, select your project and then **Settings → Environment Variables** (search: "Environment
+   Variables"; checked against Vercel's documentation in November 2026). Add `LOOKU_ENDPOINT`, `LOOKU_SITE_ID` and
+   `LOOKU_SIGNING_KEY` one at a time: **Name**, **Value**, and under environments choose only **Production**. Select
+   **Save** after each.
+
+   Settings apply only to new deployments, so **redeploy**: commit and push `lib/looku.js` and the proxy file, or in **Deployments** open the
+   latest one and choose **Redeploy**. Preview deployments send nothing, even if you add the settings there too.
+
+   </TabItem>
+   <TabItem label="Your own server">
+
+   Set the three settings as environment variables of the process that runs `next start`, the same way you set your
+   other settings (a `.env.production` file that is not in git, your systemd service, Docker `environment:` or your
+   host's control panel). `NODE_ENV` must be `production`, which `next start` sets by itself. Then restart the site.
+
+   </TabItem>
+   </Tabs>
+
+6. **Check.** Open your live site on your phone, then the Looku dashboard. The visit should be there within a few
+   seconds.
+
+</Steps>
+
+## Options
+
+Pass options as the third argument: `trackPageview(request, event, { excludePaths: ["/admin"] })`.
+
+| Option | Default | What |
+|---|---|---|
+| `excludePaths` | `[]` | paths not counted; a text path is excluded with everything under it (`"/admin"` also excludes `/admin/users`), and a regular expression (`/^\/draft-/`) is tested against the path |
+| `optOutCookie` | none | `{ name: "looku_optout", value: "1" }`: a browser that has this cookie with this value is not counted, for example your own, so that you do not count yourself. Set the cookie in your browser's developer tools or with a page of your own. |
+| `respectDoNotTrack` | `true` | skip visitors who send Do Not Track or Global Privacy Control |
+| `requireAcceptLanguage` | `true` | skip requests without the `Accept-Language` header, which real browsers always send and many bots do not |
+| `enabled` | production only | `true` or `false` to override |
+
+## Good to know
+
+- **Missing pages are counted.** The proxy runs before Next.js knows whether the page exists, so a visit to a
+  mistyped address (404) is also a page view.
+- **Client-side navigation is counted.** When a visitor clicks a link, Next.js asks the server for the next page's
+  data, and the proxy runs for that request too. Prefetches are skipped by the matcher.
+- **Bots** are skipped by their user agent, and so are requests without `Accept-Language`.
+
+## Next
+
+- Reading time and scroll depth from visitors who consent: [Browser collector](/looku/guides/consent-and-browser/).
+- Shop orders: [Shop orders](/looku/guides/shop-orders/).
+- Nothing arrives? [No page views appear](/looku/operate/troubleshooting/#no-page-views-appear).
