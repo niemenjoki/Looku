@@ -3,7 +3,9 @@ import { BREAKDOWN_DIMENSIONS } from "../modules/perus/reports.js";
 const rangeParams = [
   { name: "from", in: "query", schema: { type: "string", format: "date" }, description: "First day (YYYY-MM-DD), with to." },
   { name: "to", in: "query", schema: { type: "string", format: "date" }, description: "Last day (YYYY-MM-DD), with from." },
-  { name: "range", in: "query", schema: { type: "string", enum: ["7d", "28d", "3m", "12m"], default: "28d" }, description: "Period ending today in the site's time zone. Ignored when from/to are given." },
+  { name: "range", in: "query", schema: { type: "string", enum: ["24h", "7d", "28d", "3m", "12m"], default: "28d" }, description: "24h is the last 24 hours; the others end today in the site's time zone. Ignored when from/to or since/until are given." },
+  { name: "since", in: "query", schema: { type: "string", format: "date-time" }, description: "Start of a time window (ISO 8601, exclusive), with until; at most 31 days." },
+  { name: "until", in: "query", schema: { type: "string", format: "date-time" }, description: "End of a time window (ISO 8601, inclusive), with since." },
 ];
 const siteParam = { name: "site", in: "path", required: true, schema: { type: "string" } };
 
@@ -55,7 +57,7 @@ export function openApiDocument(version) {
           properties: {
             site: { type: "string" },
             timezone: { type: "string" },
-            range: { type: "object", properties: { from: { type: "string" }, to: { type: "string" } } },
+            range: { type: "object", properties: { from: { type: "string" }, to: { type: "string" }, since: { type: "string" }, until: { type: "string" } } },
             previous: { type: "object", properties: { from: { type: "string" }, to: { type: "string" } } },
             sample: { type: "boolean" },
             n: { type: "integer" },

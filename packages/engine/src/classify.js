@@ -58,7 +58,20 @@ export function normalizePath(value) {
   } catch {
     return "/";
   }
-  return path.slice(0, 500) || "/";
+  return decodePath(path).slice(0, 500) || "/";
+}
+
+// Paths are stored decoded ("/opas/lämpö", not "/opas/l%C3%A4mp%C3%B6"), so a
+// page is one row however the browser wrote its address. Reserved characters
+// such as %2F stay encoded, and an invalid encoding or one that would give a
+// control character is kept as it is.
+export function decodePath(path) {
+  try {
+    const decoded = decodeURI(path);
+    return /[\u0000-\u001f\u007f]/.test(decoded) ? path : decoded;
+  } catch {
+    return path;
+  }
 }
 
 export function normalizeHost(host) {
@@ -78,7 +91,7 @@ export function parseReferrer(value, siteDomain) {
     if (!host || host === normalizeHost(siteDomain)) {
       return { host: "", path: "" };
     }
-    return { host: host.slice(0, 200), path: url.pathname.slice(0, 300) };
+    return { host: host.slice(0, 200), path: decodePath(url.pathname).slice(0, 300) };
   } catch {
     return { host: "", path: "" };
   }

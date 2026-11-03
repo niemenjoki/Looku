@@ -1,14 +1,15 @@
 import { DIMENSION_COLUMNS, sessionedPageviews } from "../../sessions.js";
 import { addDays, isDayKey } from "../../time.js";
 import { ReportError } from "../errors.js";
-import { filteredPageviews } from "../filters.js";
+import { filteredPageviews, withWindow } from "../filters.js";
 
 // Basic module reports. Rolled-up days are read from the rollup tables and
 // the rest (today, and days not rolled up yet) from the raw page views, so the
 // numbers are the same before and after the nightly job. Visitors over several
 // days are the sum of daily visitors, because the visitor hash changes daily.
 
-// With filters (see filters.js) every report reads the raw page views only.
+// With filters (see filters.js) or a time window (since/until) every report
+// reads the raw page views only.
 
 export { ReportError };
 
@@ -34,7 +35,9 @@ export function checkRange(range) {
 const RAW_WHERE = `p.site_id = ? AND p.day BETWEEN ? AND ?
   AND p.day NOT IN (SELECT day FROM daily_totals WHERE site_id = ?)`;
 
-export function dailyTotals(db, siteId, { from, to }, filters = null) {
+export function dailyTotals(db, siteId, range, filters = null) {
+  const { from, to } = range;
+  filters = withWindow(filters, range);
   if (filters) {
     const { sql, params } = filteredPageviews(filters);
     return db
@@ -75,6 +78,16 @@ export function dayCount({ from, to }) {
 }
 
 export function previousRange(range) {
+  if (range.since) {
+    // The window of the same length just before; its days start one earlier.
+    const length = Date.parse(range.until) - Date.parse(range.since);
+    return {
+      from: addDays(range.from, -Math.ceil(length / 86400000)),
+      to: range.from,
+      since: new Date(Date.parse(range.since) - length).toISOString(),
+      until: range.since,
+    };
+  }
   const days = dayCount(range);
   return { from: addDays(range.from, -days), to: addDays(range.from, -1) };
 }
@@ -130,6 +143,7 @@ function hourly(db, site, range, filters) {
   if (dayCount(range) > MAX_HOURLY_DAYS) {
     throw new ReportError(`Hourly series can cover at most ${MAX_HOURLY_DAYS} days.`);
   }
+  filters = withWindow(filters, range);
   const { sql, params } = filters
     ? filteredPageviews(filters)
     : { sql: sessionedPageviews("p.site_id = ? AND p.day BETWEEN ? AND ?"), params: [] };
@@ -154,6 +168,7 @@ function hourly(db, site, range, filters) {
     const period = localHour(hour, site.timezone);
     const day = period.slice(0, 10);
     if (day < range.from || day > range.to) continue;
+    if (range.since && (t + 3600000 <= Date.parse(range.since) || t >= Date.parse(range.until))) continue;
     const row = rows.get(hour);
     points.push({ period, pageviews: row?.pageviews || 0, visitors: row?.visitors || 0, sessions: row?.sessions || 0 });
   }
@@ -188,6 +203,7 @@ export function timeseries(db, site, range, { interval = "day", filters = null }
 // With `top`, only the best rows are returned, sorted and limited in SQL, so
 // sites with many distinct paths (bots trying URLs) stay cheap to report.
 export function pageRows(db, siteId, range, top = null, filters = null) {
+  filters = withWindow(filters, range);
   const tail = top
     ? `HAVING SUM(${top.having}) > 0 ORDER BY SUM(${top.column}) DESC, path LIMIT ${top.limit}`
     : "";
@@ -252,6 +268,7 @@ export function breakdown(db, siteId, dimension, range, { limit = 50, sort, filt
     throw new ReportError(`Unknown dimension: ${dimension}`);
   }
   const rowLimit = Math.min(Math.max(Math.trunc(Number(limit)) || 50, 1), 1000);
+  filters = withWindow(filters, range);
 
   const defaultSort = { entry: "entries", exit: "exits" }[dimension] || "pageviews";
   const isPage = ["page", "entry", "exit"].includes(dimension);

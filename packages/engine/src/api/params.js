@@ -1,3 +1,4 @@
+import { decodePath } from "../classify.js";
 import { ReportError } from "../modules/perus/reports.js";
 import { addDays, dayKey, subtractMonths } from "../time.js";
 
@@ -8,14 +9,44 @@ const RANGES = {
   "12m": (to) => addDays(subtractMonths(to, 12), 1),
 };
 
-// from/to (days) or a range ending today in the site's time zone.
+const HOUR_MS = 3600000;
+const MAX_WINDOW_MS = 31 * 24 * HOUR_MS;
+
+// A time window: page views after `since` up to and including `until` (UTC
+// ISO times). `from` and `to` are the local days it touches; reports that
+// keep only days (reading time, cart events) use those days.
+export function timeWindow(since, until, timezone) {
+  const start = new Date(since);
+  const end = new Date(until);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start >= end) {
+    throw new ReportError("since and until must be times (ISO 8601), since < until.");
+  }
+  if (end - start > MAX_WINDOW_MS) {
+    throw new ReportError("since and until can be at most 31 days apart.");
+  }
+  return {
+    from: dayKey(start, timezone),
+    to: dayKey(end, timezone),
+    since: start.toISOString(),
+    until: end.toISOString(),
+  };
+}
+
+// from/to (days), since/until (a time window), or a range ending now: 24h
+// is the last 24 hours, the others end today in the site's time zone.
 export function resolveRange(query, timezone, now = new Date()) {
+  if (query.since || query.until) {
+    return timeWindow(query.since, query.until, timezone);
+  }
   if (query.from || query.to) {
     return { from: String(query.from || ""), to: String(query.to || "") };
   }
   const name = query.range || "28d";
+  if (name === "24h") {
+    return timeWindow(new Date(now.getTime() - 24 * HOUR_MS), now, timezone);
+  }
   if (!RANGES[name]) {
-    throw new ReportError(`range must be one of ${Object.keys(RANGES).join(", ")}.`);
+    throw new ReportError(`range must be one of 24h, ${Object.keys(RANGES).join(", ")}.`);
   }
   const to = dayKey(now, timezone);
   return { from: RANGES[name](to), to };
@@ -60,7 +91,7 @@ export function validateConfig(input) {
     }
     config.page_groups = input.page_groups.map((group) => {
       const name = String(group?.name ?? "").trim();
-      const prefix = String(group?.prefix ?? "").trim();
+      const prefix = decodePath(String(group?.prefix ?? "").trim());
       if (!name || name.length > 60 || !prefix.startsWith("/") || prefix.length > 200) {
         throw new ReportError("Each page group needs a name and a prefix that starts with /.");
       }
@@ -85,7 +116,7 @@ export function validateConfig(input) {
       throw new ReportError("shop must be an object.");
     }
     for (const key of SHOP_PATHS) {
-      const value = String(input.shop[key] ?? "").trim();
+      const value = decodePath(String(input.shop[key] ?? "").trim());
       if (value && (!value.startsWith("/") || value.length > 200)) {
         throw new ReportError(`shop.${key} must start with / (max 200 characters).`);
       }

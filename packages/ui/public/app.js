@@ -6,7 +6,7 @@ import { buildReview, monthRange, percentChange, shiftMonth } from "./review.js"
 // values come from visitors. The page talks only to /api/v1.
 
 const SVG_NS = "http://www.w3.org/2000/svg";
-const RANGE_KEYS = ["7d", "28d", "3m", "12m"];
+const RANGE_KEYS = ["24h", "7d", "28d", "3m", "12m"];
 
 // Sections of view A per module, in default order.
 const SECTIONS = [
@@ -37,7 +37,7 @@ const state = {
   site: null,
   config: null,
   me: null,
-  range: "28d",
+  range: "24h",
   from: "",
   to: "",
   compare: true,
@@ -79,9 +79,17 @@ function s(tag, attrs = {}) {
   return el;
 }
 
+// Version 2 made the last 24 hours the default range: a saved range from
+// before it is replaced once.
+const DEFAULTS_VERSION = 2;
+
 function load() {
   try {
-    Object.assign(state, JSON.parse(localStorage.getItem("looku") || "{}"));
+    const saved = JSON.parse(localStorage.getItem("looku") || "{}");
+    if (saved.defaults !== DEFAULTS_VERSION) {
+      delete saved.range;
+    }
+    Object.assign(state, saved);
   } catch {
     // Storage blocked: defaults are used.
   }
@@ -90,7 +98,7 @@ function load() {
 function save() {
   try {
     const { site, range, from, to, compare, hourly, lang, theme } = state;
-    localStorage.setItem("looku", JSON.stringify({ site: site?.id, range, from, to, compare, hourly, lang, theme }));
+    localStorage.setItem("looku", JSON.stringify({ site: site?.id, range, from, to, compare, hourly, lang, theme, defaults: DEFAULTS_VERSION }));
   } catch {
     // Storage blocked: settings last until the page is closed.
   }
@@ -109,8 +117,19 @@ function formatFullDay(day) {
   return L.locale === "fi-FI" ? `${formatDay(day)}${day.slice(0, 4)}` : `${formatDay(day)} ${day.slice(0, 4)}`;
 }
 
-function formatRange({ from, to }) {
+function formatRange({ from, to, since, until }, timeZone) {
+  if (since) {
+    const time = new Intl.DateTimeFormat(L.locale, { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone });
+    return `${time.format(new Date(since))}-${time.format(new Date(until))}`;
+  }
   return `${formatDay(from)}-${formatFullDay(to)}`;
+}
+
+// Query of a range from a report's meta: a time window or days.
+function rangeParams(range) {
+  return range.since
+    ? `since=${encodeURIComponent(range.since)}&until=${encodeURIComponent(range.until)}`
+    : `from=${range.from}&to=${range.to}`;
 }
 
 function formatPeriod(period) {
@@ -189,7 +208,7 @@ function duration(seconds) {
 
 function rangeQuery() {
   if (state.range === "custom" && state.from && state.to) return `from=${state.from}&to=${state.to}`;
-  return `range=${RANGE_KEYS.includes(state.range) ? state.range : "28d"}`;
+  return `range=${RANGE_KEYS.includes(state.range) ? state.range : "24h"}`;
 }
 
 function siteUrl(path) {
@@ -353,8 +372,9 @@ async function dashboardView(container, token) {
   if (token !== renderToken) return;
   const range = summary.meta.range;
   const days = daysBetween(range.from, range.to);
-  const interval = state.hourly && days <= 31 ? "hour" : days > 400 ? "month" : days > 92 ? "week" : "day";
+  const interval = range.since || (state.hourly && days <= 31) ? "hour" : days > 400 ? "month" : days > 92 ? "week" : "day";
   const previous = summary.meta.previous;
+  const timeZone = summary.meta.timezone;
 
   const sections = sectionOrder();
   const dims = {
@@ -372,8 +392,8 @@ async function dashboardView(container, token) {
   };
   const requests = {
     series: api(siteUrl(`/timeseries?${q}&interval=${interval}${fq}`)),
-    prevSeries: previous ? api(siteUrl(`/timeseries?from=${previous.from}&to=${previous.to}&interval=${interval}${fq}`)) : null,
-    prevPages: previous && sections.some((x) => x.id === "pages") ? api(siteUrl(`/breakdown/page?from=${previous.from}&to=${previous.to}&limit=200${fq}`)) : null,
+    prevSeries: previous ? api(siteUrl(`/timeseries?${rangeParams(previous)}&interval=${interval}${fq}`)) : null,
+    prevPages: previous && sections.some((x) => x.id === "pages") ? api(siteUrl(`/breakdown/page?${rangeParams(previous)}&limit=200${fq}`)) : null,
     os: sections.some((x) => x.id === "browsers") ? api(siteUrl(`/breakdown/os?${q}&limit=10${fq}`)) : null,
     campaignList: api(siteUrl(`/breakdown/utm_campaign?${q}&limit=50&sort=entries`)),
   };
@@ -503,7 +523,7 @@ async function dashboardView(container, token) {
     campaignNames.length ? filterSelect("utm_campaign", L.filters.allCampaigns, campaignNames.map((name) => [name, name])) : null,
     filterSelect("device", L.filters.allDevices, ["mobile", "desktop", "tablet"].map((v) => [v, L.names[v]])),
     filtered ? h("button", { class: "btn", type: "button", onclick: () => { state.filters = {}; render(); } }, L.filters.clear) : null,
-    days <= 31 ? h("label", { class: "check" }, h("input", { type: "checkbox", checked: state.hourly, onchange: (e) => { state.hourly = e.target.checked; save(); render(); } }), L.hourly) : null,
+    days <= 31 && !range.since ? h("label", { class: "check" }, h("input", { type: "checkbox", checked: state.hourly, onchange: (e) => { state.hourly = e.target.checked; save(); render(); } }), L.hourly) : null,
     filtered ? h("span", { class: "muted" }, L.filters.note) : null);
 
   const csvReport = {
@@ -538,11 +558,11 @@ async function dashboardView(container, token) {
   container.replaceChildren(
     h("div", { class: "va" },
       h("div", { class: "va-bar" },
-        h("span", { class: "muted" }, formatRange(range)),
+        h("span", { class: "muted" }, formatRange(range, timeZone)),
         rangeButtons, custom,
         h("label", { class: "check" }, h("input", { type: "checkbox", checked: state.compare, onchange: (e) => { state.compare = e.target.checked; save(); render(); } }), L.compare),
         h("span", { class: "sp" }),
-        previous ? h("span", { class: "muted" }, L.prevPeriod(formatRange(previous))) : null,
+        previous ? h("span", { class: "muted" }, L.prevPeriod(formatRange(previous, timeZone))) : null,
         h("a", { class: "btn", href: `/api/v1${siteUrl(`/export.csv?${q}&report=timeseries&interval=${interval}${fq}`)}`, download: true }, L.exportSeries)),
       filterBar,
       h("div", { class: "va-kpi m-perus" }, kpis.map(([k, v, c, series]) => h("div", {}, h("div", { class: "k" }, k), h("div", { class: "v" }, v), c, spark(series)))),

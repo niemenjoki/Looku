@@ -9,13 +9,22 @@ import { checkRange, dailyTotals, pageRows, previousRange, sumTotals } from "../
 // cart events from the browser collector are a consented sample and are
 // reported separately.
 
-function orderTotals(db, siteId, { from, to }) {
+// Orders of a range: by day, and within a time window also by time.
+function orderWhere(range, alias = "") {
+  const a = alias ? `${alias}.` : "";
+  return range.since
+    ? { sql: `${a}site_id = ? AND ${a}day BETWEEN ? AND ? AND ${a}ts > ? AND ${a}ts <= ?`, params: [range.from, range.to, range.since, range.until] }
+    : { sql: `${a}site_id = ? AND ${a}day BETWEEN ? AND ?`, params: [range.from, range.to] };
+}
+
+function orderTotals(db, siteId, range) {
+  const where = orderWhere(range);
   const row = db
     .prepare(
       `SELECT COUNT(*) AS orders, COALESCE(SUM(total), 0) AS revenue
-       FROM orders_ext WHERE site_id = ? AND day BETWEEN ? AND ?`,
+       FROM orders_ext WHERE ${where.sql}`,
     )
-    .get(siteId, from, to);
+    .get(siteId, ...where.params);
   return { orders: row.orders, revenue: Math.round(row.revenue * 100) / 100 };
 }
 
@@ -48,13 +57,14 @@ export function summary(db, siteId, range, { compare = false } = {}) {
 export function timeseries(db, siteId, range) {
   checkRange(range);
   const sessions = new Map(dailyTotals(db, siteId, range).map((row) => [row.day, row.sessions]));
+  const where = orderWhere(range);
   const orders = new Map(
     db
       .prepare(
         `SELECT day, COUNT(*) AS orders, SUM(total) AS revenue FROM orders_ext
-         WHERE site_id = ? AND day BETWEEN ? AND ? GROUP BY day`,
+         WHERE ${where.sql} GROUP BY day`,
       )
-      .all(siteId, range.from, range.to)
+      .all(siteId, ...where.params)
       .map((row) => [row.day, row]),
   );
   const points = [];
@@ -97,13 +107,13 @@ export function funnel(db, siteId, range, shop = {}) {
          SELECT s.*, SUM(s.is_entry) OVER (
            PARTITION BY s.day, s.visitor_hash ORDER BY s.ts, s.id ROWS UNBOUNDED PRECEDING
          ) AS session_no
-         FROM (${sessionedPageviews("p.site_id = ? AND p.day BETWEEN ? AND ?")}) s
+         FROM (${sessionedPageviews(`p.site_id = ? AND p.day BETWEEN ? AND ?${range.since ? " AND p.ts > ? AND p.ts <= ?" : ""}`)}) s
        )
        SELECT COUNT(*) AS sessions ${sums} FROM (
          SELECT 1 AS one ${columns} FROM t GROUP BY day, visitor_hash, session_no
        )`,
     )
-    .get(siteId, range.from, range.to, ...params);
+    .get(siteId, range.from, range.to, ...(range.since ? [range.since, range.until] : []), ...params);
   const { orders } = orderTotals(db, siteId, range);
 
   return {
@@ -129,10 +139,10 @@ export function products(db, siteId, range, shop = {}, { limit = 20 } = {}) {
               SUM(json_extract(j.value, '$.quantity') * json_extract(j.value, '$.price')) AS revenue,
               COUNT(DISTINCT o.external_id) AS orders
        FROM orders_ext o, json_each(o.items_json) j
-       WHERE o.site_id = ? AND o.day BETWEEN ? AND ?
+       WHERE ${orderWhere(range, "o").sql}
        GROUP BY sku ORDER BY quantity DESC, sku LIMIT ?`,
     )
-    .all(siteId, range.from, range.to, rowLimit)
+    .all(siteId, ...orderWhere(range, "o").params, rowLimit)
     .map((row) => ({
       ...row,
       name: row.name || "",

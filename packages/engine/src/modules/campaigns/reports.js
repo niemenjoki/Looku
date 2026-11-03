@@ -3,15 +3,16 @@ import { breakdown, checkRange, previousRange } from "../perus/reports.js";
 // Campaigns module: UTM campaigns compared with the previous period of the
 // same length, with orders from the shop adapter by campaign.
 
-function orderRows(db, siteId, { from, to }) {
+function orderRows(db, siteId, range) {
+  const window = range.since ? " AND ts > ? AND ts <= ?" : "";
   return new Map(
     db
       .prepare(
         `SELECT utm_campaign AS value, COUNT(*) AS orders, SUM(total) AS revenue
-         FROM orders_ext WHERE site_id = ? AND day BETWEEN ? AND ? AND utm_campaign <> ''
+         FROM orders_ext WHERE site_id = ? AND day BETWEEN ? AND ?${window} AND utm_campaign <> ''
          GROUP BY utm_campaign`,
       )
-      .all(siteId, from, to)
+      .all(siteId, range.from, range.to, ...(range.since ? [range.since, range.until] : []))
       .map((row) => [row.value, row]),
   );
 }

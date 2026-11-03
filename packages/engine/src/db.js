@@ -4,10 +4,17 @@ import { fileURLToPath } from "node:url";
 
 import Database from "better-sqlite3";
 
+import decodeStoredPaths from "./migrations/007_decoded_paths.js";
+
 const MIGRATIONS_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "migrations",
 );
+
+// Migrations that need code instead of SQL, run in name order with the SQL files.
+const CODE_MIGRATIONS = {
+  "007_decoded_paths.js": decodeStoredPaths,
+};
 
 export function openDatabase(file, { readonly = false } = {}) {
   if (!readonly && file !== ":memory:") {
@@ -34,7 +41,7 @@ export function migrate(db) {
   );
   const files = fs
     .readdirSync(MIGRATIONS_DIR)
-    .filter((name) => name.endsWith(".sql"))
+    .filter((name) => name.endsWith(".sql") || Object.hasOwn(CODE_MIGRATIONS, name))
     .sort();
   const isApplied = db.prepare("SELECT 1 FROM schema_migrations WHERE name = ?");
 
@@ -42,12 +49,15 @@ export function migrate(db) {
     if (isApplied.get(name)) {
       continue;
     }
-    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, name), "utf8");
     db.transaction(() => {
       if (isApplied.get(name)) {
         return;
       }
-      db.exec(sql);
+      if (Object.hasOwn(CODE_MIGRATIONS, name)) {
+        CODE_MIGRATIONS[name](db);
+      } else {
+        db.exec(fs.readFileSync(path.join(MIGRATIONS_DIR, name), "utf8"));
+      }
       db.prepare(
         "INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)",
       ).run(name, new Date().toISOString());

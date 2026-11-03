@@ -8,6 +8,15 @@ import { ReportError } from "./errors.js";
 
 export const FILTER_PARAMS = ["page_group", "utm_campaign", "device"];
 
+// A range with a time window (since/until, e.g. the last 24 hours) is read
+// from the raw page views like a filter.
+export function withWindow(filters, range) {
+  if (!range.since) {
+    return filters;
+  }
+  return { ...(filters || {}), window: { since: range.since, until: range.until } };
+}
+
 // Returns null when no filter is set.
 export function parseFilters(query, config = {}) {
   const filters = {};
@@ -58,6 +67,10 @@ export function filteredPageviews(filters) {
   if (filters.device !== undefined) {
     conditions.push("t.device = ?");
     params.push(filters.device);
+  }
+  if (filters.window) {
+    conditions.push("t.ts > ? AND t.ts <= ?");
+    params.push(filters.window.since, filters.window.until);
   }
 
   const sql = `
