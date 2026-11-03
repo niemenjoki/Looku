@@ -59,6 +59,14 @@ Looku stores only the day, not the time of day. The records have the page path a
 is dropped. Looku does not link orders to visitors or sessions. In your shop's own system the order id is linked to
 the customer. (`packages/engine/src/orders.js`)
 
+**History from an earlier system (optional).** `looku history:import` imports page views, events and reading-time
+records that another system collected. The file holds no IP address or user agent, so device, browser and country
+stay empty. Each page view's daily visitor hash from the earlier system is hashed again with a random key that exists
+only during the import and is never stored, so the stored hashes cannot be matched to the earlier system's data.
+Events and reading-time records keep only the day. The imported data falls under the same retention as Looku's own.
+You are responsible for the earlier system having collected the data lawfully, for example with consent where it was
+needed. (`packages/engine/src/history.js`)
+
 **Where the data goes.** Looku stores the data only on your server and sends nothing to its authors. The dashboard
 loads no external files. Data passes through other services only if you set them up:
 - a tunnel or proxy in front of the receiver (for example Cloudflare), which sees the page views with IP addresses
