@@ -107,4 +107,4 @@ docker compose --profile tunnel up -d tunnel
 ```
 
 Tarkista Cloudflaren kojelaudasta (**Networking → Tunnels**), että tunneli on taas yhdistetty, ja tee `curl`-tarkistus
-[kotipalvelinohjeesta](/looku/fi/guides/home-server-cloudflare/#4-päästä-läpi-vain-vastaanottimen-tarvitsemat-pyynnöt).
+[kotipalvelinohjeesta](/looku/fi/guides/home-server-cloudflare/#palomuurisääntö).

@@ -1,0 +1,351 @@
+---
+title: "1. Kokeile Lookua omalla koneellasi"
+description: Opastettu ensikosketus. Käynnistät Lookun ja pienen demokaupan omalla tietokoneellasi, klikkailet sitä ja näet käyntisi kojelaudassa.
+sidebar:
+  order: 1
+---
+
+import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+import Screen from "../../../../components/Screen.astro";
+
+Tässä oppaassa käynnistät Lookun omalla tietokoneellasi yhdessä pienen demokaupan kanssa. Klikkailet kauppaa
+kuin kävijä, ja minuutin päästä näet omat käyntisi Lookun kojelaudassa. Mitään ei julkaista internetiin, ja lopuksi
+poistat kaiken.
+
+Siihen menee noin 20 minuuttia, josta suurin osa on latausten odottamista. Tarvitset tietokoneen, jossa on Windows 10
+tai 11, macOS tai Linux, ja noin 3 Gt vapaata levytilaa. Dockeria tai ohjelmointia ei tarvitse osata: kaikki komennot
+ovat tässä, ja kerromme jokaisen jälkeen, mitä sinun pitäisi nähdä.
+
+Tähän olemme menossa:
+
+<Screen name="overview" alt="Lookun kojelauta: viimeisten 28 päivän sivunäytöt, kävijät ja käynnit, kaavio ja luettelot katsotuimmista sivuista." />
+
+## Hanki työkalut
+
+Looku toimii **Dockerissa**. Docker on ohjelma, joka ajaa muita ohjelmia suljetuissa laatikoissa, joita kutsutaan
+konteiksi. Näin sinun ei tarvitse asentaa Lookun osia tietokoneellesi yksi kerrallaan. Tarvitset myös **Gitin**, joka
+lataa Lookun koodin.
+
+Avaa ensin **pääte**, eli ikkuna, johon kirjoitat komentoja:
+
+- **Windows:** avaa Käynnistä-valikko, kirjoita `PowerShell` ja avaa **Windows PowerShell**.
+- **macOS:** avaa **Pääte** (Ohjelmat → Lisäohjelmat).
+- **Linux:** avaa pääteohjelmasi.
+
+Pidä pääte auki, koska käytät sitä koko ajan. Komennot ovat samat kaikissa kolmessa järjestelmässä, paitsi kun
+välilehdet näyttävät toisin.
+
+Asenna nyt Docker:
+
+<Tabs syncKey="os">
+<TabItem label="Windows">
+
+Lataa **Docker Desktop** osoitteesta [docker.com](https://www.docker.com/products/docker-desktop/) ja aja
+asennusohjelma oletusvalinnoilla. Käynnistä tietokone uudelleen, jos sitä pyydetään. Käynnistä sitten
+**Docker Desktop** Käynnistä-valikosta, hyväksy sen ehdot ja odota, kunnes siinä lukee **Engine running**.
+
+Jos se valittaa virtualisoinnista, virtualisointi pitää kytkeä päälle tietokoneen laiteohjelmiston asetuksista (BIOS
+tai UEFI). Katso
+[Dockerin vianetsintäohjeet](https://docs.docker.com/desktop/troubleshoot-and-support/troubleshoot/topics/).
+
+</TabItem>
+<TabItem label="macOS">
+
+Lataa **Docker Desktop** osoitteesta [docker.com](https://www.docker.com/products/docker-desktop/). Valitse **Apple
+silicon** tai **Intel** Macisi mukaan (Omena-valikko → Tietoja tästä Macista → Siru tai Suoritin). Avaa tiedosto, vedä
+Docker Ohjelmat-kansioon, käynnistä se, hyväksy sen ehdot ja odota, kunnes siinä lukee **Engine running**.
+
+</TabItem>
+<TabItem label="Linux">
+
+Asenna **Docker Engine** [Dockerin jakelukohtaisen ohjeen](https://docs.docker.com/engine/install/) mukaan. Anna
+sitten käyttäjällesi oikeus ajaa Dockeria ilman `sudo`a, ja kirjaudu ulos ja takaisin sisään:
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+</TabItem>
+</Tabs>
+
+Tarkista, että Docker vastaa:
+
+```bash
+docker compose version
+```
+
+Näet tekstin `Docker Compose version v2.…` tai suuremman numeron. Jos näet sen sijaan virheen:
+
+- `cannot connect to the Docker daemon` tai `error during connect`: Docker Desktop ei ole vielä käynnissä (Linuxissa:
+  `sudo systemctl start docker`).
+- `permission denied` (Linux): kirjaudu ulos ja takaisin sisään tai käynnistä tietokone uudelleen.
+
+Tarkista sitten Git:
+
+```bash
+git --version
+```
+
+Jos näet tekstin `git version 2.…`, Git on asennettu. Jos komentoa ei löydy: Windowsissa asenna
+[Git for Windows](https://git-scm.com/downloads/win) oletusvalinnoilla ja avaa PowerShell uudelleen. macOS:ssä hyväksy
+tarjous asentaa kehitystyökalut. Linuxissa aja `sudo apt install git` (Fedorassa `sudo dnf install git`).
+
+## Käynnistä Looku
+
+<Steps>
+
+1. **Lataa Looku.** Tämä luo kansion `looku` ja siirtää sinut sen `deploy`-kansioon, jossa Docker-tiedostot ovat:
+
+   ```bash
+   git clone https://github.com/niemenjoki/Looku.git looku
+   cd looku/deploy
+   ```
+
+   Näet tekstin `Cloning into 'looku'...` ja muutaman edistymisrivin.
+
+2. **Luo asetustiedosto.** Looku lukee asetuksensa tiedostosta `.env`. Aloita esimerkistä:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Avaa se sitten tekstieditorissa:
+
+   <Tabs syncKey="os">
+   <TabItem label="Windows">
+
+   ```powershell
+   notepad .env
+   ```
+
+   </TabItem>
+   <TabItem label="macOS">
+
+   ```bash
+   open -e .env
+   ```
+
+   </TabItem>
+   <TabItem label="Linux">
+
+   ```bash
+   nano .env
+   ```
+
+   </TabItem>
+   </Tabs>
+
+   Muuta yksi rivi, se joka alkaa `LOOKU_DATA_DIR=`, muotoon:
+
+   ```
+   LOOKU_DATA_DIR=looku-data
+   ```
+
+   Tallenna ja sulje (nanossa: Ctrl+O, Enter, Ctrl+X). Näin Lookun tietokanta pysyy Dockerin sisällä. Se on
+   pöytäkoneella luotettava valinta, ja tietokannan saa helposti poistettua jälkeenpäin.
+
+3. **Käynnistä Looku:**
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+   Ensimmäisellä kerralla Docker lataa ja rakentaa Lookun. Siihen menee muutama minuutti, joten anna sen tehdä
+   työnsä. Lopussa näkyvät rivit `Container looku-ingest-1 Started` ja `Container looku-dashboard-1 Started`.
+
+   Looku toimii nyt kahdessa kontissa. **Vastaanotin** (`ingest`) ottaa vastaan sivunäytöt sivustoilta.
+   **Kojelaudalta** luet luvut. `-d` jättää ne käyntiin taustalle, joten saat kehotteen takaisin.
+
+   Jos näet tekstin `port is already allocated`, jokin muu ohjelma käyttää porttia 8788. Muuta `.env`-tiedostossa
+   `LOOKU_DASHBOARD_PORT` arvoon `8789`, aja komento uudelleen ja käytä myöhemmin 8789:ää 8788:n sijaan.
+
+4. **Kerro Lookulle demosivustosta.** Looku pitää jokaisen sivuston luvut erillään, joten lisäät sivuston ensin:
+
+   ```bash
+   docker compose run --rm ingest site:add demo --domain localhost --timezone Europe/Helsinki
+   ```
+
+   (Käytä omaa aikavyöhykettäsi, esimerkiksi `America/New_York`. Se ratkaisee, milloin päivä vaihtuu raporteissa.)
+   Docker tulostaa rivin tai kaksi väliaikaisesta kontista, ja sitten Looku vastaa:
+
+   ```
+   Site demo added. Signing key (shown once):
+   k8Jd2mQx7RfTn4WcZp1LvB9sHy6GaE0uYoXiN5tCw3E
+   ```
+
+   Sinun avaimesi on eri. **Kopioi se nyt** (valitse se hiirellä ja paina Ctrl+C, Macissa Cmd+C). Demosivusto
+   allekirjoittaa jokaisen sivunäytön tällä avaimella, joten Looku tietää sivunäytön olevan aito. Tarvitset avainta
+   vaiheessa 7. Jos se katoaa, `docker compose run --rm ingest site:rotate-key demo` tulostaa uuden.
+
+5. **Ota käyttöön kaksi lisäosaa,** kampanjat ja lukuaika:
+
+   ```bash
+   docker compose run --rm ingest site:modules demo content,campaigns
+   ```
+
+   Looku vastaa `Modules of demo: perus, content, campaigns`. `perus` on aina päällä.
+
+6. **Valitse kojelaudan salasana.** Sen pitää olla vähintään 10 merkkiä pitkä:
+
+   ```bash
+   docker compose run --rm -it ingest admin:password
+   ```
+
+   Komento kysyy `New dashboard password:`. Kirjoita salasana ja paina Enter. **Kirjoittaessa ruudulle ei tule
+   mitään**, ei edes pisteitä; se on tarkoituksellista. Salasana kysytään vain kerran, joten kirjoita huolellisesti.
+   Looku vastaa ``Password set. Restart `looku serve` to end existing logins.`` Jälkimmäisestä lauseesta ei tarvitse
+   välittää: kukaan ei ole vielä kirjautunut.
+
+7. **Anna demosivustolle sen asetukset.** Siirry demon kansioon ja kopioi sen esimerkkiasetukset:
+
+   ```bash
+   cd ../examples/next-demo
+   cp .env.example .env.local
+   ```
+
+   Avaa `.env.local` tekstieditorissa kuten vaiheessa 2 (`notepad .env.local`, `open -e .env.local` tai
+   `nano .env.local`). Poista kaikki sen sisältö ja kirjoita tilalle nämä kolme riviä niin, että
+   `LOOKU_SIGNING_KEY=`-kohdan perässä on vaiheen 4 avaimesi:
+
+   ```
+   LOOKU_ENDPOINT=http://ingest:8787
+   LOOKU_SITE_ID=demo
+   LOOKU_SIGNING_KEY=LIITÄ-AVAIMESI-TÄHÄN
+   ```
+
+   Ei välilyöntejä `=`-merkin ympärille eikä lainausmerkkejä. Tallenna. Nämä kolme riviä ovat kaikki, mitä mikä
+   tahansa sivusto tarvitsee keskustellakseen Lookun kanssa: missä vastaanotin on, mikä sivusto tämä on ja avain.
+   Tässä vastaanottimen osoite on yksinkertaisesti `ingest`, sen nimi Dockerin sisällä.
+
+8. **Käynnistä demokauppa.** Palaa `looku`-kansioon ja käynnistä demo kontissa. Komento on yksi pitkä rivi, joten
+   kopioi se kokonaan:
+
+   ```bash
+   cd ../..
+   docker run --rm -it --init --name looku-demo --network looku_default -p 127.0.0.1:3000:3000 -v "${PWD}:/src:ro" node:22-bookworm-slim sh -c "cp -r /src /app && cd /app/examples/next-demo && npm install && npm run build && npm start"
+   ```
+
+   Komento käynnistää Lookun viereen kontin, jossa on Node.js, kopioi demon koodin sen sisälle ja rakentaa ja
+   käynnistää demon. Omiin kansioihisi ei kirjoiteta mitään. Ensimmäinen kerta kestää muutaman minuutin, ja ruudulla
+   vierii paljon tekstiä, myös `npm notice` -alkuisia rivejä. Se on normaalia. Demo on valmis, kun näet:
+
+   ```
+   - Local:         http://localhost:3000
+   ✓ Ready in …
+   ```
+
+   Jätä tämä ikkuna auki: demo pyörii siinä.
+
+</Steps>
+
+## Käy kaupassa
+
+Ole nyt kävijä.
+
+<Steps>
+
+1. Avaa selaimessa **yksityinen ikkuna** (Chromessa ja Edgessä Ctrl+Shift+N, Firefoxissa Ctrl+Shift+P, Safarissa
+   Cmd+Shift+N). Avaa siinä tämä linkki:
+   [http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo](http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo).
+
+   Linkin loppu (`utm_campaign=demo`) on **kampanjatunniste**, jollaisen laittaisit esimerkiksi uutiskirjeen linkkiin.
+   Looku laskee koko käynnin sille kampanjalle, josta käynti alkoi. Siksi avaat tämän linkin ensin.
+
+2. Klikkaile kaupan muutamaa sivua.
+
+3. Valitse sivun alareunasta **Salli**. Tämä on demon suostumuskysymys: lukuaika mitataan vain kävijöiltä, jotka
+   sallivat sen. Avaa sitten oppaat-sivu, vieritä alas ja viivy sillä hetki.
+
+</Steps>
+
+## Katso käyntisi
+
+Avaa kojelauta osoitteessa [http://127.0.0.1:8788](http://127.0.0.1:8788). Näet kirjautumissivun:
+
+<Screen name="login" alt="Lookun kirjautumissivu, jossa on salasanakenttä." />
+
+Kirjaudu salasanallasi. Etusivulla näkyvät viimeisten 28 päivän sivunäytöt, kävijät ja käynnit, ja niiden alla
+kaavio. Sinulla on vasta kourallinen tämän päivän sivunäyttöjä, joten kaaviosi on lähes tasainen. Oikealla
+sivustolla, jolla on kävijöitä, se näyttää tältä:
+
+<Screen name="overview" alt="Kojelauta, jossa näkyvät sivunäytöt, kävijät, käynnit ja sivuja käyntiä kohden, kaavio ja katsotuimmat sivut." />
+
+Vieritä alas. **Suosituimmat sivut** -luettelossa ovat sivut, jotka avasit. Alempana **Kampanjat**-raportissa näkyy
+kampanja `demo` ja sinun käyntisi:
+
+<Screen name="campaigns" alt="Kampanjaraportti: jokainen kampanja käynteineen ja tilauksineen." />
+
+**Lukuaika ja vieritys** -raportissa on oppaat-sivusi, koska sallit mittaamisen. Sivuja, jotka avasit ennen kuin
+valitsit **Salli**, siinä ei ole. Lukuajan ilmestymiseen voi mennä minuutti.
+
+<Screen name="content" alt="Lukuaika ja vierityssyvyys jokaiselle blogisivulle." />
+
+Looku ei asettanut selaimeesi evästettä: demon palvelin lähetti sivunäytöt suoraan Lookulle. Ainoa asia, jonka demo
+tallensi selaimeesi, on suostumusvalintasi.
+
+### Eikö mitään näy?
+
+- Katso demon ikkunaa: siellä näkyvä virhe kertoo yleensä, mikä on vialla.
+- Tarkista, että `.env.local`-tiedoston avain on täsmälleen vaiheen 4 avain. Kun olet muuttanut sitä, pysäytä demo
+  painamalla Ctrl+C ja aja pitkä `docker run` -komento uudelleen.
+- Brave ja jotkin selainasetukset lähettävät "älä seuraa" -signaalin, ja Looku ohittaa sinut silloin
+  tarkoituksella. Kokeile toisella selaimella.
+- `deploy`-kansiossa `docker compose logs ingest` näyttää vastaanottimen viestit.
+
+## Siivoa jälkesi
+
+<Steps>
+
+1. Pysäytä demo painamalla Ctrl+C sen ikkunassa.
+
+2. Poista Looku ja sen tiedot (olet `looku`-kansiossa):
+
+   ```bash
+   cd deploy
+   docker compose down -v
+   docker image rm looku:local node:22-bookworm-slim
+   ```
+
+3. Poista kansio:
+
+   <Tabs syncKey="os">
+   <TabItem label="Windows">
+
+   ```powershell
+   cd ~
+   Remove-Item -Recurse -Force ~\looku
+   ```
+
+   </TabItem>
+   <TabItem label="macOS">
+
+   ```bash
+   cd ~
+   rm -rf ~/looku
+   ```
+
+   </TabItem>
+   <TabItem label="Linux">
+
+   ```bash
+   cd ~
+   rm -rf ~/looku
+   ```
+
+   </TabItem>
+   </Tabs>
+
+</Steps>
+
+Voit poistaa myös Docker Desktopin, jos et tarvitse sitä.
+
+## Mitä seuraavaksi?
+
+Olet nähnyt koko ketjun: sivusto lähettää allekirjoitetut sivunäytöt vastaanottimelle, ja sinä luet ne kojelaudalta.
+Omaa sivustoasi varten Looku toimii palvelimella, joka on aina päällä, ja vastaanotin saa julkisen osoitteen.
+
+- [2. Ensimmäinen asennus kotipalvelimelle](/looku/fi/tutorials/home-server/) vie sinut sen läpi vaihe vaiheelta.
+- [Mitä Lookulla voi tehdä](/looku/fi/use-cases/) näyttää, mitä kannattaa ottaa käyttöön omiin tarpeisiisi.
+
+Windows- tai Mac-pöytäkone sopii Lookun kokeiluun, mutta nämä ohjeet eivät käytä sitä palvelimena: pöytäkone menee
+lepotilaan, käynnistyy uudelleen päivitysten vuoksi, ja Docker Desktop käynnistyy vasta, kun joku kirjautuu sisään.

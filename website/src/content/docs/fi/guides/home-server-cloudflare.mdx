@@ -5,267 +5,92 @@ sidebar:
   order: 2
 ---
 
-import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-**Mitä saat:** Lookun kotipalvelimellesi. Sivustosi lähettää sivunäytöt osoitteeseen `https://looku.example.com`
-(oma palvelinnimesi), joka ohjautuu palvelimellesi Cloudflare Tunnelin kautta. Et avaa reitittimeesi yhtään porttia.
-Kojelauta aukeaa vain kotona, esimerkiksi osoitteessa `http://192.168.1.10:8788`.
+Vastaanotin saa julkisen palvelinnimen (`https://looku.example.com`) Cloudflare Tunnelin kautta, eikä kotona avata
+yhtään porttia. Cloudflaren sääntö päästää läpi vain pyynnöt `POST /ingest` ja `POST /orders`. Kojelauta kuuntelee
+vain kotiverkossa. Ensimmäinen kerta? [2. Ensimmäinen asennus kotipalvelimelle](/looku/fi/tutorials/home-server/)
+käy läpi samat vaiheet selityksineen.
 
-**Aika:** noin tunti. **Tarvitset:**
+**Tarvitset:** Linuxin, jossa on Docker Compose v2 tai uudempi, Cloudflaressa olevan verkkotunnuksen ja palvelimen
+kotiverkko-osoitteen (tässä `192.168.1.10`). Komennot ajetaan palvelimella kansiossa `~/looku/deploy`.
 
-- Linux-kotipalvelimen, jossa on Docker (Raspberry Pi 4 tai uudempi käy),
-- verkkotunnuksen, jonka DNS on Cloudflaressa (ilmainen Cloudflare-tili riittää). Jos verkkotunnuksesi on muualla,
-  lisää se ensin Cloudflareen Cloudflaren [sivuston lisäysohjeen](https://developers.cloudflare.com/fundamentals/manage-domains/add-site/)
-  mukaan; nimipalvelimien vaihtaminen voi kestää muutaman tunnin,
-- palvelimesi osoitteen kotiverkossa, esimerkiksi `192.168.1.10`.
+## Asennus
 
-Korvaa tässä ohjeessa `192.168.1.10` palvelimesi osoitteella, `example.com` verkkotunnuksellasi ja `myblog`
-sivustosi lyhyellä tunnuksella.
+```bash
+cd ~ && git clone https://github.com/niemenjoki/Looku.git looku && cd looku/deploy
+cp .env.example .env
+```
 
-:::note[Valikkopolut]
-Cloudflare muuttaa kojelautaansa aika ajoin. Jokaisessa vaiheessa on valikkopolku ja hakusana siltä varalta, että
-valikko on siirtynyt. Polut on tarkistettu Cloudflaren omasta dokumentaatiosta marraskuussa 2026.
-:::
+Tiedostoon `.env`:
 
-## 1. Tarkista palvelin
+```
+LOOKU_TIMEZONE=Europe/Helsinki
+LOOKU_DASHBOARD_BIND=192.168.1.10
+LOOKU_API_HOSTS=192.168.1.10:8788
+```
 
-<Steps>
+| Asetus | Miksi |
+|---|---|
+| `LOOKU_TIMEZONE` | yöajon ja kuukausisähköpostin aikavyöhyke ([nimet](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)) |
+| `LOOKU_DASHBOARD_BIND` | kojelaudan portti julkaistaan vain tässä osoitteessa; `127.0.0.1` = vain palvelin itse |
+| `LOOKU_API_HOSTS` | hyväksytyt `Host`-otsakkeet, suojaa DNS rebinding -hyökkäykseltä. Lisää muut nimet pilkun jälkeen (`server.local:8788`); pidä portti samana kuin asetuksessa `LOOKU_DASHBOARD_PORT` |
 
-1. **Avaa pääte palvelimelle.** Omalta tietokoneeltasi:
+Kun muutat `.env`-tiedostoa myöhemmin: `docker compose up -d`. Kaikki asetukset: [Asetukset](/looku/fi/reference/settings/).
 
-   ```bash
-   ssh you@192.168.1.10
-   ```
+```bash
+mkdir -p data && sudo chown 1000:1000 data
+docker compose up -d --build
+docker compose ps
+```
 
-   Korvaa `you` käyttäjänimelläsi palvelimella. Windowsissa kirjoita tämä PowerShelliin; `ssh` on valmiina
-   Windows 10:ssä ja 11:ssä. Osien 1 ja 2 komennot ajetaan palvelimella; osa 3 tehdään
-   enimmäkseen selaimessa.
+Molemmissa konteissa lukee `Up` ja minuutin kuluttua `(healthy)`. Lisää sitten sivusto ja salasana:
 
-2. **Tarkista Docker ja Compose:**
+```bash
+docker compose run --rm ingest site:add myblog --domain example.com --timezone Europe/Helsinki
+docker compose run --rm -it ingest admin:password
+```
 
-   ```bash
-   docker compose version
-   ```
+- `site:add` tulostaa `Signing key (shown once):` ja avaimen. Tallenna se; `site:rotate-key myblog` vaihtaa sen.
+  `--timezone` ratkaisee, milloin päivä vaihtuu sivuston raporteissa; `site:timezone` vaihtaa sen myöhemmin (jo
+  tallennetut päivät säilyttävät päivämääränsä).
+- `admin:password` kysyy salasanan kerran näyttämättä sitä, vähintään 10 merkkiä. `docker compose restart dashboard`
+  päättää olemassa olevat kirjautumiset.
+- Käytä kertakomennoissa muotoa `run --rm ingest`. `run dashboard` voi ensin käynnistää vastaanottimen uudelleen,
+  koska kojelauta riippuu siitä.
 
-   Näet `Docker Compose version v2.…` tai suuremman numeron. Jos näet `command not found` tai `docker: 'compose' is not a docker
-   command`, asenna Docker [Dockerin ohjeen mukaan omalle Linuxillesi](https://docs.docker.com/engine/install/).
-   Jos näet `permission denied`, lisää `sudo` jokaisen tämän ohjeen `docker`-komennon eteen.
+Kojelauta on osoitteessa `http://192.168.1.10:8788`.
 
-3. **Selvitä palvelimen osoite**, jos et tiedä sitä:
+## Tunneli
 
-   ```bash
-   hostname -I
-   ```
+[Cloudflaren kojelaudassa](https://dash.cloudflare.com/) (polut tarkistettu marraskuussa 2026; jos valikko on
+siirtynyt, hae sulkeissa olevalla sanalla):
 
-   Yleensä oikea osoite on ensimmäinen, joka alkaa `192.168.` tai `10.`. Aseta reititin antamaan palvelimelle aina
-   tämä osoite (usein nimeltään DHCP-varaus), muuten kojelaudan osoite vaihtuu.
-
-</Steps>
-
-## 2. Asenna Looku
-
-<Steps>
-
-1. **Lataa Looku** kotikansioosi ja siirry sen `deploy`-kansioon:
-
-   ```bash
-   cd ~
-   git clone https://github.com/niemenjoki/Looku.git looku
-   cd looku/deploy
-   ```
-
-   Kaikki, mitä Docker tarvitsee, on tässä kansiossa: `compose.yaml` kuvaa kontit, ja `.env` sisältää asetuksesi.
-   Kaikki tämän ohjeen `docker compose` -komennot ajetaan tässä kansiossa.
-
-2. **Luo asetustiedosto** esimerkin pohjalta:
-
-   ```bash
-   cp .env.example .env
-   nano .env
-   ```
-
-   Muuta nämä rivit (jätä muut ennalleen):
-
-   ```
-   LOOKU_TIMEZONE=Europe/Helsinki
-   LOOKU_DASHBOARD_BIND=192.168.1.10
-   LOOKU_API_HOSTS=192.168.1.10:8788
-   ```
-
-   - `LOOKU_TIMEZONE` ratkaisee, milloin yöajo ja kuukausisähköposti ajetaan. Käytä oman
-     [aikavyöhykkeesi nimeä](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones). (Raporttien aikavyöhyke
-     asetetaan sivustokohtaisesti vaiheessa 6.)
-   - `LOOKU_DASHBOARD_BIND` on osoite, jossa kojelauta kuuntelee. Kotiverkon osoite tarkoittaa, että vain kotona
-     olevat laitteet saavat siihen yhteyden. Oletus `127.0.0.1` tarkoittaisi, että vain palvelin itse saa.
-   - `LOOKU_API_HOSTS` on osoite, jonka kirjoitat selaimeesi. Kojelauta torjuu muut osoitteet, mikä suojaa sitä
-     DNS rebinding -nimiseltä hyökkäykseltä. Jos haluat avata sen myös nimellä (esimerkiksi `server.local:8788`),
-     lisää se pilkun jälkeen. Jos muutat asetusta `LOOKU_DASHBOARD_PORT`, käytä samaa porttia tässä.
-
-   Tallenna painamalla Ctrl+O ja Enter, poistu painamalla Ctrl+X. Jos muutat `.env`-tiedostoa myöhemmin, aja tässä
-   kansiossa `docker compose up -d`, jotta kontit saavat uudet arvot.
-
-3. **Luo tietokansio.** Looku toimii kontin sisällä käyttäjänä numero 1000, joten kansion on kuuluttava tälle
-   käyttäjälle:
-
-   ```bash
-   mkdir -p data
-   sudo chown 1000:1000 data
-   ```
-
-   `sudo` kysyy salasanaasi. Muuta ei tulostu.
-
-4. **Rakenna ja käynnistä Looku:**
-
-   ```bash
-   docker compose up -d --build
-   ```
-
-   Ensimmäinen rakentaminen kestää muutaman minuutin. Lopuksi näet tällaiset rivit:
-
-   ```
-    ✔ Container looku-ingest-1     Started
-    ✔ Container looku-dashboard-1  Started
-   ```
-
-   `-d` ajaa kontit taustalla, ja ne käynnistyvät itsestään uudelleen palvelimen uudelleenkäynnistyksen jälkeen.
-
-5. **Tarkista, että molemmat ovat käynnissä:**
-
-   ```bash
-   docker compose ps
-   ```
-
-   Molemmissa pitäisi lukea `Up` ja minuutin kuluttua `(healthy)`.
-
-6. **Lisää sivustosi:**
-
-   ```bash
-   docker compose run --rm ingest site:add myblog --domain example.com --timezone Europe/Helsinki
-   ```
-
-   `--domain` on sivustosi osoite ilman `https://`-alkua. `--timezone` ratkaisee, milloin päivä vaihtuu tämän
-   sivuston raporteissa; käytä samaa kuin yllä. Voit vaihtaa sen myöhemmin komennolla `site:timezone`, mutta jo
-   tallennetut päivät säilyttävät päivämääränsä, joten tarkista se nyt. Compose tulostaa
-   ensin kaksi riviä väliaikaisesta kontista (`Container looku-ingest-run-… Created`); Lookun vastaus tulee niiden
-   jälkeen:
-
-   ```
-   Site myblog added. Signing key (shown once):
-   k8Jd2mQx7RfTn4WcZp1LvB9sHy6GaE0uYoXiN5tCw3E
-   ```
-
-   **Tallenna avain nyt salasanojen hallintaohjelmaasi.** Sivustosi tarvitsee sitä osassa 5. Jos hukkaat sen, saat
-   uuden komennolla `docker compose run --rm ingest site:rotate-key myblog` (vanha lakkaa toimimasta).
-
-7. **Aseta kojelaudan salasana** (vähintään 10 merkkiä):
-
-   ```bash
-   docker compose run --rm -it ingest admin:password
-   ```
-
-   Komento kysyy `New dashboard password:`. Kirjoita salasana ja paina Enter. Mitään ei näy kirjoittaessasi, ja
-   salasana kysytään vain kerran. Näet ``Password set. Restart `looku serve` to end existing logins.`` Kun vaihdat
-   salasanan myöhemmin, `docker compose restart dashboard` kirjaa kaikki ulos.
-
-   :::caution[Käytä kertakomennoissa `ingest`-palvelua]
-   Aja tällaiset komennot muodossa `run --rm ingest`, kuten yllä. Myös `run dashboard` toimii, mutta koska
-   kojelauta riippuu vastaanottimesta, Compose voi ensin käynnistää vastaanottimen uudelleen, jolloin sivunäyttöjä
-   jää hetkeksi saamatta.
-   :::
-
-8. **Avaa kojelauta** kotiverkossa olevalla tietokoneella tai puhelimella: `http://192.168.1.10:8788`. Kirjaudu
-   salasanallasi. Kojelauta on tyhjä, kunnes sivustosi lähettää tietoja.
-
-</Steps>
-
-## 3. Julkaise vastaanotin Cloudflare Tunnelilla
-
-Vastaanottimeen on saatava yhteys internetistä, koska sivustosi palvelin lähettää sille sivunäytöt. Cloudflare
-Tunnel hoitaa tämän avaamatta portteja kotona: pieni ohjelma (`cloudflared`) palvelimellasi pitää yhteyden auki
-Cloudflareen, ja Cloudflare välittää osoitteeseen `looku.example.com` tulevat pyynnöt sitä pitkin.
-
-<Steps>
-
-1. **Luo tunneli.** Kirjaudu [Cloudflaren kojelautaan](https://dash.cloudflare.com/) ja siirry kohtaan
-   **Networking → Tunnels** (hakusana: "Tunnels"). Valitse **Create a tunnel**, anna nimeksi `looku` ja valitse
-   **Create Tunnel**.
-
-2. **Kopioi tunnus (token).** Cloudflare näyttää asennuskomennot eri järjestelmille. Valitse **Docker**. Komento
-   näyttää tältä: `docker run cloudflare/cloudflared:latest tunnel --no-autoupdate run --token eyJhIjoi…`. Älä aja
-   sitä: kopioi vain pitkä teksti `--token`-sanan jälkeen (se alkaa `eyJ`). Tämän tunnuksen avulla palvelimesi
-   avaa tunnelin, joten käsittele sitä kuin salasanaa.
-
-3. **Lisää tunnus asetuksiin.** Palvelimella, kansiossa `~/looku/deploy`:
-
-   ```bash
-   nano .env
-   ```
-
-   Rivi `LOOKU_TUNNEL_TOKEN=` on tiedoston lopussa. Liitä tunnus sen perään ilman välilyöntejä tai lainausmerkkejä
-   (päätteessä liitetään hiiren oikealla painikkeella tai Ctrl+Shift+V, ei Ctrl+V). Tallenna ja poistu.
-
-4. **Käynnistä tunnelikontti:**
+1. **Networking → Tunnels** ("Tunnels") → **Create a tunnel**, nimi `looku`.
+2. Valitse **Docker** ja kopioi tunnus (token) `--token`-sanan jälkeen (alkaa `eyJ`). Älä aja näytettyä komentoa.
+3. Palvelimella: `LOOKU_TUNNEL_TOKEN=<token>` tiedostoon `.env` (viimeinen rivi), sitten:
 
    ```bash
    docker compose --profile tunnel up -d
    ```
 
-   Näet `✔ Container looku-tunnel-1  Started`. Tunnelikontti on erillään muista (*profiili*), joten se käynnistyy
-   vain, kun nimeät sen.
+   Tunneli näkyy Cloudflaressa yhdistettynä minuutin kuluessa (Cloudflare kutsuu `cloudflared`-ohjelmaa nimellä
+   "connector").
+4. Tunnelissa: **Routes** → **Add route** → **Published application** ("Published application"): subdomain
+   `looku`, domain `example.com`, path tyhjä, service URL `http://ingest:8787`.
 
-5. **Tarkista yhteys Cloudflaresta.** Palaa selaimeen. Tunnelin pitäisi näkyä yhdistettynä (healthy) minuutin
-   kuluessa. Cloudflare kutsuu `cloudflared`-ohjelmaa nimellä "connector"; sillä ei ole mitään tekemistä
-   sivustossasi olevan Lookun liittimen kanssa. Valitse sillä Cloudflaren sivulla, josta kopioit tunnuksen,
-   **Continue** (tai avaa tunneli kohdasta
-   **Networking → Tunnels**).
+## Palomuurisääntö
 
-6. **Ohjaa palvelinnimesi vastaanottimeen.** Valitse tunnelin **Routes**-välilehdeltä **Add route** →
-   **Published application** (hakusana: "Published application"). Täytä:
+Verkkotunnuksesi → **Security → Security rules** ("Security rules") → **Create rule → Custom rules**. Nimi
+`Looku: only POST /ingest and /orders`, **Edit expression**:
 
-   | Kenttä | Arvo |
-   |---|---|
-   | Subdomain | `looku` |
-   | Domain | `example.com` |
-   | Path | jätä tyhjäksi |
-   | Service URL | `http://ingest:8787` |
+```
+(http.host eq "looku.example.com" and not (http.request.method eq "POST" and http.request.uri.path in {"/ingest" "/orders"}))
+```
 
-   Valitse **Add route**. `ingest` on vastaanottimen nimi Dockerin sisällä; tunnelikontti saa siihen yhteyden,
-   koska ne ovat samassa Compose-projektissa.
+Toiminto **Block** → **Deploy**.
 
-</Steps>
-
-## 4. Päästä läpi vain vastaanottimen tarvitsemat pyynnöt
-
-Tällä hetkellä kuka tahansa voi lähettää minkä tahansa pyynnön osoitteeseen `looku.example.com`. Vastaanotin torjuu
-kaiken, missä ei ole kelvollista allekirjoitusta, mutta on parempi, että Cloudflare pysäyttää muut pyynnöt ennen
-kuin ne päätyvät kotiisi. Tämä sääntö sanoo selkokielellä: **estä kaikki pyynnöt osoitteeseen looku.example.com
-paitsi POST-pyynnöt osoitteisiin `/ingest` ja `/orders`**. Ne ovat ainoat kaksi osoitetta, joita sivustosi käyttää.
-
-<Steps>
-
-1. Avaa Cloudflaren kojelaudassa verkkotunnuksesi (`example.com`) tilin etusivulta.
-
-2. Siirry kohtaan **Security → Security rules** (hakusana: "Security rules"). Valitse
-   **Create rule → Custom rules**.
-
-3. **Rule name:** `Looku: only POST /ingest and /orders`.
-
-4. Valitse kohdassa **When incoming requests match** **Edit expression** ja liitä:
-
-   ```
-   (http.host eq "looku.example.com" and not (http.request.method eq "POST" and http.request.uri.path in {"/ingest" "/orders"}))
-   ```
-
-   Korvaa `looku.example.com` omalla palvelinnimelläsi.
-
-5. Valitse kohdassa **Then take action** **Block**.
-
-6. Valitse **Deploy**.
-
-</Steps>
-
-**Tarkista** päätteestä millä tahansa tietokoneella tai palvelimella itsellään. Säännön voimaantulo voi kestää
-minuutin. Kirjoita Windowsissa `curl.exe` eikä `curl`: PowerShellissä `curl` on eri komento.
+## Tarkistus
 
 <Tabs syncKey="os">
 <TabItem label="macOS ja Linux">
@@ -286,30 +111,18 @@ curl.exe -s -o NUL -w "%{http_code}\n" https://looku.example.com/
 </TabItem>
 </Tabs>
 
-Ensimmäisen pitäisi tulostaa `401`: pyyntö pääsi vastaanottimelle, joka torjui sen, koska sitä ei ollut
-allekirjoitettu. Se on oikein. Toisen pitäisi tulostaa `403`: Cloudflare esti sen. Jos ensimmäinen tulostaa `403`,
-tarkista säännön lauseke. Jos se tulostaa `502` tai `530`, tunneli ei saa yhteyttä vastaanottimeen, katso
-[Vianetsintä](/looku/fi/operate/troubleshooting/#cloudflare-502-tai-530).
+| Ensimmäinen | Toinen | Merkitys |
+|---|---|---|
+| `401` | `403` | oikein: vastaanotin torjui allekirjoittamattoman pyynnön, Cloudflare esti muut |
+| `403` | | sääntö estää myös vastaanottimen; tarkista lauseke |
+| `502`, `530` | | tunneli ei saa yhteyttä vastaanottimeen; katso [Vianetsintä](/looku/fi/operate/troubleshooting/#cloudflare-502-tai-530) |
 
-## 5. Liitä sivustosi
+`docker compose --profile tunnel ps` näyttää kontit `looku-ingest-1`, `looku-dashboard-1` ja `looku-tunnel-1` tilassa
+`Up`.
 
-Sivustosi tarvitsee kolme asetusta:
+## Seuraavaksi
 
-```
-LOOKU_ENDPOINT=https://looku.example.com
-LOOKU_SITE_ID=myblog
-LOOKU_SIGNING_KEY=osan 2 avain
-```
-
-Jatka ohjeeseen [Liitä Next.js-sivusto](/looku/fi/guides/connect-nextjs/) tai
-[Node.js, Express, Cloudflare tai oma toteutus](/looku/fi/guides/connect-other/).
-
-## Valmis, kun
-
-- `docker compose --profile tunnel ps` näyttää `looku-ingest-1`-, `looku-dashboard-1`- ja `looku-tunnel-1`-kontin
-  tilana `Up`,
-- kaksi `curl`-tarkistusta tulostavat `401` ja `403`,
-- kun olet liittänyt sivustosi ja avannut sillä sivun, sivunäyttö näkyy kojelaudassa.
-
-Seuraavaksi: [varmuuskopiot ja päivitykset](/looku/fi/operate/backup-and-update/). Jos haluat avata kojelaudan kodin
-ulkopuolella, katso [Tailscale](/looku/fi/guides/tailscale/).
+Sivuston asetukset ovat `LOOKU_ENDPOINT=https://looku.example.com`, `LOOKU_SITE_ID=myblog` ja allekirjoitusavain:
+[Liitä Next.js-sivusto](/looku/fi/guides/connect-nextjs/) tai [Node.js, Express, Cloudflare tai oma](/looku/fi/guides/connect-other/).
+Varmuuskopiot: [Varmuuskopiointi ja päivitys](/looku/fi/operate/backup-and-update/). Kojelauta kodin ulkopuolella:
+[Kojelauta Tailscalen kautta](/looku/fi/guides/tailscale/).

@@ -1,0 +1,351 @@
+---
+title: "1. Try Looku on your computer"
+description: A guided first look. You run Looku and a small demo shop on your own computer, click around, and see your visits appear in the dashboard.
+sidebar:
+  order: 1
+---
+
+import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+import Screen from "../../../components/Screen.astro";
+
+In this tutorial you run Looku on your own computer together with a small demo shop. You click around the shop like
+a visitor would, and a minute later you see your own visits in Looku's dashboard. Nothing goes on the internet, and
+at the end you remove everything.
+
+It takes about 20 minutes, most of it waiting for downloads. You need a computer with Windows 10 or 11, macOS or
+Linux, and about 3 GB of free disk space. You do not need to know Docker or programming: every command is here, and
+we tell you what you should see after each one.
+
+This is where we are going:
+
+<Screen name="overview" alt="Looku's dashboard: page views, visitors and sessions for the last 28 days, a chart, and lists of the most viewed pages." />
+
+## Get the tools
+
+Looku runs in **Docker**, a program that runs other programs in sealed boxes called containers. That way you do not
+install Looku's parts on your computer one by one. You also need **Git**, which downloads Looku's code.
+
+First, open a **terminal**, the window where you type commands:
+
+- **Windows:** open the Start menu, type `PowerShell` and open **Windows PowerShell**.
+- **macOS:** open **Terminal** (Applications → Utilities).
+- **Linux:** open your terminal app.
+
+Keep it open; you will use it all the way through. The commands are the same on all three systems unless tabs show
+otherwise.
+
+Now install Docker:
+
+<Tabs syncKey="os">
+<TabItem label="Windows">
+
+Download **Docker Desktop** from [docker.com](https://www.docker.com/products/docker-desktop/) and run the installer
+with its default choices. Restart the computer if it asks. Then start **Docker Desktop** from the Start menu, accept
+its terms, and wait until it says **Engine running**.
+
+If it complains about virtualization, that has to be turned on in the computer's firmware settings (BIOS or UEFI);
+see [Docker's troubleshooting topics](https://docs.docker.com/desktop/troubleshoot-and-support/troubleshoot/topics/).
+
+</TabItem>
+<TabItem label="macOS">
+
+Download **Docker Desktop** from [docker.com](https://www.docker.com/products/docker-desktop/). Pick **Apple silicon**
+or **Intel** to match your Mac (Apple menu → About This Mac → Chip or Processor). Open the file, drag Docker to
+Applications, start it, accept its terms, and wait until it says **Engine running**.
+
+</TabItem>
+<TabItem label="Linux">
+
+Install **Docker Engine** with [Docker's guide for your distribution](https://docs.docker.com/engine/install/). Then
+allow your user to run Docker without `sudo`, and log out and back in:
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+</TabItem>
+</Tabs>
+
+Check that Docker answers:
+
+```bash
+docker compose version
+```
+
+You should see `Docker Compose version v2.…` or a higher number. If you get an error instead:
+
+- `cannot connect to the Docker daemon` or `error during connect`: Docker Desktop is not running yet (on Linux:
+  `sudo systemctl start docker`).
+- `permission denied` (Linux): log out and back in, or restart the computer.
+
+Then check Git:
+
+```bash
+git --version
+```
+
+If you see `git version 2.…`, you have it. If the command is not found: on Windows, install
+[Git for Windows](https://git-scm.com/downloads/win) with its default choices and open PowerShell again; on macOS, accept
+the offer to install the developer tools; on Linux, `sudo apt install git` (Fedora: `sudo dnf install git`).
+
+## Start Looku
+
+<Steps>
+
+1. **Download Looku.** This makes a folder called `looku` and moves you into its `deploy` folder, where the Docker
+   files are:
+
+   ```bash
+   git clone https://github.com/niemenjoki/Looku.git looku
+   cd looku/deploy
+   ```
+
+   You see `Cloning into 'looku'...` and a few lines of progress.
+
+2. **Make a settings file.** Looku reads its settings from a file called `.env`. Start from the example:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Then open it in a text editor:
+
+   <Tabs syncKey="os">
+   <TabItem label="Windows">
+
+   ```powershell
+   notepad .env
+   ```
+
+   </TabItem>
+   <TabItem label="macOS">
+
+   ```bash
+   open -e .env
+   ```
+
+   </TabItem>
+   <TabItem label="Linux">
+
+   ```bash
+   nano .env
+   ```
+
+   </TabItem>
+   </Tabs>
+
+   Change one line, the one that starts with `LOOKU_DATA_DIR=`, to:
+
+   ```
+   LOOKU_DATA_DIR=looku-data
+   ```
+
+   Save and close (in nano: Ctrl+O, Enter, Ctrl+X). This keeps Looku's database inside Docker, which is the reliable
+   choice on a desktop computer and easy to remove afterwards.
+
+3. **Start it:**
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+   The first time, Docker downloads and builds Looku. This takes a few minutes; let it run. It ends with
+   `Container looku-ingest-1 Started` and `Container looku-dashboard-1 Started`.
+
+   Looku is now running in two containers. The **receiver** (`ingest`) takes page views from websites. The
+   **dashboard** is where you read the numbers. `-d` lets them run in the background, so you get the prompt back.
+
+   If it says `port is already allocated`, another program uses port 8788. Change `LOOKU_DASHBOARD_PORT` in `.env`
+   to `8789`, run the command again, and use 8789 instead of 8788 later.
+
+4. **Tell Looku about the demo site.** Looku keeps the numbers of each website separately, so you add the site
+   first:
+
+   ```bash
+   docker compose run --rm ingest site:add demo --domain localhost --timezone Europe/Helsinki
+   ```
+
+   (Use your own time zone, for example `America/New_York`; it decides when a day changes in the reports.) Docker
+   prints a line or two about a temporary container, and then Looku answers:
+
+   ```
+   Site demo added. Signing key (shown once):
+   k8Jd2mQx7RfTn4WcZp1LvB9sHy6GaE0uYoXiN5tCw3E
+   ```
+
+   Your key is different. **Copy it now** (select it with the mouse and press Ctrl+C, or Cmd+C on a Mac). The demo
+   site signs each page view with this key, so Looku knows the page view is genuine. You need it in step 7. If you
+   lose it, `docker compose run --rm ingest site:rotate-key demo` prints a new one.
+
+5. **Turn on two extras,** campaigns and reading time:
+
+   ```bash
+   docker compose run --rm ingest site:modules demo content,campaigns
+   ```
+
+   It says `Modules of demo: perus, content, campaigns`. `perus` (Finnish for basic) is always on.
+
+6. **Choose a dashboard password** of at least 10 characters:
+
+   ```bash
+   docker compose run --rm -it ingest admin:password
+   ```
+
+   It asks `New dashboard password:`. Type the password and press Enter. **Nothing appears while you type**, not even
+   dots; that is on purpose. It asks only once, so type carefully. It answers
+   ``Password set. Restart `looku serve` to end existing logins.`` You can ignore the second sentence: nobody is
+   logged in yet.
+
+7. **Give the demo site its settings.** Go to the demo's folder and copy its example settings:
+
+   ```bash
+   cd ../examples/next-demo
+   cp .env.example .env.local
+   ```
+
+   Open `.env.local` in the text editor as in step 2 (`notepad .env.local`, `open -e .env.local` or
+   `nano .env.local`). Delete everything in it and write these three lines, with your key from step 4 after
+   `LOOKU_SIGNING_KEY=`:
+
+   ```
+   LOOKU_ENDPOINT=http://ingest:8787
+   LOOKU_SITE_ID=demo
+   LOOKU_SIGNING_KEY=PASTE-YOUR-KEY-HERE
+   ```
+
+   No spaces around `=` and no quotes. Save. These three lines are all any website needs to talk to Looku: where the
+   receiver is, which site this is, and the key. Here the receiver's address is simply `ingest`, its name inside
+   Docker.
+
+8. **Start the demo shop.** Go back to the `looku` folder and start the demo in a container. It is one long line;
+   copy all of it:
+
+   ```bash
+   cd ../..
+   docker run --rm -it --init --name looku-demo --network looku_default -p 127.0.0.1:3000:3000 -v "${PWD}:/src:ro" node:22-bookworm-slim sh -c "cp -r /src /app && cd /app/examples/next-demo && npm install && npm run build && npm start"
+   ```
+
+   This starts a container with Node.js next to Looku, copies the demo's code into it, and builds and starts the
+   demo. Nothing is written to your own folders. The first time takes a few minutes, and you will see a lot of text
+   scroll by, including `npm notice` lines; that is normal. It is ready when you see:
+
+   ```
+   - Local:         http://localhost:3000
+   ✓ Ready in …
+   ```
+
+   Leave this window open: the demo runs in it.
+
+</Steps>
+
+## Visit the shop
+
+Now be a visitor.
+
+<Steps>
+
+1. Open a **private window** in your browser (Ctrl+Shift+N in Chrome and Edge, Ctrl+Shift+P in Firefox,
+   Cmd+Shift+N in Safari). Open this link in it:
+   [http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo](http://localhost:3000/tuotteet?utm_source=news&utm_campaign=demo).
+
+   The end of the link (`utm_campaign=demo`) is a **campaign tag**, like one you would put in a newsletter link.
+   Looku credits the whole visit to the campaign it started from, which is why you open this link first.
+
+2. Click through a few pages of the shop.
+
+3. At the bottom of the page, select **Salli** (Finnish for allow). This is the demo's consent question: only
+   visitors who allow it have their reading time measured. Then open the guides page, scroll down and stay a while.
+
+</Steps>
+
+## See your visits
+
+Open the dashboard at [http://127.0.0.1:8788](http://127.0.0.1:8788). You see the login page:
+
+<Screen name="login" alt="Looku's login page with a password field." />
+
+Log in with your password. The front page shows the page views, visitors and sessions of the last 28 days, with a
+chart below. You have only a handful of page views from today, so your chart is nearly flat. On a real site with
+traffic it looks like this:
+
+<Screen name="overview" alt="The dashboard with page views, visitors, sessions and pages per session, a chart, and the most viewed pages." />
+
+Scroll down. **Top pages** lists the pages you opened. Further down, the **Campaigns** report shows the campaign
+`demo` with your visit:
+
+<Screen name="campaigns" alt="The campaigns report: each campaign with its sessions and orders." />
+
+The **Reading time and scroll** report has your guide page, because you allowed it. Pages you opened before selecting
+**Salli** are not there. Reading time can take a minute to appear.
+
+<Screen name="content" alt="Reading time and scroll depth for each blog page." />
+
+Looku set no cookie in your browser: the demo's server sent the page views directly to Looku. The only thing the demo
+stored in your browser is your consent choice.
+
+### Nothing there?
+
+- Look at the demo's window: an error there usually says what is wrong.
+- Check that the key in `.env.local` is exactly the one from step 4. After a change, stop the demo with Ctrl+C and
+  run the long `docker run` command again.
+- Brave, and some browser settings, send a "do not track" signal, and Looku then skips you on purpose. Try another
+  browser.
+- In the `deploy` folder, `docker compose logs ingest` shows the receiver's messages.
+
+## Clean up
+
+<Steps>
+
+1. Stop the demo with Ctrl+C in its window.
+
+2. Remove Looku and its data (you are in the `looku` folder):
+
+   ```bash
+   cd deploy
+   docker compose down -v
+   docker image rm looku:local node:22-bookworm-slim
+   ```
+
+3. Delete the folder:
+
+   <Tabs syncKey="os">
+   <TabItem label="Windows">
+
+   ```powershell
+   cd ~
+   Remove-Item -Recurse -Force ~\looku
+   ```
+
+   </TabItem>
+   <TabItem label="macOS">
+
+   ```bash
+   cd ~
+   rm -rf ~/looku
+   ```
+
+   </TabItem>
+   <TabItem label="Linux">
+
+   ```bash
+   cd ~
+   rm -rf ~/looku
+   ```
+
+   </TabItem>
+   </Tabs>
+
+</Steps>
+
+You can uninstall Docker Desktop too if you do not need it.
+
+## What next?
+
+You have seen the whole chain: a website sends signed page views to the receiver, and you read them in the
+dashboard. For your own site, Looku runs on a server that is always on, and the receiver gets a public address.
+
+- [2. Your first installation on a home server](/looku/tutorials/home-server/) takes you through that step by step.
+- [What you can do with Looku](/looku/use-cases/) shows what to turn on for your needs.
+
+A Windows or Mac desktop is fine for trying Looku, but these guides do not use it as the server: a desktop computer
+sleeps, restarts for updates, and Docker Desktop starts only after someone logs in.

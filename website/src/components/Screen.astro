@@ -1,0 +1,19 @@
+---
+// A dashboard screenshot in the page's language, light or dark to match the site's theme.
+// Images are in public/screens: <name>-<fi|en>-<light|dark>.png.
+interface Props {
+  name: string;
+  alt: string;
+  caption?: string;
+}
+const { name, alt, caption } = Astro.props;
+const lang = Astro.currentLocale === "fi" ? "fi" : "en";
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const src = (theme: string) => `${base}/screens/${name}-${lang}-${theme}.png`;
+---
+
+<figure class="looku-screen">
+  <img class="screen-light" src={src("light")} alt={alt} loading="lazy" decoding="async" />
+  <img class="screen-dark" src={src("dark")} alt={alt} loading="lazy" decoding="async" />
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

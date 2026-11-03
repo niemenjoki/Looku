@@ -3,8 +3,15 @@ title: Aloita tästä
 description: Mitä tarvitset, mikä asennustapa sopii sinulle ja mitä ohjeissa käytetyt sanat tarkoittavat.
 ---
 
-Tämä sivu auttaa sinua valitsemaan asennustavan. Lue se ensin, vaikka olisit ylläpitänyt palvelimia ennenkin:
-Lookussa on kaksi osaa, ja niillä on eri säännöt sille, kuka niihin saa yhteyden.
+Tämä sivu auttaa sinua valitsemaan asennustavan. Jos palvelimet ovat sinulle uusia, seuraa kolmea **opasta**
+järjestyksessä: [1. Kokeile Lookua omalla koneellasi](/looku/fi/tutorials/try-it/),
+[2. Ensimmäinen asennus kotipalvelimelle](/looku/fi/tutorials/home-server/) ja
+[3. Liitä sivustosi](/looku/fi/tutorials/connect-your-site/). Ne selittävät jokaisen vaiheen ja näyttävät, mitä
+sinun pitäisi nähdä. Muut sivut ovat dokumentaatiota: lyhyempiä, ja niissä on kaikki vaihtoehdot.
+[Mitä Lookulla voi tehdä?](/looku/fi/use-cases/) kertoo, mitä otat käyttöön mihinkin tarpeeseen.
+
+Lue tämä sivu, vaikka olisit ylläpitänyt palvelimia ennenkin: Lookussa on kaksi osaa, ja niillä on eri säännöt
+sille, kuka niihin saa yhteyden.
 
 ## Mitä tarvitset
 
@@ -31,9 +38,10 @@ jossa niitä tarvitaan, ja [Näin Looku toimii](/looku/fi/concepts/) selittää 
 | **Vastaanotin** (ottaa sivunäytöt vastaan) | omalla koneellasi | Cloudflare Tunnelin takana | Caddyn takana, HTTPS:llä |
 | **Kojelauta** (josta luet luvut) | omalla koneellasi | vain kotiverkossa (tai [Tailscalella](/looku/fi/guides/tailscale/)) | internetissä salasanan takana, rajattuna omiin verkkoihisi |
 | **Oikeita kävijöitä?** | ei, vain esittelysivusto | kyllä | kyllä |
-| **Ohje** | [Kokeile omalla koneella](/looku/fi/guides/try-locally/) | [Kotipalvelin + Cloudflare](/looku/fi/guides/home-server-cloudflare/) | [VPS + Caddy](/looku/fi/guides/vps-caddy/) |
+| **Opas** | [1. Kokeile Lookua omalla koneellasi](/looku/fi/tutorials/try-it/) | [2. Ensimmäinen asennus](/looku/fi/tutorials/home-server/) | |
+| **Dokumentaatio** | | [Kotipalvelin + Cloudflare](/looku/fi/guides/home-server-cloudflare/) | [VPS + Caddy](/looku/fi/guides/vps-caddy/) (vaihe vaiheelta) |
 
-Etkö ole varma? Aloita ohjeesta [Kokeile omalla koneella](/looku/fi/guides/try-locally/). Mikään, mitä teet siinä, ei
+Etkö ole varma? Aloita oppaasta [1. Kokeile Lookua omalla koneellasi](/looku/fi/tutorials/try-it/). Mikään, mitä teet siinä, ei
 vaikuta oikeaan sivustoon.
 
 Jos käytät jo muuta käänteistä välityspalvelinta kuin Caddya (nginx, Traefik), seuraa VPS-ohjetta ja sovella
@@ -71,7 +79,7 @@ välityspalvelimen vaihetta. Jos haluat käyttää Lookua ilman Dockeria, katso 
 
 **Pääte (terminaali), komentotulkki**
 : Tekstiikkuna, johon kirjoitat komentoja: macOS:ssä ja Linuxissa Terminal, Windowsissa PowerShell. Katso
-  [Kokeile omalla koneella](/looku/fi/guides/try-locally/#ennen-kuin-aloitat). Palvelimella avaat sen
+  [1. Kokeile Lookua omalla koneellasi](/looku/fi/tutorials/try-it/). Palvelimella avaat sen
   `ssh`-komennolla, joka toimii myös PowerShellissä.
 
 **Docker, kontti, Compose**

@@ -5,15 +5,18 @@ template: splash
 hero:
   tagline: Cookieless, server-side web analytics that you host yourself. Your site's server records the page views, so nothing is stored in the visitor's browser and no script is needed.
   actions:
+    - text: Try it in 20 minutes
+      link: /looku/tutorials/try-it/
+      icon: right-arrow
     - text: Start here
       link: /looku/start-here/
-      icon: right-arrow
-    - text: Try it in 20 minutes
-      link: /looku/guides/try-locally/
       variant: minimal
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
+import Screen from "../../components/Screen.astro";
+
+<Screen name="overview" alt="Looku's dashboard: page views, visitors and sessions for 28 days, a chart, and the most viewed pages." />
 
 <CardGrid>
   <Card title="Server-side page views" icon="seti:default">
@@ -44,6 +47,8 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 Looku fits a site owner who has (or wants) a small server, such as a home server or a cheap virtual server, and whose
 site runs on a server of its own: Next.js, Node.js, Express, or a static site behind Cloudflare. It does not fit a
 site where you can only paste a script into the page, such as a hosted website builder.
+
+See [What you can do with Looku](/looku/use-cases/) for seven common uses, from plain page views to shop sales.
 
 Looku is not a cookie banner tool and does not make anything legal by itself. Read
 [Privacy and the law](/looku/privacy/) before you use it.

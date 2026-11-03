@@ -5,15 +5,18 @@ template: splash
 hero:
   tagline: Evästeetön, palvelinpuolen verkkoanalytiikka, jota ylläpidät itse. Sivustosi palvelin kirjaa sivunäytöt, joten kävijän selaimeen ei tallenneta mitään eikä skriptiä tarvita.
   actions:
+    - text: Kokeile 20 minuutissa
+      link: /looku/fi/tutorials/try-it/
+      icon: right-arrow
     - text: Aloita tästä
       link: /looku/fi/start-here/
-      icon: right-arrow
-    - text: Kokeile 20 minuutissa
-      link: /looku/fi/guides/try-locally/
       variant: minimal
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
+import Screen from "../../../components/Screen.astro";
+
+<Screen name="overview" alt="Lookun kojelauta: sivunäytöt, kävijät ja istunnot 28 päivältä, kaavio ja suosituimmat sivut." />
 
 <CardGrid>
   <Card title="Sivunäytöt palvelimelta" icon="seti:default">
@@ -46,6 +49,9 @@ Looku sopii sivuston omistajalle, jolla on pieni palvelin (tai joka haluaa sella
 edullinen virtuaalipalvelin, ja jonka sivusto toimii omalla palvelimellaan: Next.js, Node.js, Express tai
 staattinen sivusto Cloudflaren takana. Looku ei sovi sivustolle, jonka sivuun voit vain liittää skriptin, kuten
 valmiille sivustonrakentajalle.
+
+Seitsemän tavallista käyttötapaa tavallisista sivunäytöistä verkkokaupan myyntiin on sivulla
+[Mitä Lookulla voi tehdä?](/looku/fi/use-cases/).
 
 Looku ei ole evästebannerityökalu, eikä se yksinään tee mistään laillista. Lue
 [Tietosuoja ja laki](/looku/fi/privacy/) ennen kuin otat sen käyttöön.

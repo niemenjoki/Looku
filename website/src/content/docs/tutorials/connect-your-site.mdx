@@ -1,0 +1,201 @@
+---
+title: "3. Connect your site and read your first numbers"
+description: A guided connection of a Next.js site on Vercel to Looku, followed by a tour of the dashboard and what each part tells you.
+sidebar:
+  order: 3
+---
+
+import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+import Screen from "../../../components/Screen.astro";
+
+In this tutorial you connect your website to Looku. After that, every page that someone opens on your site appears
+in your dashboard. Then we walk through the dashboard and what each part tells you.
+
+We use a **Next.js site on Vercel**, the most common setup. If your site is built differently (Node.js, Express, a
+static site behind Cloudflare), the connection step is in
+[Node.js, Express, Cloudflare or your own](/looku/guides/connect-other/); the dashboard tour below applies to every
+site.
+
+**You need:** the installation from [2. Your first installation](/looku/tutorials/home-server/) and its three
+settings, your site's code on your computer, and access to its Vercel project. About 30 minutes.
+
+## How the connection works
+
+Next.js can run a small piece of code before each page, called the **proxy** (in Next.js 15 and older, the
+**middleware**). Looku's **connector** goes there. When a visitor opens a page, the connector notes the page, where
+the visitor came from and what kind of device they use, signs this with your key, and sends it to Looku's receiver.
+It does this after the page has been sent, so your site is not slowed down. Nothing is added to your pages and
+nothing is stored in the visitor's browser.
+
+## Connect
+
+<Steps>
+
+1. **Copy the connector into your site.** It is one file. Download
+   [`packages/next/src/index.js`](https://github.com/niemenjoki/Looku/blob/master/packages/next/src/index.js) and save
+   it in your project as `lib/looku.js`: make a folder called `lib` next to `package.json` if there is none.
+
+2. **Add the proxy file.** Check your Next.js version: open `package.json` and look at the number after `"next"`.
+   Create the file in the same folder as `package.json` (if your pages are in `src/app`, put it in `src/` and write
+   `"../lib/looku.js"` in the `import` line).
+
+   <Tabs>
+   <TabItem label="Next.js 16 and newer: proxy.js">
+
+   ```js
+   import { NextResponse } from "next/server";
+   import { trackPageview } from "./lib/looku.js";
+
+   export function proxy(request, event) {
+     trackPageview(request, event);
+     return NextResponse.next();
+   }
+
+   export const config = {
+     matcher: [
+       {
+         source: "/((?!api|_next/static|_next/image|.*[.]).*)",
+         missing: [
+           { type: "header", key: "next-router-prefetch" },
+           { type: "header", key: "purpose", value: "prefetch" },
+           { type: "header", key: "sec-purpose", value: "(.*)prefetch(.*)" },
+         ],
+       },
+     ],
+   };
+   ```
+
+   </TabItem>
+   <TabItem label="Next.js 15 and older: middleware.js">
+
+   ```js
+   import { NextResponse } from "next/server";
+   import { trackPageview } from "./lib/looku.js";
+
+   export function middleware(request, event) {
+     trackPageview(request, event);
+     return NextResponse.next();
+   }
+
+   export const config = {
+     matcher: [
+       {
+         source: "/((?!api|_next/static|_next/image|.*[.]).*)",
+         missing: [
+           { type: "header", key: "next-router-prefetch" },
+           { type: "header", key: "purpose", value: "prefetch" },
+           { type: "header", key: "sec-purpose", value: "(.*)prefetch(.*)" },
+         ],
+       },
+     ],
+   };
+   ```
+
+   </TabItem>
+   </Tabs>
+
+   Copy it exactly. The `matcher` part makes sure only real pages are counted, not images, Next.js's own files or
+   pages the browser loads in advance. If you already have a file with this name, see
+   [Connect a Next.js site](/looku/guides/connect-nextjs/) for how to combine them.
+
+3. **Add the three settings in Vercel.** Open your project on [vercel.com](https://vercel.com/), go to
+   **Settings → Environment Variables** and add these three, one at a time, with your own values. For each, choose
+   only the **Production** environment and select **Save**:
+
+   | Name | Value |
+   |---|---|
+   | `LOOKU_ENDPOINT` | `https://looku.example.com` |
+   | `LOOKU_SITE_ID` | `myblog` |
+   | `LOOKU_SIGNING_KEY` | your signing key |
+
+   The key stays in Vercel and never goes into your code.
+
+4. **Publish.** Commit and push `lib/looku.js` and the proxy file as you normally publish changes. Vercel builds a
+   new version with the settings. (If you added the settings after pushing, open **Deployments**, select the latest
+   one and choose **Redeploy**.)
+
+5. **Check.** Open your live site on your phone, click a couple of pages, and open the dashboard at home. Your visit
+   is there within a few seconds.
+
+</Steps>
+
+Only the production site sends page views. Your own `npm run dev` and Vercel's preview versions send nothing, so your
+work on the site does not show up as visitors.
+
+Nothing appears? Go through [No page views appear](/looku/operate/troubleshooting/#no-page-views-appear); it checks
+each link in the chain.
+
+## Read your dashboard
+
+After a few days you have something to look at. These pictures come from a small web shop with about three months of
+data.
+
+### The front page
+
+<Screen name="overview" alt="Dashboard front page: page views, visitors, sessions and pages per session with changes, and a chart." />
+
+At the top you choose the period: 7 days, 28 days, 3 or 12 months, or your own dates. **Compare to previous** shows
+the change against the period before, both as percentages and as the dashed line in the chart.
+
+- **Page views:** how many pages were opened.
+- **Visitors:** how many different people, as far as Looku can tell. Looku recognises a visitor for one day only, so
+  someone who comes on three days counts three times in a month. This is the price of not storing anything that
+  identifies people.
+- **Sessions:** visits. A visitor who comes back after a break of 30 minutes starts a new session.
+- **Pages / session:** how many pages a visit has on average.
+
+With **Filter** you look at one part of the site (a page group), one campaign or one kind of device at a time.
+
+### Pages and where visitors come from
+
+<Screen name="pages" alt="The most viewed pages with view counts and changes." />
+
+**Top pages** is the list most people look at first. **Entry pages** tells where visits start, which is often a blog
+post that someone found with a search engine, and **Exit pages** where they end.
+
+<Screen name="referrers" alt="Where visitors came from: search engines, direct visits and social media, with bars." />
+
+**Where visitors came from** lists the sites that sent visitors: search engines, social media and other sites that
+link to you. **Direct / unknown** means the visitor typed your address, used a bookmark, or came from an app that does
+not say where the visitor came from.
+
+### Devices and countries
+
+<Screen name="devices" alt="Share of phones, computers and tablets." />
+
+Phones, computers and tablets, and further down browsers, systems and countries. If most of your visitors are on
+phones, that is where your site has to work best.
+
+### Campaigns
+
+When you share a link in a newsletter or a post, add a campaign tag to it, for example:
+
+```
+https://example.com/products/?utm_source=newsletter&utm_campaign=autumn-sale
+```
+
+Looku then shows how many visits each campaign brought and, in a shop, how many orders. This needs the campaigns
+module (see [What you can do with Looku](/looku/use-cases/)).
+
+<Screen name="campaigns" alt="Campaigns with their sessions, status and orders." />
+
+### The monthly review
+
+**Monthly review** at the top of the dashboard tells the month in sentences: how many visitors there were, where they
+came from, which pages rose. The same review can come to your email on the first day of each month.
+
+<Screen name="report" alt="The monthly review: a headline, a paragraph in plain words, key numbers and a chart." />
+
+### Settings
+
+In **Settings** you choose the dashboard's language and theme, and you can group pages, for example all
+`/products/` pages as "Products", so that you see how each part of the site does. In a shop you also set the pages
+of the purchase path here.
+
+<Screen name="settings" alt="Settings: theme and language, page groups and purchase path." />
+
+## Where to go from here
+
+- [What you can do with Looku](/looku/use-cases/): turn on campaigns, shop orders, reading time or the monthly email.
+- [Backups and updates](/looku/operate/backup-and-update/): set up a daily backup now, while you remember.
+- [Privacy and the law](/looku/privacy/): update your site's privacy notice; the page has a template.

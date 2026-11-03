@@ -1,0 +1,278 @@
+---
+title: "2. Your first installation on a home server"
+description: A guided installation. Looku goes on your home server, its receiver gets a public address through a Cloudflare Tunnel, and the dashboard stays at home.
+sidebar:
+  order: 2
+---
+
+import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+import Screen from "../../../components/Screen.astro";
+
+In this tutorial you install Looku for real, on a home server, and give it a public address that your website can
+send page views to. When you are done, Looku is ready for your site, which you connect in the next tutorial.
+
+It takes about an hour. If you did [1. Try Looku on your computer](/looku/tutorials/try-it/), the first half will look
+familiar: it is the same Docker setup.
+
+## The plan
+
+Looku has two parts with different jobs:
+
+- The **receiver** takes page views from your website's server. Your website is somewhere on the internet, so the
+  receiver needs a public address, for example `https://looku.example.com`.
+- The **dashboard** is where you read the numbers. Only you need it, so it stays on your home network, at an address
+  like `http://192.168.1.10:8788`.
+
+To give the receiver a public address without opening your home router, we use a **Cloudflare Tunnel**: a small
+program on your server keeps a connection open to Cloudflare, and Cloudflare passes requests for
+`looku.example.com` through it. Cloudflare also blocks everything that is not a page view before it reaches your
+home.
+
+## What you need
+
+- **A home server running Linux** with Docker installed: an old computer, a mini PC or a Raspberry Pi 4 or newer.
+  If Docker is not installed yet, install it with [Docker's guide for your Linux](https://docs.docker.com/engine/install/).
+- **A domain on Cloudflare**, for example `example.com`. The Cloudflare account is free; a domain costs about 10 € a
+  year. If your domain is with another company, add it to Cloudflare with their
+  [guide to adding a site](https://developers.cloudflare.com/fundamentals/manage-domains/add-site/) first. That can
+  take a few hours, so start early.
+- **Your own computer** on the same home network, to type commands and use the browser.
+
+In the commands below, replace `192.168.1.10` with your server's address, `example.com` with your domain and `myblog`
+with a short name for your site. We show you how to find the server's address.
+
+## Part 1: Get onto the server
+
+<Steps>
+
+1. **Open a terminal on your own computer** (Windows: PowerShell; macOS and Linux: Terminal) and connect to the
+   server with `ssh`, using your user name on the server:
+
+   ```bash
+   ssh you@192.168.1.10
+   ```
+
+   The first time, it asks whether you trust the server; type `yes`. Then it asks for your password. When the prompt
+   changes to the server's name, every command you type runs on the server.
+
+   Don't know the server's address? Run `hostname -I` on the server itself (with a keyboard and screen). The first
+   number that starts with `192.168.` or `10.` is usually it. Ask your router to always give the server this address
+   (a "DHCP reservation" in the router's settings), or the dashboard's address may change one day.
+
+2. **Check that Docker works:**
+
+   ```bash
+   docker compose version
+   ```
+
+   You should see `Docker Compose version v2.…` or a higher number. If you see `permission denied`, put `sudo` in
+   front of every `docker` command in this tutorial.
+
+</Steps>
+
+## Part 2: Install Looku
+
+<Steps>
+
+1. **Download Looku** into your home folder:
+
+   ```bash
+   cd ~
+   git clone https://github.com/niemenjoki/Looku.git looku
+   cd looku/deploy
+   ```
+
+   You are now in the `deploy` folder. All `docker compose` commands in this tutorial are run here.
+
+2. **Write the settings.** Copy the example and open it in `nano`, a simple text editor in the terminal:
+
+   ```bash
+   cp .env.example .env
+   nano .env
+   ```
+
+   Move with the arrow keys and change these three lines:
+
+   ```
+   LOOKU_TIMEZONE=Europe/Helsinki
+   LOOKU_DASHBOARD_BIND=192.168.1.10
+   LOOKU_API_HOSTS=192.168.1.10:8788
+   ```
+
+   What they mean:
+
+   - `LOOKU_TIMEZONE`: your time zone. The nightly tidy-up and the monthly email follow it.
+   - `LOOKU_DASHBOARD_BIND`: where the dashboard can be opened. Your server's home address means: only from home.
+   - `LOOKU_API_HOSTS`: the address you will type in the browser. The dashboard refuses other addresses, which
+     protects it against a trick where a malicious web page tries to reach devices on your home network.
+
+   Save with Ctrl+O and Enter, and exit with Ctrl+X.
+
+3. **Make a folder for the data.** All of Looku's data will be in one file in this folder:
+
+   ```bash
+   mkdir -p data
+   sudo chown 1000:1000 data
+   ```
+
+   The second command gives the folder to the user that Looku runs as inside its container. `sudo` asks for your
+   password.
+
+4. **Start Looku:**
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+   The first time takes a few minutes. It ends with `Container looku-ingest-1 Started` and
+   `Container looku-dashboard-1 Started`. Looku now starts by itself whenever the server restarts.
+
+5. **Add your site:**
+
+   ```bash
+   docker compose run --rm ingest site:add myblog --domain example.com --timezone Europe/Helsinki
+   ```
+
+   `--domain` is your website's address without `https://`. Looku answers with the site's signing key:
+
+   ```
+   Site myblog added. Signing key (shown once):
+   k8Jd2mQx7RfTn4WcZp1LvB9sHy6GaE0uYoXiN5tCw3E
+   ```
+
+   **Save the key in your password manager now.** Your website signs every page view with it, and Looku accepts only
+   signed page views. If you lose it, `docker compose run --rm ingest site:rotate-key myblog` makes a new one.
+
+6. **Choose the dashboard password** (at least 10 characters):
+
+   ```bash
+   docker compose run --rm -it ingest admin:password
+   ```
+
+   Type it after `New dashboard password:` and press Enter. Nothing appears while you type, and it asks only once.
+
+7. **Open the dashboard** on your own computer: `http://192.168.1.10:8788`. Log in.
+
+   <Screen name="login" alt="Looku's login page." />
+
+   The dashboard is empty for now; it fills up once your site sends page views.
+
+</Steps>
+
+## Part 3: A public address for the receiver
+
+This part happens mostly in the Cloudflare dashboard in your browser. Cloudflare changes its menus now and then;
+each step names the menu and a word to search for. (Checked in November 2026.)
+
+<Steps>
+
+1. **Create the tunnel.** Log in at [dash.cloudflare.com](https://dash.cloudflare.com/), go to
+   **Networking → Tunnels** (search: "Tunnels") and select **Create a tunnel**. Name it `looku` and select
+   **Create Tunnel**.
+
+2. **Copy the tunnel's token.** Cloudflare now shows how to install the tunnel program on different systems. Choose
+   **Docker**. You do not run the command it shows; Looku already has the tunnel program. Copy only the long text after
+   `--token` (it starts with `eyJ`). Keep this page open.
+
+3. **Give the token to Looku.** In the terminal on the server:
+
+   ```bash
+   nano .env
+   ```
+
+   Go to the last line, `LOOKU_TUNNEL_TOKEN=`, and paste the token right after the `=` (in the terminal, paste with a
+   right click or Ctrl+Shift+V). Save and exit.
+
+4. **Start the tunnel:**
+
+   ```bash
+   docker compose --profile tunnel up -d
+   ```
+
+   It says `Container looku-tunnel-1 Started`. The tunnel is a separate container that starts only when you ask for it
+   with `--profile tunnel`.
+
+5. **Back in Cloudflare,** on the page where you copied the token, the tunnel should show as connected within a
+   minute. (Cloudflare calls the tunnel program a "connector".) Select **Continue**.
+
+6. **Point your address at the receiver.** In the tunnel, open the **Routes** tab and select **Add route** →
+   **Published application**. Fill in:
+
+   | Field | Value |
+   |---|---|
+   | Subdomain | `looku` |
+   | Domain | `example.com` |
+   | Path | leave empty |
+   | Service URL | `http://ingest:8787` |
+
+   Select **Add route**. Requests to `https://looku.example.com` now travel through the tunnel to the receiver, which
+   is called `ingest` inside Docker.
+
+</Steps>
+
+## Part 4: Let only page views through
+
+Your website sends exactly two kinds of requests to the receiver: POST requests to `/ingest` (page views) and to
+`/orders` (shop orders). We tell Cloudflare to block everything else, so nothing else ever reaches your home.
+
+<Steps>
+
+1. In the Cloudflare dashboard, open your domain (`example.com`).
+
+2. Go to **Security → Security rules** (search: "Security rules") and select **Create rule → Custom rules**.
+
+3. Name the rule `Looku: only POST /ingest and /orders`.
+
+4. Under **When incoming requests match**, select **Edit expression** and paste this, with your own address instead
+   of `looku.example.com`:
+
+   ```
+   (http.host eq "looku.example.com" and not (http.request.method eq "POST" and http.request.uri.path in {"/ingest" "/orders"}))
+   ```
+
+   In words: "a request to looku.example.com that is not a POST to /ingest or /orders".
+
+5. Under **Then take action**, choose **Block**, and select **Deploy**.
+
+</Steps>
+
+**Test it** from your own computer. Give the rule a minute first:
+
+<Tabs syncKey="os">
+<TabItem label="macOS and Linux">
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST https://looku.example.com/ingest
+curl -s -o /dev/null -w "%{http_code}\n" https://looku.example.com/
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+curl.exe -s -o NUL -w "%{http_code}\n" -X POST https://looku.example.com/ingest
+curl.exe -s -o NUL -w "%{http_code}\n" https://looku.example.com/
+```
+
+</TabItem>
+</Tabs>
+
+The first should print `401`: your test reached the receiver, which refused it because it was not signed. That is
+exactly right. The second should print `403`: Cloudflare blocked it. If you see something else, the
+[troubleshooting page](/looku/operate/troubleshooting/#cloudflare-502-or-530) explains each answer.
+
+## You're done
+
+Looku is running on your server. The receiver has a public address that only takes signed page views, and the
+dashboard is reachable only at home. Write down the three things your website needs:
+
+```
+LOOKU_ENDPOINT=https://looku.example.com
+LOOKU_SITE_ID=myblog
+LOOKU_SIGNING_KEY=the key from part 2
+```
+
+Next: [3. Connect your site and read your first numbers](/looku/tutorials/connect-your-site/).
+
+Later, set up [backups](/looku/operate/backup-and-update/). To open the dashboard when you are away from home, see
+[Tailscale](/looku/guides/tailscale/).

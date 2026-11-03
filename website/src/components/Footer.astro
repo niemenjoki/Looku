@@ -1,0 +1,23 @@
+---
+// Starlight's footer with a small link to the page about the author, which is not in the sidebar.
+import Default from "@astrojs/starlight/components/Footer.astro";
+
+const fi = Astro.currentLocale === "fi";
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
+
+<Default><slot /></Default>
+<p class="looku-about">
+  <a href={fi ? `${base}/fi/about/` : `${base}/about/`}>{fi ? "Tekijästä" : "About the author"}</a>
+</p>
+
+<style>
+  .looku-about {
+    margin-top: 1.5rem;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+  }
+  .looku-about a {
+    color: inherit;
+  }
+</style>

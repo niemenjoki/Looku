@@ -1,0 +1,130 @@
+---
+title: Mitä Lookulla voi tehdä?
+description: Seitsemän yleistä käyttötapaa pelkistä sivunäytöistä verkkokaupan myyntiin ja Home Assistantiin, ja mitä kuhunkin otetaan käyttöön.
+---
+
+import Screen from "../../../components/Screen.astro";
+
+Jokainen alla oleva resepti kertoo, mitä saat, mitä otat käyttöön ja mistä löydät ohjeet. Kaikki lähtevät samasta
+pohjasta: Looku on asennettu ja sivustosi liitetty. Opetusohjelmat vievät sinut sinne asti:
+[2. Ensimmäinen asennus kotipalvelimelle](/looku/fi/tutorials/home-server/) ja [3. Liitä sivustosi ja lue ensimmäiset lukusi](/looku/fi/tutorials/connect-your-site/).
+
+Reseptejä voi yhdistellä. `site:modules` asettaa koko moduuliluettelon, joten luettele aina kaikki moduulit, jotka
+haluat, esimerkiksi `shop,campaigns,content`. `site:list` näyttää nykyiset. Moduulin ottaminen käyttöön tai pois
+käytöstä ei koskaan poista tietoja.
+
+Komennot ajetaan palvelimella Lookun `deploy`-kansiossa. `myblog` on sivustosi tunnus.
+
+## 1. Haluan vain nähdä, kuinka moni lukee sivustoani
+
+**Saat:** sivunäytöt, kävijät ja käynnit päivittäin, katsotuimmat sivut, mistä kävijät tulevat (hakukoneet,
+sosiaalinen media, muut sivustot), laitteet, selaimet ja maat.
+
+**Ota käyttöön:** ei mitään ylimääräistä. Tämän Looku tekee heti, kun sivustosi on liitetty.
+
+<Screen name="overview" alt="Kojelaudan etusivu, jossa sivunäytöt, kävijät, istunnot ja kaavio." />
+
+## 2. Mikä uutiskirje tai julkaisu tuo kävijöitä
+
+**Saat:** jokaisesta kampanjasta tiedon siitä, kuinka monta käyntiä se toi, onko se uusi vai jo päättynyt ja
+(verkkokaupassa) kuinka monta tilausta siitä tuli.
+
+**Ota käyttöön:** kampanjamoduuli (lisää listaan myös muut moduulit, joita käytät):
+
+```bash
+docker compose run --rm ingest site:modules myblog campaigns
+```
+
+**Sitten:** lisää kampanjatunniste jokaiseen jakamaasi linkkiin: `?utm_source=newsletter&utm_campaign=autumn-sale`
+osoitteen loppuun (`&utm_…`, jos osoitteessa on jo `?`). `utm_source` kertoo, missä linkki oli (newsletter,
+instagram), ja `utm_campaign`, mihin kampanjaan se kuuluu. Käytä samaa kampanjan nimeä kaikkialla, missä jaat sen.
+
+<Screen name="campaigns" alt="Kampanjat käynteineen, tiloineen ja tilauksineen." />
+
+## 3. Mikä verkkokaupassani myy ja mikä kampanja toi myynnin
+
+**Saat:** tilaukset, myynnin, keskiostoksen ja konversion, myydyimmät tuotteet sekä ostopolun: kuinka moni käynti
+eteni tuotesivulta ostoskoriin, kassalle ja tilaukseen asti.
+
+<Screen name="shop" alt="Verkkokaupan luvut: tilaukset, myynti, keskiostos ja konversio." />
+
+<Screen name="funnel" alt="Ostopolku käynneistä tuotesivuille, ostoskoriin, kassalle ja tilauksiin." />
+
+**Ota käyttöön:** verkkokauppa- ja kampanjamoduuli:
+
+```bash
+docker compose run --rm ingest site:modules myblog shop,campaigns
+```
+
+**Sitten:** lähetä jokainen maksettu tilaus verkkokauppasi palvelimelta `sendOrder`-funktiolla ja aseta kaupan polut
+kojelaudan asetuksissa. Vaiheet ja täydellinen esimerkki ovat ohjeessa
+[Verkkokaupan tilaukset](/looku/fi/guides/shop-orders/). Vanhat tilaukset voi tuoda tiedostosta.
+
+## 4. Lukevatko ihmiset kirjoitukseni loppuun
+
+**Saat:** jokaisesta sivusta lukuajan mediaanin ja sen, kuinka pitkälle kävijät keskimäärin vierittävät, sekä
+nousevat sivut.
+
+<Screen name="content" alt="Lukuaika ja vierityssyvyys kirjoituksittain." />
+
+**Ota käyttöön:** sisältömoduuli (lisää listaan myös muut moduulit, joita käytät):
+
+```bash
+docker compose run --rm ingest site:modules myblog content
+```
+
+**Sitten:** lukuaika mitataan kävijän selaimessa, joten siihen tarvitaan kävijän suostumus. Lisäät pienen skriptin,
+joka käynnistyy vasta, kun kävijä sallii sen. Vaiheet: [Lukuaika ja suostumus](/looku/fi/guides/consent-and-browser/).
+Luvut ovat otos niistä kävijöistä, jotka antoivat luvan.
+
+## 5. Yhteenveto sähköpostiini joka kuukausi
+
+**Saat:** jokaisen kuukauden ensimmäisenä päivänä sähköpostin, joka kertoo edellisen kuukauden kokonaisin lausein:
+kävijät, mistä he tulivat ja mitkä sivut nousivat. Kojelautaa ei tarvitse avata.
+
+<Screen name="report" alt="Kuukausikatsaus arkisin lausein tärkeimpine lukuineen." />
+
+**Ota käyttöön:** sähköpostiasetukset tiedostoon `.env` (sähköpostipalvelusi kertoo postipalvelimen osoitteen,
+käyttäjätunnuksen ja salasanan):
+
+```
+LOOKU_SMTP_URL=smtps://user:password@smtp.example.com:465
+LOOKU_REPORT_FROM=looku@example.com
+LOOKU_REPORT_TO=you@example.com
+LOOKU_REPORT_LANG=en
+```
+
+Aja sitten `docker compose up -d`, ja katso ensi kuun sähköposti etukäteen komennolla
+`docker compose run --rm ingest report:send --dry-run`. Katso [Asetukset](/looku/fi/reference/settings/#kuukausisähköposti).
+
+## 6. Mahdollisimman vähän tietoa
+
+**Saat:** sivunäytöt sivuittain, viittaavat sivustot, kampanjat ja laitteet, mutta et kävijä- tai käyntimääriä etkä
+maita. Yksittäiset sivunäytöt poistetaan aiemmin, ja sen jälkeen jäljellä on vain sivukohtaiset päiväsummat.
+
+**Ota käyttöön:**
+
+```bash
+docker compose run --rm ingest site:visitors myblog off
+docker compose run --rm ingest site:country myblog off
+docker compose run --rm ingest site:retention myblog 3
+```
+
+Ensimmäinen lopettaa päivittäisen kävijätiivisteen: jokainen sivunäyttö on oma erillinen tapahtumansa, joten kävijät,
+käynnit, aloitus- ja poistumissivut sekä ostopolku katoavat raporteista. Toinen lopettaa maan tallentamisen. Kolmas
+säilyttää yksittäiset sivunäytöt kolme kuukautta. Mitä tämä merkitsee lain kannalta, kerrotaan sivulla
+[Tietosuoja ja laki](/looku/fi/privacy/).
+
+## 7. Lukuni Home Assistantiin tai omaan kojelautaani
+
+**Saat:** minkä tahansa kojelaudan luvun omiin työkaluihisi, esimerkiksi "sivunäytöt viimeisen 7 päivän aikana"
+Home Assistantin anturiksi.
+
+**Ota käyttöön:** pelkkään lukemiseen tarkoitettu avain:
+
+```bash
+docker compose run --rm ingest token:create homeassistant --scope read --site myblog
+```
+
+**Sitten:** seuraa lukurajapinnan ohjeen [Home Assistant -esimerkkiä](/looku/fi/reference/api/#home-assistant--esimerkki).
+Kaikki, mitä kojelauta näyttää, on saatavilla saman rajapinnan kautta.

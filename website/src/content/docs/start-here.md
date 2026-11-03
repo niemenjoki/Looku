@@ -3,8 +3,14 @@ title: Start here
 description: What you need, which setup suits you, and the words used in these guides.
 ---
 
-This page helps you choose a setup. Read it first even if you have run servers before: Looku has two parts with
-different rules about who may reach them.
+This page helps you choose a setup. New to servers? Follow the three **tutorials** in order:
+[1. Try Looku on your computer](/looku/tutorials/try-it/), [2. Your first installation on a home server](/looku/tutorials/home-server/)
+and [3. Connect your site](/looku/tutorials/connect-your-site/). They explain each step and show what you should see.
+The other pages are the documentation: shorter, with all the options. [What you can do with Looku](/looku/use-cases/)
+shows what to turn on for your needs.
+
+Read this page even if you have run servers before: Looku has two parts with different rules about who may reach
+them.
 
 ## What you need
 
@@ -31,9 +37,10 @@ You do not need to know Docker, tunnels or signatures beforehand. Each guide exp
 | **Receiver** (takes page views) | on your computer | behind a Cloudflare Tunnel | behind Caddy, with HTTPS |
 | **Dashboard** (where you read the numbers) | on your computer | only on your home network (or [Tailscale](/looku/guides/tailscale/)) | on the internet behind a password, limited to your own networks |
 | **Real visitors?** | no, only the demo site | yes | yes |
-| **Guide** | [Try it locally](/looku/guides/try-locally/) | [Home server + Cloudflare](/looku/guides/home-server-cloudflare/) | [VPS + Caddy](/looku/guides/vps-caddy/) |
+| **Tutorial** | [1. Try Looku on your computer](/looku/tutorials/try-it/) | [2. Your first installation](/looku/tutorials/home-server/) | |
+| **Documentation** | | [Home server + Cloudflare](/looku/guides/home-server-cloudflare/) | [VPS + Caddy](/looku/guides/vps-caddy/) (step by step) |
 
-Not sure? Start with [Try it locally](/looku/guides/try-locally/). Nothing you do there affects a real site.
+Not sure? Start with [1. Try Looku on your computer](/looku/tutorials/try-it/). Nothing you do there affects a real site.
 
 If you already run a reverse proxy other than Caddy (nginx, Traefik), follow the VPS guide and adapt the proxy step.
 To run Looku without Docker, see [Without Docker](/looku/guides/without-docker/).
@@ -67,7 +74,7 @@ To run Looku without Docker, see [Without Docker](/looku/guides/without-docker/)
 
 **Terminal, shell**
 : The text window where you type commands: Terminal on macOS and Linux, PowerShell on Windows. See
-  [Try it locally](/looku/guides/try-locally/#before-you-start). On a server you open it with `ssh`, which also works
+  [1. Try Looku on your computer](/looku/tutorials/try-it/#get-the-tools). On a server you open it with `ssh`, which also works
   in PowerShell.
 
 **Docker, container, Compose**

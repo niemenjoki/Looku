@@ -1,0 +1,207 @@
+---
+title: "3. Liitä sivustosi ja lue ensimmäiset lukusi"
+description: Ohjattu Vercelissä toimivan Next.js-sivuston liittäminen Lookuun ja sen jälkeen kierros kojelaudassa ja siinä, mitä kukin osa kertoo.
+sidebar:
+  order: 3
+---
+
+import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+import Screen from "../../../../components/Screen.astro";
+
+Tässä oppaassa liität verkkosivustosi Lookuun. Sen jälkeen jokainen sivu, jonka joku avaa sivustollasi,
+näkyy kojelaudassasi. Lopuksi käymme läpi kojelaudan ja sen, mitä kukin osa kertoo.
+
+Käytämme esimerkkinä **Vercelissä toimivaa Next.js-sivustoa**, joka on yleisin kokoonpano. Jos sivustosi on tehty
+toisin (Node.js, Express tai Cloudflaren takana oleva staattinen sivusto), liittäminen on ohjeessa
+[Node.js, Express, Cloudflare tai oma](/looku/fi/guides/connect-other/). Alla oleva kierros kojelaudassa koskee
+kaikkia sivustoja.
+
+**Tarvitset:** asennuksen oppaasta [2. Ensimmäinen asennus kotipalvelimelle](/looku/fi/tutorials/home-server/) ja sen
+kolme asetusta, sivustosi koodin omalla tietokoneellasi ja pääsyn sivuston Vercel-projektiin. Aikaa kuluu noin
+30 minuuttia.
+
+## Miten liittäminen toimii
+
+Next.js voi ajaa pienen koodinpätkän ennen jokaista sivua. Sen nimi on **proxy** (Next.js 15:ssä ja vanhemmissa
+**middleware**). Lookun **liitin** sijoitetaan siihen. Kun kävijä avaa sivun, liitin kirjaa sivun, sen, mistä kävijä
+tuli, ja millaista laitetta hän käyttää, allekirjoittaa tiedot avaimellasi ja lähettää ne Lookun vastaanottimelle.
+Se tekee tämän vasta, kun sivu on jo lähetetty kävijälle, joten sivustosi ei hidastu. Sivuillesi ei lisätä mitään,
+eikä kävijän selaimeen tallenneta mitään.
+
+## Liitä
+
+<Steps>
+
+1. **Kopioi liitin sivustoosi.** Liitin on yksi tiedosto. Lataa
+   [`packages/next/src/index.js`](https://github.com/niemenjoki/Looku/blob/master/packages/next/src/index.js) ja
+   tallenna se projektiisi nimellä `lib/looku.js`. Jos `package.json`-tiedoston vieressä ei ole `lib`-kansiota, luo
+   se.
+
+2. **Lisää proxy-tiedosto.** Tarkista Next.js-versiosi: avaa `package.json` ja katso numero sanan `"next"` jälkeen.
+   Luo tiedosto samaan kansioon kuin `package.json` (jos sivusi ovat kansiossa `src/app`, laita tiedosto kansioon
+   `src/` ja kirjoita `import`-riville `"../lib/looku.js"`).
+
+   <Tabs>
+   <TabItem label="Next.js 16 ja uudemmat: proxy.js">
+
+   ```js
+   import { NextResponse } from "next/server";
+   import { trackPageview } from "./lib/looku.js";
+
+   export function proxy(request, event) {
+     trackPageview(request, event);
+     return NextResponse.next();
+   }
+
+   export const config = {
+     matcher: [
+       {
+         source: "/((?!api|_next/static|_next/image|.*[.]).*)",
+         missing: [
+           { type: "header", key: "next-router-prefetch" },
+           { type: "header", key: "purpose", value: "prefetch" },
+           { type: "header", key: "sec-purpose", value: "(.*)prefetch(.*)" },
+         ],
+       },
+     ],
+   };
+   ```
+
+   </TabItem>
+   <TabItem label="Next.js 15 ja vanhemmat: middleware.js">
+
+   ```js
+   import { NextResponse } from "next/server";
+   import { trackPageview } from "./lib/looku.js";
+
+   export function middleware(request, event) {
+     trackPageview(request, event);
+     return NextResponse.next();
+   }
+
+   export const config = {
+     matcher: [
+       {
+         source: "/((?!api|_next/static|_next/image|.*[.]).*)",
+         missing: [
+           { type: "header", key: "next-router-prefetch" },
+           { type: "header", key: "purpose", value: "prefetch" },
+           { type: "header", key: "sec-purpose", value: "(.*)prefetch(.*)" },
+         ],
+       },
+     ],
+   };
+   ```
+
+   </TabItem>
+   </Tabs>
+
+   Kopioi se täsmälleen sellaisenaan. `matcher`-osa varmistaa, että vain oikeat sivut lasketaan, eivät kuvat,
+   Next.js:n omat tiedostot tai sivut, jotka selain lataa etukäteen. Jos sinulla on jo tämänniminen tiedosto, katso
+   ohjeesta [Liitä Next.js-sivusto](/looku/fi/guides/connect-nextjs/), miten ne yhdistetään.
+
+3. **Lisää kolme asetusta Verceliin.** Avaa projektisi osoitteessa [vercel.com](https://vercel.com/), siirry kohtaan
+   **Settings → Environment Variables** ja lisää nämä kolme yksi kerrallaan omilla arvoillasi. Valitse jokaiselle
+   ympäristöistä vain **Production** ja valitse **Save**:
+
+   | Nimi | Arvo |
+   |---|---|
+   | `LOOKU_ENDPOINT` | `https://looku.example.com` |
+   | `LOOKU_SITE_ID` | `myblog` |
+   | `LOOKU_SIGNING_KEY` | allekirjoitusavaimesi |
+
+   Avain pysyy Vercelissä eikä koskaan päädy koodiisi.
+
+4. **Julkaise.** Tee commit ja push tiedostoille `lib/looku.js` ja proxy-tiedosto samalla tavalla kuin julkaiset
+   muutkin muutokset. Vercel rakentaa uuden version asetusten kanssa. (Jos lisäsit asetukset vasta pushin jälkeen,
+   avaa **Deployments**, valitse uusin julkaisu ja valitse **Redeploy**.)
+
+5. **Tarkista.** Avaa julkaistu sivustosi puhelimella, napsauta paria sivua ja avaa kojelauta kotona. Käyntisi näkyy
+   siellä muutamassa sekunnissa.
+
+</Steps>
+
+Vain tuotannossa oleva sivusto lähettää sivunäyttöjä. Oma `npm run dev` ja Vercelin esikatseluversiot eivät lähetä
+mitään, joten sivustoa kehittäessäsi et näy kävijänä.
+
+Eikö mitään näy? Käy läpi [Sivunäyttöjä ei näy](/looku/fi/operate/troubleshooting/#sivunäyttöjä-ei-näy). Se tarkistaa
+ketjun jokaisen lenkin.
+
+## Lue kojelautaasi
+
+Muutaman päivän päästä sinulla on jo jotain katsottavaa. Nämä kuvat ovat pienestä verkkokaupasta, jolla on noin
+kolmen kuukauden tiedot.
+
+### Etusivu
+
+<Screen name="overview" alt="Kojelaudan etusivu: sivunäytöt, kävijät, istunnot ja sivua istuntoa kohden muutoksineen sekä kaavio." />
+
+Yläreunasta valitset ajanjakson: **7 pv**, **28 pv**, **3 kk**, **12 kk** tai **Oma** eli omat päivämääräsi.
+**Vertailu edelliseen** näyttää muutoksen edelliseen samanpituiseen jaksoon verrattuna, sekä prosentteina että
+kaavion katkoviivana.
+
+- **Sivunäytöt:** kuinka monta sivua avattiin.
+- **Kävijät:** kuinka monta eri ihmistä, sikäli kuin Looku pystyy sen päättelemään. Looku tunnistaa kävijän vain
+  yhden päivän ajan, joten kolmena päivänä käyvä ihminen lasketaan kuukaudessa kolmesti. Tämä on hinta siitä, ettei
+  ihmisiä tunnistavaa tietoa tallenneta.
+- **Istunnot:** käynnit. Kun kävijä palaa 30 minuutin tauon jälkeen, alkaa uusi käynti.
+- **Sivua / istunto:** kuinka monta sivua käynnillä katsotaan keskimäärin.
+
+**Suodata**-valinnalla katsot kerrallaan yhtä sivuston osaa (sivuryhmää), yhtä kampanjaa tai yhtä laitetyyppiä.
+
+### Sivut ja se, mistä kävijät tulevat
+
+<Screen name="pages" alt="Katsotuimmat sivut näyttömäärineen ja muutoksineen." />
+
+**Suosituimmat sivut** on lista, jota useimmat katsovat ensimmäisenä. **Aloitussivut** kertoo, mistä käynnit
+alkavat. Usein se on blogikirjoitus, jonka joku löysi hakukoneella. **Poistumissivut** kertoo, mihin käynnit
+päättyvät.
+
+<Screen name="referrers" alt="Mistä kävijät tulivat: hakukoneet, suorat käynnit ja sosiaalinen media palkkeina." />
+
+**Mistä tultiin** luettelee sivustot, jotka lähettivät kävijöitä: hakukoneet, sosiaalisen median ja muut sivustot,
+jotka linkittävät sinuun. **Suora / ei tiedossa** tarkoittaa, että kävijä kirjoitti osoitteesi, käytti kirjanmerkkiä
+tai tuli sovelluksesta, joka ei kerro, mistä kävijä tuli.
+
+### Laitteet ja maat
+
+<Screen name="devices" alt="Puhelinten, tietokoneiden ja tablettien osuudet." />
+
+**Laitteet** näyttää puhelimet, tietokoneet ja tabletit, ja alempana ovat **Selaimet ja järjestelmät** sekä
+**Maat**. Jos suurin osa kävijöistäsi käyttää puhelinta, sivustosi on toimittava parhaiten juuri siinä.
+
+### Kampanjat
+
+Kun jaat linkin uutiskirjeessä tai julkaisussa, lisää siihen kampanjatunniste, esimerkiksi:
+
+```
+https://example.com/products/?utm_source=newsletter&utm_campaign=autumn-sale
+```
+
+Looku näyttää silloin, kuinka monta käyntiä kukin kampanja toi ja verkkokaupassa myös kuinka monta tilausta. Tähän
+tarvitaan kampanjamoduuli (katso [Mitä Lookulla voi tehdä?](/looku/fi/use-cases/)).
+
+<Screen name="campaigns" alt="Kampanjat käynteineen, tiloineen ja tilauksineen." />
+
+### Kuukausikatsaus
+
+Kojelaudan yläreunan **Kuukausikatsaus** kertoo kuukauden kokonaisin lausein: kuinka monta kävijää oli, mistä he
+tulivat ja mitkä sivut nousivat. Saman katsauksen voi saada sähköpostiisi jokaisen kuukauden ensimmäisenä päivänä.
+
+<Screen name="report" alt="Kuukausikatsaus: otsikko, kappale arkikielellä, tärkeimmät luvut ja kaavio." />
+
+### Asetukset
+
+**Asetuksissa** valitset kojelaudan kielen ja teeman. Voit myös ryhmitellä sivuja, esimerkiksi kaikki
+`/products/`-sivut ryhmään "Tuotteet", jotta näet, miten kukin sivuston osa pärjää. Verkkokaupassa asetat täällä myös
+ostopolun sivut.
+
+<Screen name="settings" alt="Asetukset: teema ja kieli, sivuryhmät ja ostopolku." />
+
+## Mihin seuraavaksi
+
+- [Mitä Lookulla voi tehdä?](/looku/fi/use-cases/): ota käyttöön kampanjat, verkkokaupan tilaukset, lukuaika tai
+  kuukausisähköposti.
+- [Varmuuskopiointi ja päivitys](/looku/fi/operate/backup-and-update/): ota päivittäinen varmuuskopio käyttöön nyt,
+  kun asia on vielä mielessä.
+- [Tietosuoja ja laki](/looku/fi/privacy/): päivitä sivustosi tietosuojaseloste. Sivulla on siihen pohja.

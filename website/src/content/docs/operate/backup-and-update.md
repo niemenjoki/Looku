@@ -102,4 +102,4 @@ docker compose --profile tunnel up -d tunnel
 ```
 
 Check in the Cloudflare dashboard (**Networking → Tunnels**) that the tunnel is connected again, and run the `curl`
-check from the [home server guide](/looku/guides/home-server-cloudflare/#4-let-through-only-what-the-receiver-needs).
+check from the [home server guide](/looku/guides/home-server-cloudflare/#firewall-rule).

@@ -22,7 +22,8 @@ Looku is not a cookie banner tool and does not make anything legal by itself. Se
 reference for the rest:
 
 - [Start here](https://niemenjoki.github.io/looku/start-here/): what you need and which setup suits you
-- [Try it locally](https://niemenjoki.github.io/looku/guides/try-locally/) in about 20 minutes, without touching a real site
+- Three tutorials: [try Looku on your computer](https://niemenjoki.github.io/looku/tutorials/try-it/) in about 20 minutes, [your first installation](https://niemenjoki.github.io/looku/tutorials/home-server/) and [connect your site](https://niemenjoki.github.io/looku/tutorials/connect-your-site/)
+- [What you can do with Looku](https://niemenjoki.github.io/looku/use-cases/): seven common uses and what to turn on
 - Install on a [home server with Cloudflare](https://niemenjoki.github.io/looku/guides/home-server-cloudflare/) or a
   [VPS with Caddy](https://niemenjoki.github.io/looku/guides/vps-caddy/)
 - [Connect a Next.js site](https://niemenjoki.github.io/looku/guides/connect-nextjs/), or [Node.js, Express, Cloudflare or your own](https://niemenjoki.github.io/looku/guides/connect-other/)
@@ -66,3 +67,5 @@ Public License 3.0 ([LICENSE](LICENSE)). The connectors that you add to your sit
 `packages/browser`) are under the MIT License (`LICENSE` in each package), so you can use them in any site, open or
 closed. The dashboard font Space Grotesk is under the SIL Open Font License 1.1
 (`packages/ui/public/fonts/OFL.txt`).
+
+Made by Joonas Niemenjoki ([about](https://niemenjoki.github.io/looku/about/)).
