@@ -152,10 +152,10 @@ the offer to install the developer tools; on Linux, `sudo apt install git` (Fedo
 3. **Start it:**
 
    ```bash
-   docker compose up -d --build
+   docker compose up -d
    ```
 
-   The first time, Docker downloads and builds Looku. This takes a few minutes; let it run. It ends with
+   The first time, Docker downloads Looku. This takes a minute or a few; let it run. It ends with
    `Container looku-ingest-1 Started` and `Container looku-dashboard-1 Started`.
 
    Looku is now running in two containers. The **receiver** (`ingest`) takes page views from websites. The
@@ -315,7 +315,7 @@ stored in your browser is your consent choice.
    ```bash
    cd deploy
    docker compose down -v
-   docker image rm looku:local node:22-bookworm-slim
+   docker image rm ghcr.io/niemenjoki/looku:1 node:22-bookworm-slim
    ```
 
    You see lines ending with `Removed` and `Deleted`. If you use the `node:22-bookworm-slim` image for something

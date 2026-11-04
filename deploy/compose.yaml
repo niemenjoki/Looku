@@ -3,7 +3,11 @@
 #
 #   mkdir -p data && sudo chown 1000:1000 data
 #
-#   docker compose up -d --build
+#   docker compose up -d
+#
+# `up` downloads the published image (ghcr.io/niemenjoki/looku, version
+# LOOKU_VERSION). If it cannot, or with `--build`, it builds the image from
+# this repository instead, for example after you have changed the code.
 #   docker compose run --rm ingest site:add example --domain example.com
 #   docker compose run --rm -it ingest admin:password
 #
@@ -16,7 +20,7 @@ name: looku
 
 x-looku: &looku
   build: ..
-  image: looku:local
+  image: ghcr.io/niemenjoki/looku:${LOOKU_VERSION:-1}
   restart: unless-stopped
   volumes:
     - ${LOOKU_DATA_DIR:-./data}:/data

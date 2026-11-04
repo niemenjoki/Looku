@@ -74,11 +74,14 @@ Read the changelog (`CHANGELOG.md`) first. Then:
 cd ~/looku
 git pull
 cd deploy
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
-`git pull` downloads the new version, and `up -d --build` builds a new image and replaces the containers. The old
-image stays on the disk without a name; `docker image prune` removes such unused images now and then (it asks
+`git pull` updates the Compose file and these guides, `docker compose pull` downloads the newest Looku 1.x, and
+`up -d` replaces the containers. If you have changed Looku's code yourself, run `docker compose up -d --build`
+instead of the last two commands. A new major version (2.0) is not taken automatically: read its changelog, then set
+`LOOKU_VERSION=2` in `.env`. The old image stays on the disk without a name; `docker image prune` removes such unused images now and then (it asks
 before removing, and it does not touch images that containers use). Database
 changes run by themselves when the receiver starts. The receiver is down for a few seconds, and page views sent during
 that time are lost. Check afterwards:

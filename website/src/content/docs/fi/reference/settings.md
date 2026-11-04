@@ -18,6 +18,7 @@ Nämä lukee `compose.yaml`, ei Looku itse.
 | `LOOKU_DATA_DIR` | `./data` | tietokannan kansio palvelinkoneella; varmuuskopioi se. `looku-data` pitää tietokannan sen sijaan Docker-taltiossa, kun [kokeilet Lookua](/looku/fi/tutorials/try-it/) pöytäkoneella |
 | `LOOKU_DASHBOARD_BIND` | `127.0.0.1` | palvelinkoneen osoite, jossa kojelaudan portti julkaistaan: lähiverkon tai Tailscalen osoite pitää sen yksityisenä, `127.0.0.1` vain samalla koneella olevaa välityspalvelinta varten |
 | `LOOKU_DASHBOARD_PORT` | `8788` | kojelaudan portti palvelinkoneella |
+| `LOOKU_VERSION` | `1` | Lookun levykuvan versio (`ghcr.io/niemenjoki/looku`); `1` on uusin 1.x, täysi versio kuten `1.0.0` pysyy paikallaan |
 | `CLOUDFLARED_VERSION` | tyhjä = `latest` | Cloudflare-tunnelin levykuvan versio |
 | `LOOKU_TUNNEL_TOKEN` | tyhjä | Cloudflare-tunnelisi tunnus (token) (profiili `tunnel`) |
 

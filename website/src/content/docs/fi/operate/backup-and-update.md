@@ -78,11 +78,14 @@ Lue ensin muutosloki (`CHANGELOG.md`). Sitten:
 cd ~/looku
 git pull
 cd deploy
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
-`git pull` lataa uuden version, ja `up -d --build` rakentaa uuden levykuvan ja korvaa kontit. Vanha levykuva jää
-levylle nimettömänä; `docker image prune` poistaa tällaiset käyttämättömät levykuvat silloin tällöin (se kysyy
+`git pull` päivittää Compose-tiedoston ja nämä ohjeet, `docker compose pull` lataa uusimman Looku 1.x:n, ja `up -d`
+korvaa kontit. Jos olet muuttanut Lookun koodia itse, aja kahden viimeisen komennon sijaan `docker compose up -d
+--build`. Uutta pääversiota (2.0) ei oteta automaattisesti: lue sen muutosloki ja aseta sitten `.env`-tiedostoon
+`LOOKU_VERSION=2`. Vanha levykuva jää levylle nimettömänä; `docker image prune` poistaa tällaiset käyttämättömät levykuvat silloin tällöin (se kysyy
 ennen poistoa eikä koske levykuviin, joita kontit käyttävät). Tietokannan muutokset
 ajetaan itsestään, kun vastaanotin käynnistyy. Vastaanotin on poissa käytöstä muutaman sekunnin, ja sinä aikana
 lähetetyt sivunäytöt menetetään. Tarkista jälkeenpäin:

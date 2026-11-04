@@ -155,10 +155,10 @@ tarjous asentaa kehitystyökalut. Linuxissa aja `sudo apt install git` (Fedorass
 3. **Käynnistä Looku:**
 
    ```bash
-   docker compose up -d --build
+   docker compose up -d
    ```
 
-   Ensimmäisellä kerralla Docker lataa ja rakentaa Lookun. Siihen menee muutama minuutti, joten anna sen tehdä
+   Ensimmäisellä kerralla Docker lataa Lookun. Siihen menee minuutista muutamaan minuuttiin, joten anna sen tehdä
    työnsä. Lopussa näkyvät rivit `Container looku-ingest-1 Started` ja `Container looku-dashboard-1 Started`.
 
    Looku toimii nyt kahdessa kontissa. **Vastaanotin** (`ingest`) ottaa vastaan sivunäytöt sivustoilta.
@@ -321,7 +321,7 @@ tallensi selaimeesi, on suostumusvalintasi.
    ```bash
    cd deploy
    docker compose down -v
-   docker image rm looku:local node:22-bookworm-slim
+   docker image rm ghcr.io/niemenjoki/looku:1 node:22-bookworm-slim
    ```
 
    Näet rivejä, jotka päättyvät sanoihin `Removed` ja `Deleted`. Jos käytät `node:22-bookworm-slim`-levykuvaa
