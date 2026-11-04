@@ -5,9 +5,12 @@ template: splash
 hero:
   tagline: Cookieless, server-side web analytics that you host yourself. Your site's server records the page views, so nothing is stored in the visitor's browser and no script is needed.
   actions:
+    - text: Open the demo
+      link: /looku/demo/
+      icon: right-arrow
     - text: Try it in 20 minutes
       link: /looku/tutorials/try-it/
-      icon: right-arrow
+      variant: secondary
     - text: Start here
       link: /looku/start-here/
       variant: minimal
@@ -41,6 +44,9 @@ import Screen from "../../components/Screen.astro";
     `/api/v1` with an OpenAPI description, for your own dashboards or Home Assistant.
   </Card>
 </CardGrid>
+
+The [demo](/looku/demo/) shows the dashboard with made-up data, no sign-in needed. How Looku differs from
+Plausible, Umami, GoatCounter and Matomo: [Looku and the alternatives](/looku/comparison/).
 
 ## Is Looku for you?
 

@@ -29,7 +29,7 @@ export default defineConfig({
         {
           label: "Start here",
           translations: { fi: "Aloita tästä" },
-          items: ["start-here", "use-cases", "concepts"],
+          items: ["start-here", "use-cases", "concepts", "comparison"],
         },
         {
           label: "Tutorials",

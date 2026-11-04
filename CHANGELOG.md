@@ -4,21 +4,39 @@
 
 First public version.
 
-- Receiver: server-side page views (`POST /ingest`), events and engagement from the browser collector, and shop
-  orders (`POST /orders`), signed with HMAC-SHA256 and protected against replay.
-- Daily visitor hash without cookies, or no visitor hash at all (`site:visitors off`); optional country.
-- SQLite storage, nightly rollups and retention (25 months of single page views, then daily totals).
+**Install and run**
+- Docker image `ghcr.io/niemenjoki/looku` (amd64 and arm64) and a Compose file; `looku all` runs everything in one
+  process without Docker.
+- One SQLite file. `looku backup` makes a consistent copy without the daily salt.
+- Client allowlist and HSTS for public servers; the dashboard can stay on the home network.
+
+**Collect**
+- Server-side page views (`POST /ingest`) and shop orders (`POST /orders`), signed with HMAC-SHA256 and protected
+  against replay.
+- Connectors: Next.js, Node.js http and Express, a Cloudflare Worker example, and a browser collector for events and
+  engagement from visitors who consented.
+- Bots are dropped: known bots, user agents with neither a browser nor a system, and visitors with more than 20 page
+  views in two minutes.
+- Paths are stored decoded (`/opas/lämpö`, not `/opas/l%C3%A4mp%C3%B6`).
+- `looku history:import` brings page views, events and engagement from an earlier system.
+
+**Report**
 - Modules: basic, shop (orders, purchase path, best sellers), campaigns, content (reading time, scroll, rising pages).
-- Read API `/api/v1` with OpenAPI description, read and admin keys, CSV export, filters and hourly series.
-- Dashboard: compact view, monthly review in sentences, settings; Finnish and English; light and dark.
-- `looku history:import` for page views, events and engagement from an earlier system.
-- `looku site:timezone` changes a site's time zone after `site:add`.
-- Paths are stored decoded (`/opas/lämpö`, not `/opas/l%C3%A4mp%C3%B6`); older rows are converted once.
-- The receiver drops bots that pass as browsers: a user agent with neither a browser nor a system, and a visitor
-  with more than 20 page views in two minutes (that visitor's day is removed). Stored rows are cleaned once.
-- Range `24h`, the last 24 hours up to now, also the dashboard's default; time windows with `since` and `until`.
-- Monthly email, `looku backup`, `looku all` (one process), client allowlist and HSTS for public servers.
-- Connectors: Next.js, Node.js http and Express, Cloudflare Worker example, browser collector.
-- Docker image and Compose file.
-- License: GNU AGPL 3.0 for the receiver and dashboard, MIT for the connectors (`@looku/next`, `@looku/node`,
-  `@looku/browser`).
+- Dashboard in English and Finnish, light and dark, with a compact view and settings. Default range: the last
+  24 hours.
+- Monthly review in plain sentences, in the dashboard and by email.
+- Read API `/api/v1` with an OpenAPI description, read and admin keys, CSV export, filters, hourly series, and time
+  windows with `since` and `until`.
+
+**Privacy**
+- No cookies for visitors and nothing stored on the visitor's device.
+- Visitors from a hash that changes daily, or no visitor hash at all (`site:visitors off`). Country is optional.
+- Single page views are kept for 25 months, then only daily totals. Time zone per site (`site:timezone`).
+
+**Known limitations**
+- A site needs a server (or a Cloudflare Worker) to send page views; plain static hosting is not enough.
+- A bot with a full browser user agent that reads slowly is counted as a visitor.
+- One admin password per installation; no user accounts or teams. Read and admin API keys can be limited to one site.
+
+**License:** GNU AGPL 3.0 for the receiver and dashboard, MIT for the connectors (`@looku/next`, `@looku/node`,
+`@looku/browser`).
