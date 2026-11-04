@@ -1,0 +1,25 @@
+/* The ribbon at the top of the online demo. */
+.demo-ribbon {
+  padding: 8px 16px;
+  font-size: 14px;
+  text-align: center;
+  background: #fff4cc;
+  color: #3d3200;
+  border-bottom: 1px solid #e6d27a;
+}
+.demo-ribbon a {
+  color: inherit;
+  font-weight: 600;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .demo-ribbon {
+    background: #3a3215;
+    color: #f3e7b5;
+    border-bottom-color: #5c4f1f;
+  }
+}
+:root[data-theme="dark"] .demo-ribbon {
+  background: #3a3215;
+  color: #f3e7b5;
+  border-bottom-color: #5c4f1f;
+}
