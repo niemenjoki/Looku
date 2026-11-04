@@ -53,6 +53,11 @@ export function runMaintenance(db, now = new Date()) {
     const saltsDeleted = db
       .prepare("DELETE FROM daily_salt WHERE site_id = ? AND day <> ?")
       .run(site.site_id, today).changes;
+    // A visitor hash is valid for one day, and page views may arrive a day late.
+    db.prepare("DELETE FROM bot_visitors WHERE site_id = ? AND day < ?").run(
+      site.site_id,
+      addDays(today, -1),
+    );
 
     const days = db
       .prepare(

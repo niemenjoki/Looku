@@ -45,7 +45,8 @@ each one sets up a link in this chain.
    addresses the receiver needs.
 5. **The receiver checks the signature.** A record without a valid signature gets the answer `401` and is dropped.
    It uses the IP address and user agent only to compute the visitor hash and to recognise the device type and
-   browser family, and then forgets them.
+   browser family, and then forgets them. It also drops bots that the connector let through: a user agent with
+   neither a browser nor a system, and a visitor who loads more than 20 pages in two minutes.
 6. **The database** is one SQLite file. Every night the receiver adds up finished days and removes data older than
    the retention period.
 7. **The dashboard** reads the same file and shows the numbers. It has a password and is meant to be private.

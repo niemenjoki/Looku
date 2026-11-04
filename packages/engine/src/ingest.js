@@ -12,6 +12,11 @@ import { dayKey } from "./time.js";
 import { createVisitorHasher, randomVisitor } from "./visitor.js";
 
 const MAX_PAST_MS = 24 * 60 * 60 * 1000;
+// A visitor who loads more pages than this within the window is a bot that
+// passes as a browser: its page views and events are removed, and later ones
+// on the same day are not stored.
+export const BURST_PAGES = 20;
+export const BURST_MS = 2 * 60 * 1000;
 const MAX_FUTURE_MS = 5 * 60 * 1000;
 const UTM_FIELDS = [
   "utm_source",
@@ -70,6 +75,19 @@ export function createIngest(db) {
     `INSERT INTO engagement (site_id, ts, day, path, dwell_ms, max_scroll_pct)
      VALUES (?, ?, ?, ?, ?, ?)`,
   );
+  const isBotVisitor = db.prepare(
+    "SELECT 1 FROM bot_visitors WHERE site_id = ? AND visitor_hash = ?",
+  );
+  const countRecent = db.prepare(
+    "SELECT COUNT(*) AS n FROM pageviews WHERE site_id = ? AND visitor_hash = ? AND ts > ?",
+  );
+  const markBot = db.transaction((siteId, hash, day) => {
+    db.prepare(
+      "INSERT INTO bot_visitors (site_id, visitor_hash, day) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+    ).run(siteId, hash, day);
+    db.prepare("DELETE FROM pageviews WHERE site_id = ? AND visitor_hash = ?").run(siteId, hash);
+    db.prepare("DELETE FROM events WHERE site_id = ? AND visitor_hash = ?").run(siteId, hash);
+  });
   const setLastIngest = db.prepare(
     "INSERT INTO meta (key, value) VALUES ('last_ingest', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
   );
@@ -104,6 +122,17 @@ export function createIngest(db) {
       row[field] = cleanText(payload[field], 120);
     }
 
+    if (site.visitors !== "off") {
+      if (isBotVisitor.get(site.site_id, row.visitor_hash)) {
+        return { stored: false, reason: "bot" };
+      }
+      const since = new Date(time.getTime() - BURST_MS).toISOString();
+      if (countRecent.get(site.site_id, row.visitor_hash, since).n >= BURST_PAGES) {
+        markBot(site.site_id, row.visitor_hash, row.day);
+        return { stored: false, reason: "bot" };
+      }
+    }
+
     insertPageview.run(row);
     setLastIngest.run(now.toISOString());
     return { stored: true };
@@ -132,11 +161,15 @@ export function createIngest(db) {
     // Without a visitor hash, the time is kept only to the day, so the event
     // cannot be matched to a page view by its time.
     const hashed = Boolean(ip && userAgent) && site.visitors !== "off";
+    const hash = hashed ? visitorHash(site, ip, userAgent, now) : null;
+    if (hash && isBotVisitor.get(site.site_id, hash)) {
+      return { stored: false, reason: "bot" };
+    }
     const { lastInsertRowid } = insertEvent.run(
       site.site_id,
       hashed ? time.toISOString() : dayStart(time),
       dayKey(time, site.timezone),
-      hashed ? visitorHash(site, ip, userAgent, now) : null,
+      hash,
       normalizePath(payload.path),
       name,
       cleanText(payload.target, 200),

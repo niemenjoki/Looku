@@ -14,6 +14,8 @@ First public version.
 - `looku history:import` for page views, events and engagement from an earlier system.
 - `looku site:timezone` changes a site's time zone after `site:add`.
 - Paths are stored decoded (`/opas/lämpö`, not `/opas/l%C3%A4mp%C3%B6`); older rows are converted once.
+- The receiver drops bots that pass as browsers: a user agent with neither a browser nor a system, and a visitor
+  with more than 20 page views in two minutes (that visitor's day is removed). Stored rows are cleaned once.
 - Range `24h`, the last 24 hours up to now, also the dashboard's default; time windows with `since` and `until`.
 - Monthly email, `looku backup`, `looku all` (one process), client allowlist and HSTS for public servers.
 - Connectors: Next.js, Node.js http and Express, Cloudflare Worker example, browser collector.

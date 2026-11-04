@@ -46,7 +46,9 @@ ymmärrettäviä: jokainen niistä rakentaa yhden tämän ketjun lenkin.
    ne kaksi osoitetta, joita vastaanotin tarvitsee.
 5. **Vastaanotin tarkistaa allekirjoituksen.** Tietue, jossa ei ole kelvollista allekirjoitusta, saa vastauksen
    `401` ja hylätään. Vastaanotin käyttää IP-osoitetta ja selaimen tunnistemerkkijonoa vain kävijätiivisteen
-   laskemiseen sekä laitetyypin ja selainperheen tunnistamiseen, ja unohtaa ne sitten.
+   laskemiseen sekä laitetyypin ja selainperheen tunnistamiseen, ja unohtaa ne sitten. Se hylkää myös botit, jotka
+   pääsivät liittimen ohi: tunnisteen, josta ei löydy selainta eikä järjestelmää, ja kävijän, joka lataa yli 20 sivua
+   kahdessa minuutissa.
 6. **Tietokanta** on yksi SQLite-tiedosto. Joka yö vastaanotin laskee päättyneiden päivien yhteenvedot ja poistaa
    säilytysaikaa vanhemmat tiedot.
 7. **Kojelauta** lukee samaa tiedostoa ja näyttää luvut. Siinä on salasana, ja se on tarkoitettu yksityiseksi.

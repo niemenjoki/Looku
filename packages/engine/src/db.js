@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 
 import decodeStoredPaths from "./migrations/007_decoded_paths.js";
+import removeBots from "./migrations/008_bot_rules.js";
 
 const MIGRATIONS_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -14,6 +15,7 @@ const MIGRATIONS_DIR = path.join(
 // Migrations that need code instead of SQL, run in name order with the SQL files.
 const CODE_MIGRATIONS = {
   "007_decoded_paths.js": decodeStoredPaths,
+  "008_bot_rules.js": removeBots,
 };
 
 export function openDatabase(file, { readonly = false } = {}) {

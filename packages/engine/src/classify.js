@@ -1,8 +1,14 @@
 export const BOT_USER_AGENT_PATTERN =
   /bot|crawl|spider|slurp|preview|monitor|headless|lighthouse|pagespeed|facebookexternalhit|embedly|curl|wget|python|httpclient|okhttp|axios|node-fetch|go-http|java\//i;
 
+// A user agent that names neither a known browser nor an operating system is
+// not a browser, whatever it calls itself.
 export function isBot(userAgent) {
-  return !userAgent || BOT_USER_AGENT_PATTERN.test(userAgent);
+  return (
+    !userAgent ||
+    BOT_USER_AGENT_PATTERN.test(userAgent) ||
+    (browserFamily(userAgent) === "Other" && osFamily(userAgent) === "Other")
+  );
 }
 
 export function deviceType(userAgent) {
