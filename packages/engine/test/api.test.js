@@ -139,6 +139,17 @@ test("settings and keys need admin; read keys cannot change anything", async (t)
   assert.equal((await put(admin, { page_groups: [{ name: "x", prefix: "ei-kauttaviivaa" }] })).status, 400);
   assert.equal((await put(admin, config)).status, 200);
 
+  // The opt-out page: a full http(s) address, shown in the site list for the dashboard.
+  assert.equal((await put(admin, { ...config, opt_out_url: "/pois" })).status, 400);
+  assert.equal((await put(admin, { ...config, opt_out_url: "javascript:alert(1)" })).status, 400);
+  const saved = await put(admin, { ...config, opt_out_url: " https://www.lieromaa.fi/oma-pois " });
+  assert.equal((await saved.json()).data.opt_out_url, "https://www.lieromaa.fi/oma-pois");
+  const listed = await (await fetch(`${base}/api/v1/sites`, bearer(admin))).json();
+  assert.equal(listed.data.find((s) => s.id === "lieromaa").opt_out_url, "https://www.lieromaa.fi/oma-pois");
+  assert.equal((await put(admin, config)).status, 200);
+  const cleared = await (await fetch(`${base}/api/v1/sites`, bearer(admin))).json();
+  assert.equal(cleared.data.find((s) => s.id === "lieromaa").opt_out_url, null);
+
   const groups = await (await fetch(`${base}/api/v1/sites/lieromaa/breakdown/page_group?range=7d`, bearer(read))).json();
   assert.deepEqual(groups.data.rows.map((r) => [r.value, r.pageviews]), [["", 1], ["Kauppa", 1], ["Oppaat", 1]]);
 

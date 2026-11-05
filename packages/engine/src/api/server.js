@@ -163,7 +163,7 @@ export function createApiServer(
   const cookieName = secureCookie ? `__Host-${SESSION_COOKIE}` : SESSION_COOKIE;
 
   const getSite = db.prepare("SELECT * FROM sites WHERE site_id = ?");
-  const allSites = db.prepare("SELECT site_id, name, domain, timezone, modules_json, visitors FROM sites ORDER BY site_id");
+  const allSites = db.prepare("SELECT site_id, name, domain, timezone, modules_json, visitors, config_json FROM sites ORDER BY site_id");
   const lastIngest = db.prepare("SELECT MAX(ts) AS ts FROM pageviews");
   const touchToken = writeDb.prepare(
     "UPDATE api_tokens SET last_used_day = ? WHERE id = ? AND (last_used_day IS NULL OR last_used_day <> ?)",
@@ -386,6 +386,7 @@ export function createApiServer(
           today: dayKey(now(), site.timezone),
           modules: JSON.parse(site.modules_json || "[]"),
           visitors: site.visitors,
+          opt_out_url: parseConfig(site.config_json).opt_out_url || null,
         }));
       sendJson(res, 200, { data: sites });
       return;

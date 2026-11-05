@@ -71,6 +71,7 @@ export function openApiDocument(version) {
             language: { type: "string", enum: ["", "fi", "en"] },
             page_groups: { type: "array", items: { type: "object", properties: { name: { type: "string" }, prefix: { type: "string" } } } },
             sections: { type: ["array", "null"], items: { type: "string" } },
+            opt_out_url: { type: "string", description: "The site's own page that sets its opt-out cookie (full http or https address, or empty). The dashboard links to it." },
           },
         },
       },

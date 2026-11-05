@@ -165,10 +165,54 @@ Pass options as the third argument: `trackPageview(request, event, { excludePath
 | Option | Default | What |
 |---|---|---|
 | `excludePaths` | `[]` | paths not counted; a text path is excluded with everything under it (`"/admin"` also excludes `/admin/users`), and a regular expression (`/^\/draft-/`) is tested against the path |
-| `optOutCookie` | none | `{ name: "looku_optout", value: "1" }`: a browser that has this cookie with this value is not counted, for example your own, so that you do not count yourself. Set the cookie in your browser's developer tools or with a page of your own. |
+| `optOutCookie` | none | `{ name: "looku_optout", value: "1" }`: a browser that has this cookie with this value is not counted, for example your own, so that you do not count yourself. See [Leave out your own visits](#leave-out-your-own-visits). |
 | `respectDoNotTrack` | `true` | skip visitors who send Do Not Track or Global Privacy Control |
 | `requireAcceptLanguage` | `true` | skip requests without the `Accept-Language` header, which real browsers always send and many bots do not |
 | `enabled` | production only | `true` or `false` to override |
+
+## Leave out your own visits
+
+Your own visits would make the numbers look busier than they are. The connector skips a browser that has an opt-out
+cookie, and a page on your own site sets that cookie with one tap.
+
+<Steps>
+
+1. **Add the page.** With the App Router, a route handler is enough. Pick a path that is hard to guess, so that
+   visitors do not find it by chance:
+
+   ```js
+   // app/looku-off-7h3k/route.js
+   export function GET() {
+     return new Response("Your visits from this browser are no longer counted.", {
+       headers: {
+         "Content-Type": "text/plain; charset=utf-8",
+         "Set-Cookie": "looku_optout=1; Path=/; Max-Age=34560000; SameSite=Lax; Secure; HttpOnly",
+       },
+     });
+   }
+   ```
+
+   (With the Pages Router, an API route does the same with `res.setHeader("Set-Cookie", …)`.)
+
+2. **Tell the connector about the cookie,** and leave the page itself out:
+
+   ```js
+   trackPageview(request, event, {
+     optOutCookie: { name: "looku_optout", value: "1" },
+     excludePaths: ["/looku-off-7h3k"],
+   });
+   ```
+
+3. **Deploy,** then open the page once in every browser you use, for example on your phone and your laptop.
+
+4. **Put the page in the dashboard.** In Looku's **Settings**, under **Leave out your own visits**, enter the full
+   address (`https://example.com/looku-off-7h3k`) and select **Save**. The bottom of the dashboard's front page then
+   has a link to the page for every site that has one, so on a new phone you open the dashboard and tap the link.
+
+</Steps>
+
+The cookie belongs to one browser. A private window forgets it, and browsers keep it for at most about 400 days, so
+open the link again after that or after clearing your cookies. The link is shown only to you when you are logged in.
 
 ## Good to know
 

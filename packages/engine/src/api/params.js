@@ -65,6 +65,7 @@ export function parseConfig(json) {
     page_groups: Array.isArray(value.page_groups) ? value.page_groups : [],
     sections: Array.isArray(value.sections) ? value.sections : null,
     shop: value.shop && typeof value.shop === "object" ? value.shop : {},
+    opt_out_url: typeof value.opt_out_url === "string" ? value.opt_out_url : "",
   };
 }
 
@@ -76,7 +77,7 @@ export function validateConfig(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new ReportError("The settings must be a JSON object.");
   }
-  const config = { language: "", page_groups: [], sections: null, shop: {} };
+  const config = { language: "", page_groups: [], sections: null, shop: {}, opt_out_url: "" };
 
   if (input.language !== undefined && input.language !== "") {
     if (!["fi", "en"].includes(input.language)) {
@@ -124,6 +125,21 @@ export function validateConfig(input) {
         config.shop[key] = value;
       }
     }
+  }
+  // The site's own page that sets its opt-out cookie, linked from the dashboard so the
+  // owner can leave out a phone or another browser with one tap.
+  if (input.opt_out_url !== undefined && input.opt_out_url !== null && String(input.opt_out_url).trim() !== "") {
+    const value = String(input.opt_out_url).trim();
+    let url = null;
+    try {
+      url = new URL(value);
+    } catch {
+      url = null;
+    }
+    if (!url || !["https:", "http:"].includes(url.protocol) || value.length > 500) {
+      throw new ReportError("opt_out_url must be a full http or https address (max 500 characters).");
+    }
+    config.opt_out_url = url.href;
   }
   return config;
 }

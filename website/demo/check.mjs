@@ -82,6 +82,17 @@ for (const lang of ["en", "fi"]) {
     if (/error|virhe/i.test(await page.locator("main").innerText())) problems.push(`${lang} ${hash}: error text`);
     await page.screenshot({ path: `/out/${hash}-${lang}.png`, fullPage: true });
   }
+
+  // Opt-out page: saved in the settings, linked at the bottom of the front page.
+  await page.locator("main input[type=url]").fill("https://shop.example/looku-off");
+  await page.locator("main button.primary").first().click();
+  await page.waitForTimeout(800);
+  await page.locator('header nav a[href="#/"]').click();
+  await page.waitForSelector("main .optout a", { timeout: 20000 });
+  const optOut = await page.locator("main .optout a").first().getAttribute("href");
+  if (optOut !== "https://shop.example/looku-off") problems.push(`${lang}: opt-out link ${optOut}`);
+  console.log(`${lang} opt-out: ${await page.locator("main .optout").innerText()}`);
+  await page.screenshot({ path: `/out/optout-${lang}.png`, fullPage: true });
   await context.close();
 }
 await browser.close();

@@ -168,10 +168,55 @@ Anna valinnat kolmantena argumenttina: `trackPageview(request, event, { excludeP
 | Valinta | Oletus | Mitä tekee |
 |---|---|---|
 | `excludePaths` | `[]` | polut, joita ei lasketa. Tekstinä annettu polku jätetään pois kaikkine alapolkuineen (`"/admin"` jättää pois myös polun `/admin/users`), ja säännöllistä lauseketta (`/^\/draft-/`) verrataan polkuun |
-| `optOutCookie` | ei mitään | `{ name: "looku_optout", value: "1" }`: selainta, jolla on tämä eväste tällä arvolla, ei lasketa. Esimerkiksi omasi, jotta et laske itseäsi. Aseta eväste selaimesi kehittäjätyökaluilla tai omalla sivulla. |
+| `optOutCookie` | ei mitään | `{ name: "looku_optout", value: "1" }`: selainta, jolla on tämä eväste tällä arvolla, ei lasketa. Esimerkiksi omasi, jotta et laske itseäsi. Katso [Omat käynnit pois](#omat-käynnit-pois). |
 | `respectDoNotTrack` | `true` | ohittaa kävijät, jotka lähettävät Do Not Track- tai Global Privacy Control -signaalin |
 | `requireAcceptLanguage` | `true` | ohittaa pyynnöt, joissa ei ole `Accept-Language`-otsaketta. Oikeat selaimet lähettävät sen aina, monet botit eivät |
 | `enabled` | vain tuotannossa | `true` tai `false` ohittaa oletuksen |
+
+## Omat käynnit pois
+
+Omat käyntisi saisivat luvut näyttämään todellista suuremmilta. Liitin ohittaa selaimen, jolla on opt-out-eväste, ja
+sivustosi oma sivu asettaa evästeen yhdellä napautuksella.
+
+<Steps>
+
+1. **Lisää sivu.** App Routerissa riittää reitinkäsittelijä. Valitse polku, jota on vaikea arvata, jotta kävijät eivät
+   osu siihen vahingossa:
+
+   ```js
+   // app/looku-pois-7h3k/route.js
+   export function GET() {
+     return new Response("Tämän selaimen käyntejä ei enää lasketa.", {
+       headers: {
+         "Content-Type": "text/plain; charset=utf-8",
+         "Set-Cookie": "looku_optout=1; Path=/; Max-Age=34560000; SameSite=Lax; Secure; HttpOnly",
+       },
+     });
+   }
+   ```
+
+   (Pages Routerissa sama onnistuu API-reitillä: `res.setHeader("Set-Cookie", …)`.)
+
+2. **Kerro liittimelle eväste,** ja jätä itse sivu pois:
+
+   ```js
+   trackPageview(request, event, {
+     optOutCookie: { name: "looku_optout", value: "1" },
+     excludePaths: ["/looku-pois-7h3k"],
+   });
+   ```
+
+3. **Julkaise,** ja avaa sivu kerran jokaisella käyttämälläsi selaimella, esimerkiksi puhelimella ja kannettavalla.
+
+4. **Lisää sivu kojelautaan.** Lookun **Asetukset**-sivulla, kohdassa **Omat käynnit pois**, kirjoita koko osoite
+   (`https://example.com/looku-pois-7h3k`) ja valitse **Tallenna**. Kojelaudan etusivun alareunassa on sen jälkeen linkki
+   jokaisen sivuston sivulle, jolla sellainen on. Uudella puhelimella avaat kojelaudan ja napautat linkkiä.
+
+</Steps>
+
+Eväste kuuluu yhdelle selaimelle. Yksityinen ikkuna unohtaa sen, ja selaimet säilyttävät sen enintään noin 400
+päivää, joten avaa linkki uudelleen sen jälkeen tai kun olet tyhjentänyt evästeet. Linkki näkyy vain sinulle, kun
+olet kirjautunut.
 
 ## Hyvä tietää
 

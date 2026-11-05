@@ -24,6 +24,8 @@ First public version.
 - Modules: basic, shop (orders, purchase path, best sellers), campaigns, content (reading time, scroll, rising pages).
 - Dashboard in English and Finnish, light and dark, with a compact view and settings. Default range: the last
   24 hours.
+- Links to the sites' own opt-out pages at the bottom of the dashboard, so you can leave out your own phone with
+  one tap.
 - Monthly review in plain sentences, in the dashboard and by email.
 - Read API `/api/v1` with an OpenAPI description, read and admin keys, CSV export, filters, hourly series, and time
   windows with `since` and `until`.

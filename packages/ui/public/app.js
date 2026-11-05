@@ -570,7 +570,17 @@ async function dashboardView(container, token) {
       h("div", { class: "va-grid" }, sections.map((section) =>
         h("section", { class: `m-${section.module}` },
           h("div", { class: "va-h" }, h("h3", {}, L.sections[section.id]), csv(csvReport[section.id]), h("span", { class: "tag" }, L.modules[section.module])),
-          bodies[section.id]())))));
+          bodies[section.id]()))),
+      optOutLinks()));
+}
+
+// Links to the sites' own opt-out pages, so the owner can leave out a phone with one tap.
+// Only in the logged-in dashboard; the link opens the site itself, which sets its cookie.
+function optOutLinks() {
+  const sites = state.me?.login ? state.sites.filter((x) => x.opt_out_url) : [];
+  if (!sites.length) return null;
+  return h("p", { class: "note optout" }, L.optOutLinks, " ",
+    sites.map((x, i) => [i ? " · " : "", h("a", { href: x.opt_out_url, target: "_blank", rel: "noopener noreferrer" }, x.domain)]));
 }
 
 function lastCompleteMonth() {
@@ -650,7 +660,7 @@ async function settingsView(container, token) {
   const admin = state.me?.scope === "admin";
   const tokens = admin ? (await api("/tokens")).data : [];
   if (token !== renderToken) return;
-  const config = state.config || { language: "", page_groups: [], sections: null, shop: {} };
+  const config = state.config || { language: "", page_groups: [], sections: null, shop: {}, opt_out_url: "" };
   const enabled = SECTIONS.filter((x) => state.site.modules.includes(x.module));
 
   // Your view (this browser only).
@@ -691,6 +701,8 @@ async function settingsView(container, token) {
         h("input", { type: "text", value: shop[key] || "", placeholder: example, "aria-label": S.shopPaths[key], oninput: (e) => { shop[key] = e.target.value; } })))]
     : [];
 
+  const optOutInput = h("input", { type: "url", value: config.opt_out_url || "", placeholder: `https://${state.site.domain}/…`, "aria-label": S.optOutUrl, maxlength: 500 });
+
   const languageSelect = h("select", { "aria-label": S.siteLanguage },
     [["", S.languageAuto], ["fi", "Suomi"], ["en", "English"]].map(([v, t]) => h("option", { value: v, selected: config.language === v }, t)));
 
@@ -701,8 +713,10 @@ async function settingsView(container, token) {
         page_groups: groups.filter((g) => g.name.trim() || g.prefix.trim()),
         sections: sectionRows.filter((row) => row.on).map((row) => row.id),
         shop,
+        opt_out_url: optOutInput.value,
       };
       state.config = (await api(siteUrl("/config"), { method: "PUT", body })).data;
+      state.site.opt_out_url = state.config.opt_out_url || null;
       state.filters = {};
       status.textContent = S.saved;
       status.className = "note";
@@ -720,6 +734,8 @@ async function settingsView(container, token) {
     h("div", { class: "row" }, h("button", { class: "btn", type: "button", onclick: () => { groups.push({ name: "", prefix: "/" }); drawGroups(); } }, S.add)),
     shopFields,
     h("h2", {}, S.sections), h("p", { class: "note" }, S.sectionsNote), sectionList,
+    h("h2", {}, S.optOut), h("p", { class: "note" }, S.optOutNote),
+    h("div", { class: "row" }, h("span", { class: "muted" }, S.optOutUrl), optOutInput),
     admin ? h("div", { class: "row" }, h("button", { class: "btn primary", type: "button", onclick: saveSite }, S.save), status) : null);
 
   // API keys.
