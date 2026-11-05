@@ -24,11 +24,21 @@ First public version.
 - Modules: basic, shop (orders, purchase path, best sellers), campaigns, content (reading time, scroll, rising pages).
 - Dashboard in English and Finnish, light and dark, with a compact view and settings. Default range: the last
   24 hours.
+- Charts can be read point by point with the mouse, a finger or the arrow keys; an incomplete period is drawn dashed.
+  Small changes are shown as counts, not percentages.
+- Tap a row (a page, source, campaign, device or country) to filter the whole dashboard by it. The range and filters
+  are kept in the address, so views can be bookmarked and Back works. **Show all** opens a card's full list with
+  search and sorting.
+- Starting views (everything, simple, blog, shop) on the first visit, and **Edit view** on the dashboard itself:
+  drag cards, hide them, choose rows, table or bars, order, width and the figures in the top row.
+- Conversion over time in a shop, as a 7-day rolling rate, and the shop's currency.
+- The header shows when the newest page view arrived; a site with none yet shows a short checklist.
+- Settings on one page with a save bar that appears when something changed.
 - Links to the sites' own opt-out pages at the bottom of the dashboard, so you can leave out your own phone with
   one tap.
 - Monthly review in plain sentences, in the dashboard and by email.
-- Read API `/api/v1` with an OpenAPI description, read and admin keys, CSV export, filters, hourly series, and time
-  windows with `since` and `until`.
+- Read API `/api/v1` with an OpenAPI description, read and admin keys, CSV export, filters (page, page group,
+  source, campaign, device, country), hourly series, and time windows with `since` and `until`.
 
 **Privacy**
 - No cookies for visitors and nothing stored on the visitor's device.

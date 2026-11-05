@@ -67,6 +67,19 @@ for (const lang of ["en", "fi"]) {
   }
   await page.screenshot({ path: `/out/after-${lang}.png` });
 
+  // Reading the chart with the mouse, and a row that filters the dashboard.
+  const plot = page.locator(".va-main .plot");
+  const box = await plot.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + 30);
+  if (!(await page.locator(".va-main .tip").isVisible())) problems.push(`${lang}: no chart readout`);
+  else console.log(`${lang} readout: ${(await page.locator(".va-main .tip").innerText()).replace(/\n/g, " | ")}`);
+  await page.locator("section[data-id=pages] a.fl").first().click();
+  await page.waitForTimeout(1500);
+  if (!page.url().includes("page=") || !(await page.locator(".chip").count())) problems.push(`${lang}: row filter did not apply`);
+  if (/error|virhe/i.test(await page.locator("main").innerText())) problems.push(`${lang} row filter: error text`);
+  await page.goBack();
+  await page.waitForTimeout(1500);
+
   // CSV download.
   const csv = page.locator("a[download]").first();
   if (await csv.count()) {
@@ -87,7 +100,7 @@ for (const lang of ["en", "fi"]) {
   await page.locator("main input[type=url]").fill("https://shop.example/looku-off");
   await page.locator("main button.primary").first().click();
   await page.waitForTimeout(800);
-  await page.locator('header nav a[href="#/"]').click();
+  await page.locator('header nav a[href^="#/"]').first().click();
   await page.waitForSelector("main .optout a", { timeout: 20000 });
   const optOut = await page.locator("main .optout a").first().getAttribute("href");
   if (optOut !== "https://shop.example/looku-off") problems.push(`${lang}: opt-out link ${optOut}`);

@@ -165,6 +165,11 @@ export function createApiServer(
   const getSite = db.prepare("SELECT * FROM sites WHERE site_id = ?");
   const allSites = db.prepare("SELECT site_id, name, domain, timezone, modules_json, visitors, config_json FROM sites ORDER BY site_id");
   const lastIngest = db.prepare("SELECT MAX(ts) AS ts FROM pageviews");
+  // The newest page view of a site: the newest day through the index, then its rows.
+  const lastPageview = db.prepare(
+    `SELECT MAX(ts) AS ts FROM pageviews
+     WHERE site_id = ? AND day = (SELECT MAX(day) FROM pageviews WHERE site_id = ?)`,
+  );
   const touchToken = writeDb.prepare(
     "UPDATE api_tokens SET last_used_day = ? WHERE id = ? AND (last_used_day IS NULL OR last_used_day <> ?)",
   );
@@ -387,6 +392,8 @@ export function createApiServer(
           modules: JSON.parse(site.modules_json || "[]"),
           visitors: site.visitors,
           opt_out_url: parseConfig(site.config_json).opt_out_url || null,
+          // Lets the dashboard tell whether the site's connector is sending.
+          last_pageview: lastPageview.get(site.site_id, site.site_id).ts,
         }));
       sendJson(res, 200, { data: sites });
       return;

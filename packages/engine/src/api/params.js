@@ -66,8 +66,20 @@ export function parseConfig(json) {
     sections: Array.isArray(value.sections) ? value.sections : null,
     shop: value.shop && typeof value.shop === "object" ? value.shop : {},
     opt_out_url: typeof value.opt_out_url === "string" ? value.opt_out_url : "",
+    hidden_sections: Array.isArray(value.hidden_sections) ? value.hidden_sections : null,
+    kpis: Array.isArray(value.kpis) ? value.kpis : null,
+    cards: value.cards && typeof value.cards === "object" && !Array.isArray(value.cards) ? value.cards : {},
+    currency: typeof value.currency === "string" ? value.currency : "",
+    preset: typeof value.preset === "string" ? value.preset : "",
   };
 }
+
+// Figures the dashboard can show in its top row.
+export const KPI_IDS = ["pageviews", "visitors", "sessions", "pages_per_session", "orders", "revenue", "conversion"];
+// Starting layouts offered on the first visit; "default" shows every section.
+export const PRESETS = ["default", "simple", "blog", "shop"];
+const CARD_VIEWS = ["table", "bars"];
+const CARD_SORTS = ["pageviews", "visitors", "entries"];
 
 const SHOP_PATHS = ["product_prefix", "cart_path", "checkout_path"];
 
@@ -77,7 +89,28 @@ export function validateConfig(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new ReportError("The settings must be a JSON object.");
   }
-  const config = { language: "", page_groups: [], sections: null, shop: {}, opt_out_url: "" };
+  const config = {
+    language: "",
+    page_groups: [],
+    sections: null,
+    shop: {},
+    opt_out_url: "",
+    hidden_sections: null,
+    kpis: null,
+    cards: {},
+    currency: "",
+    preset: "",
+  };
+  const sectionList = (value, name) => {
+    if (
+      !Array.isArray(value) ||
+      value.length > 50 ||
+      !value.every((id) => typeof id === "string" && SECTION_PATTERN.test(id))
+    ) {
+      throw new ReportError(`${name} must be a list of section ids.`);
+    }
+    return [...new Set(value)];
+  };
 
   if (input.language !== undefined && input.language !== "") {
     if (!["fi", "en"].includes(input.language)) {
@@ -101,14 +134,67 @@ export function validateConfig(input) {
   }
 
   if (input.sections !== undefined && input.sections !== null) {
-    if (
-      !Array.isArray(input.sections) ||
-      input.sections.length > 50 ||
-      !input.sections.every((id) => typeof id === "string" && SECTION_PATTERN.test(id))
-    ) {
-      throw new ReportError("sections must be a list of section ids.");
+    config.sections = sectionList(input.sections, "sections");
+  }
+  // Sections hidden on purpose, so that sections added later (a new module or
+  // a new version) can be told apart and shown.
+  if (input.hidden_sections !== undefined && input.hidden_sections !== null) {
+    config.hidden_sections = sectionList(input.hidden_sections, "hidden_sections");
+  }
+
+  if (input.kpis !== undefined && input.kpis !== null) {
+    if (!Array.isArray(input.kpis) || input.kpis.length > KPI_IDS.length || !input.kpis.every((id) => KPI_IDS.includes(id))) {
+      throw new ReportError(`kpis must be a list of: ${KPI_IDS.join(", ")}.`);
     }
-    config.sections = [...new Set(input.sections)];
+    config.kpis = [...new Set(input.kpis)];
+  }
+
+  // Per-card options: rows (3-50), wide (true = two columns), view and sort.
+  if (input.cards !== undefined && input.cards !== null) {
+    if (typeof input.cards !== "object" || Array.isArray(input.cards) || Object.keys(input.cards).length > 50) {
+      throw new ReportError("cards must be an object keyed by section id.");
+    }
+    for (const [id, options] of Object.entries(input.cards)) {
+      if (!SECTION_PATTERN.test(id) || !options || typeof options !== "object" || Array.isArray(options)) {
+        throw new ReportError("cards must be an object keyed by section id.");
+      }
+      const card = {};
+      if (options.rows !== undefined && options.rows !== null) {
+        const rows = Number(options.rows);
+        if (!Number.isInteger(rows) || rows < 3 || rows > 50) {
+          throw new ReportError("cards.*.rows must be a whole number from 3 to 50.");
+        }
+        card.rows = rows;
+      }
+      if (typeof options.wide === "boolean") {
+        card.wide = options.wide;
+      }
+      if (options.view) {
+        if (!CARD_VIEWS.includes(options.view)) throw new ReportError(`cards.*.view must be ${CARD_VIEWS.join(" or ")}.`);
+        card.view = options.view;
+      }
+      if (options.sort) {
+        if (!CARD_SORTS.includes(options.sort)) throw new ReportError(`cards.*.sort must be one of ${CARD_SORTS.join(", ")}.`);
+        card.sort = options.sort;
+      }
+      if (Object.keys(card).length) {
+        config.cards[id] = card;
+      }
+    }
+  }
+
+  if (input.currency !== undefined && input.currency !== null && input.currency !== "") {
+    if (typeof input.currency !== "string" || !/^[A-Z]{3}$/.test(input.currency)) {
+      throw new ReportError("currency must be a three-letter code such as EUR, or empty.");
+    }
+    config.currency = input.currency;
+  }
+
+  if (input.preset !== undefined && input.preset !== null && input.preset !== "") {
+    if (!PRESETS.includes(input.preset)) {
+      throw new ReportError(`preset must be one of ${PRESETS.join(", ")}, or empty.`);
+    }
+    config.preset = input.preset;
   }
 
   // Shop funnel paths, e.g. product_prefix "/tuotteet/", cart_path "/ostoskori".

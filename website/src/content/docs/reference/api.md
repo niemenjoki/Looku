@@ -46,7 +46,10 @@ Paths are returned decoded, as people read them: `/opas/lämpö`, not `/opas/l%C
 | `reports/<module>/<report>` | module reports: `shop/summary`, `shop/timeseries`, `shop/funnel`, `shop/products`, `campaigns/overview`, `content/engagement`, `content/rising`. Only for modules that are on for the site (`site:modules`); otherwise the answer is `Unknown report.` |
 | `export.csv?report=…` | any of the above as CSV |
 
-`summary`, `timeseries` and `breakdown` also take filters: `page_group`, `utm_campaign`, `device`.
+`summary`, `timeseries` and `breakdown` also take filters. `page` (one page path), `page_group`, `device` and
+`country` keep the page views that match. `referrer` (a host such as `www.google.com`, empty for direct),
+`utm_source` and `utm_campaign` keep whole sessions that started with that value, so `breakdown/page?referrer=…`
+lists every page those visitors saw.
 
 Every answer has `meta` (site, time zone, period) and `data`. When `meta.sample` is `true`, the numbers come only from
 consenting visitors (reading time).
@@ -56,7 +59,7 @@ consenting visitors (reading time).
 | Path | |
 |---|---|
 | `GET /api/v1/health` | status and version, no key needed |
-| `GET /api/v1/sites` | sites this key can read |
+| `GET /api/v1/sites` | sites this key can read, with the time of each site's newest page view (`last_pageview`) |
 | `GET /api/v1/modules` | modules and their reports |
 | `GET /api/v1/me` | what the current key may do |
 | `GET`, `PUT /api/v1/sites/<site>/config` | dashboard settings of a site (`PUT` needs an admin key) |

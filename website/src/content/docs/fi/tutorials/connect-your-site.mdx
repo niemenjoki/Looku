@@ -153,18 +153,32 @@ kolmen kuukauden tiedot.
 Yläreunasta valitset ajanjakson: **24 h** (oletus, kaavio tunneittain), **7 pv**, **28 pv**, **3 kk**, **12 kk** tai
 **Oma** eli omat päivämääräsi.
 **Vertailu edelliseen** näyttää muutoksen edelliseen samanpituiseen jaksoon verrattuna, sekä prosentteina että
-kaavion katkoviivana.
+kaavion katkoviivana. Pienillä luvuilla muutos näytetään kappaleina (**+2**) prosenttien sijaan, ja alle 5 %:n
+muutokset ovat harmaita, jotta hiljainen päivä ei näytä uutiselta.
+
+Osoita kaaviota, tai napauta sitä puhelimella, niin näet kunkin tunnin tai päivän luvut. Viivan katkoviivainen pää
+tarkoittaa, että jakso on vielä kesken, joten matala viimeinen piste ei vielä ole pudotus. Valikon vieressä yläreunassa
+näkyy, milloin uusin sivunäyttö saapui. Sivusto, joka ei ole vielä lähettänyt yhtään, näyttää lukujen sijaan lyhyen
+tarkistuslistan.
 
 - **Sivunäytöt:** kuinka monta sivua avattiin.
 - **Kävijät:** kuinka monta eri ihmistä, sikäli kuin Looku pystyy sen päättelemään. Looku tunnistaa kävijän vain
   yhden päivän ajan, joten kolmena päivänä käyvä ihminen lasketaan kuukaudessa kolmesti. Tämä on hinta siitä, ettei
-  ihmisiä tunnistavaa tietoa tallenneta.
+  ihmisiä tunnistavaa tietoa tallenneta. Usean päivän jaksolla kortti näyttää myös päivän keskiarvon, ja sen vieressä
+  oleva **?** selittää tämän.
 - **Istunnot:** käynnit. Kun kävijä palaa 30 minuutin tauon jälkeen, alkaa uusi käynti.
 - **Sivua / istunto:** kuinka monta sivua käynnillä katsotaan keskimäärin.
 
-**Suodata**-valinnalla katsot kerrallaan yhtä sivuston osaa (sivuryhmää), yhtä kampanjaa tai yhtä laitetyyppiä.
-**Tunneittain** näyttää kaavion tunneittain, ja **Vie CSV** lataa luvut taulukkolaskentaa varten. Kunkin kortin
-oikeassa yläkulmassa oleva pieni merkintä (**PERUS**, **KAMPANJAT**…) kertoo, mihin moduuliin kortti kuuluu.
+**Napauta riviä suodattaaksesi sillä.** Kun napautat sivua, koko kojelauta näyttää vain sen sivun näytöt, myös
+sen, mistä sen lukijat tulivat. Lähde, kampanja, laite ja maa toimivat samoin. **Suodata**-kohdan listoista valitset
+sivuryhmän, kampanjan tai laitetyypin. Voimassa olevat suodattimet näkyvät merkkeinä: **×** poistaa yhden, ja
+selaimen Takaisin-painike peruu viimeisimmän muutoksen. Osoite säilyttää ajanjakson ja suodattimet, joten näkymän voi
+tallentaa kirjanmerkiksi. Verkkokaupan ja sisällön kortteja ei suodateta, ja ne himmennetään suodatuksen ajaksi.
+
+Kortin lopussa oleva **Näytä kaikki** avaa koko listan hakuineen ja lajitteluineen. **Tunneittain** näyttää kaavion
+tunneittain, ja **Vie CSV** lataa luvut taulukkolaskentaa varten. Kun käytössä on useampi moduuli, kunkin kortin
+oikeassa yläkulmassa oleva pieni merkintä (**PERUS**, **VERKKOKAUPPA**…) kertoo, mihin moduuliin kortti kuuluu.
+Kortit, joissa ei ole valitulla jaksolla mitään, luetellaan yhdellä rivillä alareunassa.
 
 ### Sivut ja se, mistä kävijät tulevat
 
@@ -197,8 +211,8 @@ https://example.com/products/?utm_source=newsletter&utm_campaign=autumn-sale
 ```
 
 Kampanjoiden nimet näkyvät heti perusluvuissa, **Kampanjat (UTM)** -listassa. Kampanjamoduuli lisää alla olevan
-**Kampanjat**-kortin, jossa näkyvät kunkin kampanjan käynnit, se, onko kampanja uusi vai päättynyt (**%**-sarakkeessa,
-joka muuten näyttää muutoksen), ja verkkokaupassa sen tilaukset. Käyttöönotto:
+**Kampanjat**-kortin, jossa näkyvät kunkin kampanjan käynnit, se, onko kampanja uusi vai päättynyt
+(**Muutos**-sarakkeessa, joka muuten näyttää muutoksen), ja verkkokaupassa sen tilaukset. Käyttöönotto:
 [Mitä Lookulla voi tehdä?](/looku/fi/use-cases/#2-mikä-uutiskirje-tai-julkaisu-tuo-kävijöitä).
 
 <Screen name="campaigns" alt="Kampanjat käynteineen, tiloineen ja tilauksineen." />
@@ -211,14 +225,32 @@ ensimmäisenä päivänä.
 
 <Screen name="report" alt="Kuukausikatsaus: otsikko, kappale arkikielellä, tärkeimmät luvut ja kaavio." />
 
+### Oma näkymä
+
+Ensimmäisellä käynnillä kojelauta tarjoaa aloitusnäkymiä: **Kaikki**, **Yksinkertainen** (sivut, lähteet ja
+laitteet), **Blogi** (sivut, lukeminen ja lähteet) ja verkkokauppamoduulin kanssa **Kauppa** (myynti, konversio ja
+ostopolku ensin). Valitse yksi tai ohita valinta valitsemalla **Kaikki**. Muuta ei tarvitse asettaa.
+
+Kojelaudan **Muokkaa näkymää** muuttaa näkymää paikan päällä, ja näet luvut muokatessasi:
+
+- raahaa korttia kahvasta **⠿** tai siirrä sitä nuolilla,
+- piilota kortti merkillä **×** ja palauta se kohdasta **Piilotetut**,
+- valitse rivien määrä, taulukko tai palkit, järjestys (näytöt, kävijät tai istunnot) ja se, onko kortti leveä,
+- valitse ylärivin luvut, esimerkiksi tilaukset ja konversio kävijöiden rinnalle.
+
+**Tallenna näkymä** säilyttää näkymän kaikille ja kaikilla laitteilla, ja **Palauta oletukset** palaa alkuun.
+Verkkokaupan **Konversio, 7 pv liukuva** -kortti näyttää jokaisena päivänä edellisten seitsemän päivän tilaukset
+jaettuna saman ajan istunnoilla, joten yksittäinen tilaus hiljaisena päivänä ei heilauta käyrää.
+
 ### Asetukset
 
-**Asetuksissa** kohta **Oma näkymä** asettaa teeman ja kielen vain tälle selaimelle, ja sivuston oletuskieli
-asetetaan kaikille. Voit ryhmitellä sivuja, esimerkiksi kaikki `/products/`-sivut ryhmään "Tuotteet", jotta näet,
-miten kukin sivuston osa pärjää, ja valita, mitkä kortit kojelauta näyttää ja missä järjestyksessä. Verkkokaupassa
-asetat täällä myös ostopolun sivut.
+**Asetuksissa** kohta **Tämä selain** asettaa teeman ja kielen vain tälle selaimelle, ja ne vaihtuvat heti.
+**Sivuston mukaan** käyttää sivuston oletuskieltä, joka asetetaan alempana kaikille. Voit ryhmitellä sivuja,
+esimerkiksi kaikki `/products/`-sivut ryhmään "Tuotteet", jotta näet, miten kukin sivuston osa pärjää. Verkkokaupassa
+asetat täällä myös ostopolun sivut ja valuutan. Kun muutat sivuston asetusta, näytön alareunaan tulee palkki, jossa on
+**Tallenna**, ja sivulta poistuminen tallentamattomin muutoksin kysyy ensin.
 
-<Screen name="settings" alt="Asetukset: teema ja kieli, sivuryhmät ja ostopolku." />
+<Screen name="settings" alt="Asetukset: tämän selaimen teema ja kieli, sivuston kieli, valuutta ja opt-out-sivu, sivuryhmät ja ostopolku." />
 
 ## Mihin seuraavaksi
 

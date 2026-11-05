@@ -47,7 +47,10 @@ Polut palautetaan dekoodattuina eli luettavassa muodossa: `/opas/lämpö` eikä 
 | `reports/<module>/<report>` | moduulien raportit: `shop/summary`, `shop/timeseries`, `shop/funnel`, `shop/products`, `campaigns/overview`, `content/engagement`, `content/rising`. Vain sivustolla päällä oleville moduuleille (`site:modules`); muuten vastaus on `Unknown report.` |
 | `export.csv?report=…` | mikä tahansa yllä olevista CSV-muodossa |
 
-`summary`, `timeseries` ja `breakdown` hyväksyvät myös suodattimet: `page_group`, `utm_campaign`, `device`.
+`summary`, `timeseries` ja `breakdown` hyväksyvät myös suodattimet. `page` (yhden sivun polku), `page_group`,
+`device` ja `country` rajaavat sivunäytöt, jotka täsmäävät. `referrer` (palvelimen nimi, kuten `www.google.com`,
+tyhjä suorille käynneille), `utm_source` ja `utm_campaign` rajaavat kokonaiset istunnot, jotka alkoivat sillä
+arvolla, joten `breakdown/page?referrer=…` listaa kaikki sivut, joita nämä kävijät katsoivat.
 
 Jokaisessa vastauksessa on `meta` (sivusto, aikavyöhyke, ajanjakso) ja `data`. Kun `meta.sample` on `true`, luvut
 tulevat vain suostumuksen antaneilta kävijöiltä (lukuaika).
@@ -57,7 +60,7 @@ tulevat vain suostumuksen antaneilta kävijöiltä (lukuaika).
 | Polku | |
 |---|---|
 | `GET /api/v1/health` | tila ja versio, avainta ei tarvita |
-| `GET /api/v1/sites` | sivustot, joita tällä avaimella voi lukea |
+| `GET /api/v1/sites` | sivustot, joita tällä avaimella voi lukea, ja kunkin uusimman sivunäytön aika (`last_pageview`) |
 | `GET /api/v1/modules` | moduulit ja niiden raportit |
 | `GET /api/v1/me` | mitä nykyinen avain saa tehdä |
 | `GET`, `PUT /api/v1/sites/<site>/config` | sivuston kojelaudan asetukset (`PUT` vaatii admin-avaimen) |

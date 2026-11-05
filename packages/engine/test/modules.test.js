@@ -176,6 +176,70 @@ test("filters: campaign by session, page group by page, device", () => {
   assert.deepEqual(summary(db, "lieromaa", WEEK, { filters: parseFilters({ utm_campaign: "syksy" }, config) }).pageviews, 4);
 });
 
+test("filters: page by page; referrer and UTM source by session; country", () => {
+  const context = seed();
+  const { db } = context;
+  const ingest = createIngest(db);
+  // Visitor C came from a search engine with a newsletter source and read two guides.
+  const view = (iso, path, extra = {}) =>
+    ingest(context.site, { type: "pageview", ts: iso, path, ip: "203.0.113.4", ua: CHROME_UA, ...extra }, new Date(iso));
+  view("2026-11-04T08:00:00Z", "/oppaat/kompostointi", { referrer: "https://www.google.com/haku", utm_source: "uutiskirje" });
+  view("2026-11-04T08:02:00Z", "/oppaat/matokasvatus");
+
+  // A page filter keeps the page views of that page only.
+  const page = summary(db, "lieromaa", WEEK, { filters: parseFilters({ page: "/oppaat/kompostointi" }) });
+  assert.equal(page.pageviews, 3);
+  // Where the readers of one page came from.
+  const sources = breakdown(db, "lieromaa", "referrer", WEEK, { filters: parseFilters({ page: "/oppaat/kompostointi" }) });
+  const search = sources.rows.find((row) => row.value !== "").value;
+  assert.deepEqual(sources.rows.map((row) => [row.value, row.pageviews]), [["", 2], [search, 1]]);
+
+  // A referrer or UTM source filter keeps whole sessions that started from it.
+  for (const filters of [{ referrer: search }, { utm_source: "uutiskirje" }]) {
+    const pages = breakdown(db, "lieromaa", "page", WEEK, { filters: parseFilters(filters) });
+    assert.deepEqual(pages.rows.map((row) => [row.value, row.pageviews]), [["/oppaat/kompostointi", 1], ["/oppaat/matokasvatus", 1]]);
+  }
+  // Empty = direct, i.e. the other 7 page views of the week.
+  assert.equal(summary(db, "lieromaa", WEEK, { filters: parseFilters({ referrer: "" }) }).pageviews, 7);
+
+  // Country: none is stored in the test data.
+  assert.equal(summary(db, "lieromaa", WEEK, { filters: parseFilters({ country: "" }) }).pageviews, 9);
+  assert.equal(summary(db, "lieromaa", WEEK, { filters: parseFilters({ country: "FI" }) }).pageviews, 0);
+});
+
+test("dashboard layout settings are validated", () => {
+  const config = validateConfig({
+    sections: ["pages", "shop_conversion"],
+    hidden_sections: ["exits"],
+    kpis: ["visitors", "orders", "conversion"],
+    cards: { pages: { rows: 15, wide: true, view: "bars", sort: "visitors" }, shop_conversion: { wide: false }, devices: {} },
+    currency: "EUR",
+    preset: "shop",
+  });
+  assert.deepEqual(config.hidden_sections, ["exits"]);
+  assert.deepEqual(config.kpis, ["visitors", "orders", "conversion"]);
+  // Empty card options are dropped; wide: false is kept, so a card wide by default can be narrow.
+  assert.deepEqual(config.cards, { pages: { rows: 15, wide: true, view: "bars", sort: "visitors" }, shop_conversion: { wide: false } });
+  assert.equal(config.currency, "EUR");
+  assert.equal(config.preset, "shop");
+  const defaults = validateConfig({});
+  assert.deepEqual([defaults.hidden_sections, defaults.kpis, defaults.cards, defaults.currency, defaults.preset], [null, null, {}, "", ""]);
+
+  for (const bad of [
+    { kpis: ["bounce_rate"] },
+    { hidden_sections: ["no spaces"] },
+    { cards: { pages: { rows: 2 } } },
+    { cards: { pages: { rows: 51 } } },
+    { cards: { pages: { view: "pie" } } },
+    { cards: { pages: { sort: "exits" } } },
+    { cards: ["pages"] },
+    { currency: "euro" },
+    { preset: "fancy" },
+  ]) {
+    assert.throws(() => validateConfig(bad), undefined, JSON.stringify(bad));
+  }
+});
+
 test("hourly series has every local hour, sessions in their first hour", () => {
   const { db } = seed();
   const result = timeseries(db, SITE, { from: "2026-11-03", to: "2026-11-03" }, { interval: "hour" });

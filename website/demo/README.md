@@ -11,8 +11,8 @@ Settings can be changed, but the changes stay in the browser tab.
   the repository's own packages: run `npm install` in the root first. `DEMO_NOW=2026-11-04T12:00:00Z` makes the same
   data every time.
 - The demo's clock stops when the data was made, so "the last 24 hours" always has data.
-- `check.mjs` opens the built demo in Chromium and goes through the ranges, filters, CSV export, monthly review and
-  settings. It runs in the Playwright image from `website/screenshots`:
+- `check.mjs` opens the built demo in Chromium and goes through the ranges, filters, chart readout, row filters, CSV
+  export, monthly review and settings. It runs in the Playwright image from `website/screenshots`:
 
   ```bash
   docker build -t looku-pw:local -f screenshots/Dockerfile.pw screenshots

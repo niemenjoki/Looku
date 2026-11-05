@@ -98,3 +98,7 @@ In the dashboard, open **Settings** and set the shop's paths: where product page
 example `/products/`, `/cart`, `/checkout`). The purchase path counts visitors who reached each step on the same day.
 It does not work if visitors are turned off for the site (`site:visitors <site> off`), because then page views
 cannot be linked into visits.
+
+The same settings page has the shop's **Currency**, which the dashboard uses for sales. The **Conversion, 7-day
+rolling** card shows conversion over time: at each day, the orders of the previous seven days divided by their
+sessions. To put orders and conversion in the top row of the dashboard, choose the **Shop** view, or **Edit view**.

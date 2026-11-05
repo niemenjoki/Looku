@@ -86,6 +86,7 @@ export async function createDemoApi({ initSqlJs, base, fetch }) {
           id: site.site_id, name: site.name, domain: site.domain, timezone: site.timezone,
           today: dayKey(now(), site.timezone), modules: JSON.parse(site.modules_json || "[]"), visitors: site.visitors,
           opt_out_url: parseConfig(site.config_json).opt_out_url || null,
+          last_pageview: db.prepare("SELECT MAX(ts) AS ts FROM pageviews WHERE site_id = ? AND ts <= ?").get(site.site_id, info.now).ts,
         })),
       };
     }

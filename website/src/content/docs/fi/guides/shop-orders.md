@@ -101,3 +101,8 @@ Avaa kojelaudassa **Asetukset** ja aseta verkkokaupan polut: missä tuotesivut, 
 `/products/`, `/cart`, `/checkout`). Ostopolku laskee kävijät, jotka pääsivät kuhunkin vaiheeseen saman päivän
 aikana. Se ei toimi, jos kävijät on kytketty sivustolta pois (`site:visitors <sivusto> off`), koska silloin
 sivunäyttöjä ei voi yhdistää käynneiksi.
+
+Samalla asetussivulla on verkkokaupan **Valuutta**, jota kojelauta käyttää myynnissä. **Konversio, 7 pv liukuva**
+-kortti näyttää konversion ajan mittaan: jokaisena päivänä edellisten seitsemän päivän tilaukset jaettuna niiden
+istunnoilla. Saat tilaukset ja konversion kojelaudan yläriville valitsemalla **Kauppa**-näkymän tai kohdan
+**Muokkaa näkymää**.

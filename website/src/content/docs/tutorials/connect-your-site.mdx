@@ -148,18 +148,31 @@ data.
 
 At the top you choose the period: the last 24 hours (the default, with the chart by the hour), 7 days, 28 days, 3 or
 12 months, or your own dates. **Compare to previous** shows
-the change against the period before, both as percentages and as the dashed line in the chart.
+the change against the period before, both as percentages and as the dashed line in the chart. With small numbers
+the change is shown as a count (**+2**) instead of a percentage, and changes under 5 % are grey, so that a quiet day
+does not look like news.
+
+Point at the chart, or tap it on a phone, to see the numbers of each hour or day. A dashed end of a line means the
+period is not over yet, so a low last point is not yet a drop. Next to the menu, the header tells when the newest
+page view arrived; a site that has not sent any yet shows a short checklist instead of the numbers.
 
 - **Page views:** how many pages were opened.
 - **Visitors:** how many different people, as far as Looku can tell. Looku recognises a visitor for one day only, so
   someone who comes on three days counts three times in a month. This is the price of not storing anything that
-  identifies people.
+  identifies people. Over several days the card also shows the daily average, and **?** next to it explains this.
 - **Sessions:** visits. A visitor who comes back after a break of 30 minutes starts a new session.
 - **Pages / session:** how many pages a visit has on average.
 
-With **Filter** you look at one part of the site (a page group), one campaign or one kind of device at a time.
-**Hourly** shows the chart by the hour, and **Export CSV** downloads the numbers for a spreadsheet. The small label
-at the top right of each card (**CORE**, **CAMPAIGNS**…) tells which module it belongs to.
+**Tap a row to filter by it.** Tap a page, and the whole dashboard shows only that page's views, including where
+its readers came from. A source, a campaign, a device or a country works the same way. The lists under **Filter**
+choose a page group, a campaign or a kind of device. Active filters are shown as chips: **×** removes one, and the
+browser's Back button undoes the last change. The address keeps the period and the filters, so you can bookmark a
+view. Shop and content cards are not filtered and are dimmed while a filter is on.
+
+**Show all** at the end of a card opens the whole list with search and sorting. **Hourly** shows the chart by the
+hour, and **Export CSV** downloads the numbers for a spreadsheet. When more than one module is on, the small label at
+the top right of each card (**CORE**, **SHOP**…) tells which module it belongs to. Cards with nothing in the chosen
+period are listed on one line at the bottom.
 
 ### Pages and where visitors come from
 
@@ -190,8 +203,8 @@ https://example.com/products/?utm_source=newsletter&utm_campaign=autumn-sale
 ```
 
 The campaign names appear in the basic numbers right away, in the **Campaigns (UTM)** list. The campaigns module
-adds the **Campaigns** card below, with each campaign's visits, whether it is new or has ended (in the **%** column,
-which otherwise shows the change), and in a shop its orders. To turn it on, see
+adds the **Campaigns** card below, with each campaign's visits, whether it is new or has ended (in the **Change**
+column, which otherwise shows the change), and in a shop its orders. To turn it on, see
 [What you can do with Looku](/looku/use-cases/#2-which-newsletter-or-post-brings-visitors).
 
 <Screen name="campaigns" alt="Campaigns with their sessions, status and orders." />
@@ -204,14 +217,32 @@ of each month.
 
 <Screen name="report" alt="The monthly review: a headline, a paragraph in plain words, key numbers and a chart." />
 
+### Make it your own
+
+On the first visit the dashboard offers starting views: **Everything**, **Simple** (pages, sources and devices),
+**Blog** (pages, reading and sources) and, with the shop module, **Shop** (sales, conversion and the purchase path
+first). Choose one, or skip it with **Everything**; nothing else has to be set up.
+
+**Edit view** on the dashboard changes the view in place, and you see the numbers while you edit:
+
+- drag a card by its handle **⠿**, or move it with the arrows,
+- hide a card with **×**, and bring it back from **Hidden**,
+- choose the number of rows, a table or bars, the order (views, visitors or sessions) and whether the card is wide,
+- choose the figures in the top row, for example orders and conversion next to visitors.
+
+**Save view** keeps the view for everyone and on every device, **Reset to defaults** goes back to the start. In a shop,
+the **Conversion, 7-day rolling** card shows orders divided by sessions over the previous seven days at each day, so
+a single order on a quiet day does not swing the line.
+
 ### Settings
 
-In **Settings**, **Your view** sets the theme and language for this browser only, and the site's default language
-is set for everyone. You can group pages, for example all `/products/` pages as "Products", so that you see how each
-part of the site does, and choose which cards the dashboard shows and in which order. In a shop you also set the
-pages of the purchase path here.
+In **Settings**, **This browser** sets the theme and language for this browser only, and they change at once. **Same
+as the site** uses the site's default language, which is set below for everyone. You can group pages, for example
+all `/products/` pages as "Products", so that you see how each part of the site does. In a shop you also set the
+pages of the purchase path and the currency here. When you change a site setting, a bar with **Save** appears at the
+bottom of the screen, and leaving the page with unsaved changes asks first.
 
-<Screen name="settings" alt="Settings: theme and language, page groups and purchase path." />
+<Screen name="settings" alt="Settings: this browser's theme and language, the site's language, currency and opt-out page, page groups and purchase path." />
 
 ## Where to go from here
 

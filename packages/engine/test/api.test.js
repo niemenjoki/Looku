@@ -149,6 +149,23 @@ test("settings and keys need admin; read keys cannot change anything", async (t)
   assert.equal((await put(admin, config)).status, 200);
   const cleared = await (await fetch(`${base}/api/v1/sites`, bearer(admin))).json();
   assert.equal(cleared.data.find((s) => s.id === "lieromaa").opt_out_url, null);
+  // The newest page view per site tells the dashboard whether collection works.
+  assert.equal(cleared.data.find((s) => s.id === "lieromaa").last_pageview, "2026-11-03T08:00:00.000Z");
+  assert.equal(cleared.data.find((s) => s.id === "toinen").last_pageview, null);
+
+  // The dashboard layout is kept with the other settings.
+  const layout = { ...config, sections: ["pages"], hidden_sections: ["exits"], kpis: ["pageviews"], cards: { pages: { rows: 5 } }, preset: "simple" };
+  const stored = await (await put(admin, layout)).json();
+  assert.deepEqual([stored.data.sections, stored.data.hidden_sections, stored.data.kpis, stored.data.cards, stored.data.preset],
+    [["pages"], ["exits"], ["pageviews"], { pages: { rows: 5 } }, "simple"]);
+  const reread = await (await fetch(`${base}/api/v1/sites/lieromaa/config`, bearer(read))).json();
+  assert.deepEqual(reread.data.cards, { pages: { rows: 5 } });
+  assert.equal((await put(admin, { ...layout, kpis: ["nope"] })).status, 400);
+  assert.equal((await put(admin, config)).status, 200);
+
+  // A page filter over the API.
+  const one = await (await fetch(`${base}/api/v1/sites/lieromaa/summary?range=7d&page=${encodeURIComponent("/kauppa/madot")}`, bearer(read))).json();
+  assert.equal(one.data.pageviews, 1);
 
   const groups = await (await fetch(`${base}/api/v1/sites/lieromaa/breakdown/page_group?range=7d`, bearer(read))).json();
   assert.deepEqual(groups.data.rows.map((r) => [r.value, r.pageviews]), [["", 1], ["Kauppa", 1], ["Oppaat", 1]]);

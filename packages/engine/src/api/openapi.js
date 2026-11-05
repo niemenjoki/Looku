@@ -30,8 +30,12 @@ function report(summary, extraParams = []) {
 
 const filterParams = [
   { name: "page_group", in: "query", schema: { type: "string" }, description: "Page group name from the site settings; empty = pages in no group." },
+  { name: "page", in: "query", schema: { type: "string" }, description: "One page path, e.g. /blog/post (page views of that page)." },
   { name: "utm_campaign", in: "query", schema: { type: "string" }, description: "Campaign of the page where the session started." },
+  { name: "utm_source", in: "query", schema: { type: "string" }, description: "UTM source of the page where the session started." },
+  { name: "referrer", in: "query", schema: { type: "string" }, description: "Referring host of the session, e.g. www.google.com; empty = direct." },
   { name: "device", in: "query", schema: { type: "string", enum: ["mobile", "desktop", "tablet", ""] } },
+  { name: "country", in: "query", schema: { type: "string" }, description: "Country code, e.g. FI; empty = unknown." },
 ];
 
 export function openApiDocument(version) {
@@ -72,6 +76,11 @@ export function openApiDocument(version) {
             page_groups: { type: "array", items: { type: "object", properties: { name: { type: "string" }, prefix: { type: "string" } } } },
             sections: { type: ["array", "null"], items: { type: "string" } },
             opt_out_url: { type: "string", description: "The site's own page that sets its opt-out cookie (full http or https address, or empty). The dashboard links to it." },
+            hidden_sections: { type: ["array", "null"], items: { type: "string" }, description: "Sections hidden on purpose; sections in neither list are shown (new modules and versions)." },
+            kpis: { type: ["array", "null"], items: { type: "string", enum: ["pageviews", "visitors", "sessions", "pages_per_session", "orders", "revenue", "conversion"] }, description: "Figures in the dashboard's top row; null = the default four." },
+            cards: { type: "object", description: "Options per section id: rows (3-50), wide (true or false), view (table or bars), sort (pageviews, visitors or entries)." },
+            currency: { type: "string", description: "Three-letter currency code for shop figures, e.g. EUR, or empty." },
+            preset: { type: "string", enum: ["", "default", "simple", "blog", "shop"], description: "Starting layout chosen on the first visit; empty = not chosen yet." },
           },
         },
       },
@@ -90,7 +99,7 @@ export function openApiDocument(version) {
       "/logout": { post: { summary: "Ends the dashboard login.", security: [], responses: { 200: { description: "OK" } } } },
       "/me": { get: { summary: "Scope of the current key or login.", responses: { 200: { description: "OK" } } } },
       "/modules": { get: { summary: "Installed modules and their reports.", responses: { 200: { description: "OK" } } } },
-      "/sites": { get: { summary: "Sites this key can read.", responses: { 200: { description: "OK" } } } },
+      "/sites": { get: { summary: "Sites this key can read, with the time of each site's newest page view (last_pageview).", responses: { 200: { description: "OK" } } } },
       "/sites/{site}/config": {
         get: { summary: "Dashboard settings of the site.", parameters: [siteParam], responses: { 200: { description: "OK" } } },
         put: {
