@@ -175,6 +175,7 @@ Anna valinnat kolmantena argumenttina: `trackPageview(request, event, { excludeP
 | `optOutCookie` | ei mitään | `{ name: "looku_optout", value: "1" }`: selainta, jolla on tämä eväste tällä arvolla, ei lasketa. Esimerkiksi omasi, jotta et laske itseäsi. Katso [Omat käynnit pois](#omat-käynnit-pois). |
 | `respectDoNotTrack` | `true` | ohittaa kävijät, jotka lähettävät Do Not Track- tai Global Privacy Control -signaalin |
 | `requireAcceptLanguage` | `true` | ohittaa pyynnöt, joissa ei ole `Accept-Language`-otsaketta. Oikeat selaimet lähettävät sen aina, monet botit eivät |
+| `requireFetchMetadata` | `true` | ohittaa pyynnöt, joiden tunniste nimeää selaimen, joka lähettää HTTPS:n yli `Sec-Fetch-Mode`-otsakkeen (Chromium 76, Firefox 90, Safari 16.4 ja uudemmat), kun otsake puuttuu. Selaimen tunnistetta jäljittelevät indeksoijat lähettävät sitä harvoin |
 | `enabled` | vain tuotannossa | `true` tai `false` ohittaa oletuksen |
 
 ## Omat käynnit pois
@@ -228,7 +229,8 @@ olet kirjautunut.
   väärin kirjoitetussa osoitteessa (404) on myös sivunäyttö.
 - **Selaimen sisäiset siirtymät lasketaan.** Kun kävijä napsauttaa linkkiä, Next.js pyytää palvelimelta seuraavan
   sivun tiedot, ja proxy ajetaan myös sille pyynnölle. `matcher` ohittaa esilataukset.
-- **Botit** ohitetaan niiden user agent -tunnisteen perusteella, samoin pyynnöt, joissa ei ole `Accept-Language`-otsaketta.
+- **Botit** ohitetaan niiden user agent -tunnisteen perusteella, samoin pyynnöt, joissa ei ole `Accept-Language`-otsaketta,
+  ja pyynnöt, jotka esiintyvät uutena selaimena mutta joista puuttuu sen `Sec-Fetch-Mode`-otsake.
 - **Maa** tulee alustalta: Vercelissä otsakkeesta `x-vercel-ip-country`, Cloudflaressa otsakkeesta `CF-IPCountry`. Kun
   sivusto on Vercelissä Cloudflaren takana, Vercel näkee Cloudflaren palvelimen, joten maa luetaan Cloudflarelta. Jos
   maa jää tyhjäksi, ota Cloudflaressa käyttöön **IP Geolocation** (Network-asetukset).

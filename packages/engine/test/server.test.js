@@ -137,6 +137,7 @@ test("the Next.js connector delivers a signed page view end to end", async (t) =
     headers: {
       "user-agent": CHROME_UA,
       "accept-language": "fi-FI",
+      "sec-fetch-mode": "navigate",
       "x-forwarded-for": "172.68.0.1",
       "cf-connecting-ip": "198.51.100.23",
     },

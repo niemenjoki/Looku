@@ -9,7 +9,13 @@ const UA =
 
 function request(path = "/oppaat/a", headers = {}, init = {}) {
   return new Request(`https://lieromaa.fi${path}`, {
-    headers: { "user-agent": UA, "accept-language": "fi", "x-forwarded-for": "198.51.100.23", ...headers },
+    headers: {
+      "user-agent": UA,
+      "accept-language": "fi",
+      "sec-fetch-mode": "navigate",
+      "x-forwarded-for": "198.51.100.23",
+      ...headers,
+    },
     ...init,
   });
 }
@@ -39,6 +45,29 @@ test("reads the country from Cloudflare when the address comes from Cloudflare",
   assert.equal(buildPageview(request("/", both)).country, "SE");
   assert.equal(buildPageview(request("/", { "cf-ipcountry": "FI" })).country, "FI");
   assert.equal(buildPageview(request("/")).country, "");
+});
+
+test("skips a modern browser's user agent without Fetch Metadata", () => {
+  const bare = (url, ua, headers = {}) =>
+    new Request(url, { headers: { "user-agent": ua, "accept-language": "fi", "x-forwarded-for": "198.51.100.23", ...headers } });
+  const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
+  const OLD_IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6 Mobile/15E148 Safari/604.1";
+  const FIREFOX = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0";
+  const MAC_SAFARI = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15";
+  const OLD_CHROME = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.110 Safari/537.36";
+
+  for (const ua of [UA, IPHONE, FIREFOX, MAC_SAFARI]) {
+    assert.equal(buildPageview(bare("https://lieromaa.fi/", ua)), null, ua);
+    // A client-side navigation is a fetch, not a navigation, and still counts.
+    assert.ok(buildPageview(bare("https://lieromaa.fi/", ua, { "sec-fetch-mode": "cors" })), ua);
+  }
+  // Browsers too old for Fetch Metadata are counted without it.
+  assert.ok(buildPageview(bare("https://lieromaa.fi/", OLD_IPHONE)));
+  assert.ok(buildPageview(bare("https://lieromaa.fi/", OLD_CHROME)));
+  // Browsers send it only over HTTPS, as the proxy in front of the site reports.
+  assert.ok(buildPageview(bare("https://lieromaa.fi/", UA, { "x-forwarded-proto": "http" })));
+  assert.ok(buildPageview(bare("http://localhost:3000/", UA)));
+  assert.ok(buildPageview(bare("https://lieromaa.fi/", UA), { requireFetchMetadata: false }));
 });
 
 test("skips requests that are not real page views", () => {

@@ -17,6 +17,8 @@ First public version.
   engagement from visitors who consented.
 - Bots are dropped: known bots, user agents with neither a browser nor a system, and visitors with more than 20 page
   views in two minutes or more than 4 in three seconds.
+- The Next.js connector skips requests that claim a modern browser but lack its `Sec-Fetch-Mode` header: crawlers
+  that copy a browser's user agent (`requireFetchMetadata`).
 - On Vercel behind Cloudflare, the Next.js connector reads the country from Cloudflare; Vercel's header would name
   Cloudflare's server.
 - Paths are stored decoded (`/opas/lämpö`, not `/opas/l%C3%A4mp%C3%B6`).

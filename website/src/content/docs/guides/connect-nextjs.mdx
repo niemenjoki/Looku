@@ -172,6 +172,7 @@ Pass options as the third argument: `trackPageview(request, event, { excludePath
 | `optOutCookie` | none | `{ name: "looku_optout", value: "1" }`: a browser that has this cookie with this value is not counted, for example your own, so that you do not count yourself. See [Leave out your own visits](#leave-out-your-own-visits). |
 | `respectDoNotTrack` | `true` | skip visitors who send Do Not Track or Global Privacy Control |
 | `requireAcceptLanguage` | `true` | skip requests without the `Accept-Language` header, which real browsers always send and many bots do not |
+| `requireFetchMetadata` | `true` | skip requests whose user agent names a browser that sends `Sec-Fetch-Mode` over HTTPS (Chromium 76, Firefox 90, Safari 16.4 and newer) when the header is missing. Crawlers that copy a browser's user agent seldom send it |
 | `enabled` | production only | `true` or `false` to override |
 
 ## Leave out your own visits
@@ -224,7 +225,8 @@ open the link again after that or after clearing your cookies. The link is shown
   mistyped address (404) is also a page view.
 - **Client-side navigation is counted.** When a visitor clicks a link, Next.js asks the server for the next page's
   data, and the proxy runs for that request too. Prefetches are skipped by the matcher.
-- **Bots** are skipped by their user agent, and so are requests without `Accept-Language`.
+- **Bots** are skipped by their user agent, and so are requests without `Accept-Language` and requests that claim a
+  modern browser but lack its `Sec-Fetch-Mode` header.
 - **The country** comes from the platform: `x-vercel-ip-country` on Vercel, `CF-IPCountry` on Cloudflare. When the
   site is on Vercel behind Cloudflare, Vercel sees Cloudflare's server, so the country is read from Cloudflare. Turn on
   **IP Geolocation** in Cloudflare (Network settings) if the country stays empty.

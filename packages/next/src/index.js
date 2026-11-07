@@ -20,6 +20,43 @@ function isPrefetch(headers) {
   );
 }
 
+// Browsers that send Fetch Metadata (Sec-Fetch-*) with every request over
+// HTTPS: Chromium 76, Firefox 90 and Safari 16.4 (every browser on iOS uses
+// Safari's engine). A request that names one of these but has no
+// Sec-Fetch-Mode comes from a crawler that copies a browser's user agent.
+// Older browsers are counted as before.
+function sendsFetchMetadata(userAgent) {
+  const atLeast = (major, minor, needMajor, needMinor) =>
+    Number(major) > needMajor || (Number(major) === needMajor && Number(minor || 0) >= needMinor);
+  const ios = userAgent.match(/(?:iPhone|iPad|iPod).*? OS (\d+)_(\d+)/);
+  if (ios) {
+    return atLeast(ios[1], ios[2], 16, 4);
+  }
+  const chromium = userAgent.match(/Chrome\/(\d+)/);
+  if (chromium) {
+    return Number(chromium[1]) >= 76;
+  }
+  const firefox = userAgent.match(/Firefox\/(\d+)/);
+  if (firefox) {
+    return Number(firefox[1]) >= 90;
+  }
+  const safari = userAgent.match(/Version\/(\d+)(?:\.(\d+))?.*Safari\//);
+  if (safari) {
+    return atLeast(safari[1], safari[2], 16, 4);
+  }
+  return false;
+}
+
+// Browsers send Fetch Metadata only to secure origins.
+function overHttps(request) {
+  const proto = String(request.headers.get("x-forwarded-proto") || "").split(",")[0].trim();
+  return (proto || new URL(request.url).protocol.replace(":", "")) === "https";
+}
+
+function lacksFetchMetadata(request, userAgent) {
+  return !request.headers.get("sec-fetch-mode") && overHttps(request) && sendsFetchMetadata(userAgent);
+}
+
 // Behind Cloudflare, Vercel's x-forwarded-for can hold Cloudflare's edge
 // address, so Cloudflare's own header is read first. List only headers that
 // your own proxy sets: a visitor can send any of these directly.
@@ -81,8 +118,9 @@ function getCookie(request, name) {
 /**
  * Builds the page view payload, or returns null when the request should not be
  * counted: not a GET page request, a prefetch, a file, an excluded path, a
- * bot, a request without Accept-Language, Do Not Track or Global Privacy
- * Control, or the owner's opt-out cookie.
+ * bot, a request without Accept-Language, a modern browser's user agent
+ * without Fetch Metadata, Do Not Track or Global Privacy Control, or the
+ * owner's opt-out cookie.
  */
 export function buildPageview(request, options = {}) {
   const {
@@ -90,6 +128,7 @@ export function buildPageview(request, options = {}) {
     optOutCookie,
     respectDoNotTrack = true,
     requireAcceptLanguage = true,
+    requireFetchMetadata = true,
     ipHeaders = DEFAULT_IP_HEADERS,
   } = options;
 
@@ -111,6 +150,7 @@ export function buildPageview(request, options = {}) {
     !userAgent ||
     BOT_USER_AGENT_PATTERN.test(userAgent) ||
     (requireAcceptLanguage && !headers.get("accept-language")) ||
+    (requireFetchMetadata && lacksFetchMetadata(request, userAgent)) ||
     (respectDoNotTrack && (headers.get("sec-gpc") === "1" || headers.get("dnt") === "1")) ||
     (optOutCookie && getCookie(request, optOutCookie.name) === optOutCookie.value)
   ) {
