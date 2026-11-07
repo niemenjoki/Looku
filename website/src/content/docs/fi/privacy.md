@@ -48,7 +48,8 @@ konversiota. Tämä koskee kojelautaa, rajapintaa ja kuukausisähköpostia. (`pa
 **Do Not Track ja Global Privacy Control otetaan oletuksena huomioon.** Sivunäyttöjä eikä selainkeräimen tietoja
 kirjata pyynnöistä, joissa on `DNT: 1` tai `Sec-GPC: 1`. Myöskään tunnettuja botteja (tunnistetaan selaimen
 tunnisteesta) ja esilatauksia ei kirjata. (`packages/next/src/index.js`) Vastaanotin hylkää lisäksi pyynnöt, joiden
-tunnisteesta ei löydy selainta eikä käyttöjärjestelmää, sekä kävijän, joka lataa yli 20 sivua kahdessa minuutissa:
+tunnisteesta ei löydy selainta eikä käyttöjärjestelmää, sekä kävijän, joka lataa yli 20 sivua kahdessa minuutissa
+tai yli 4 sivua kolmessa sekunnissa:
 tämän kävijän sen päivän sivunäytöt ja tapahtumat poistetaan. (`packages/engine/src/classify.js`,
 `packages/engine/src/ingest.js`)
 

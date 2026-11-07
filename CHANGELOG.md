@@ -16,7 +16,7 @@ First public version.
 - Connectors: Next.js, Node.js http and Express, a Cloudflare Worker example, and a browser collector for events and
   engagement from visitors who consented.
 - Bots are dropped: known bots, user agents with neither a browser nor a system, and visitors with more than 20 page
-  views in two minutes.
+  views in two minutes or more than 4 in three seconds.
 - On Vercel behind Cloudflare, the Next.js connector reads the country from Cloudflare; Vercel's header would name
   Cloudflare's server.
 - Paths are stored decoded (`/opas/lämpö`, not `/opas/l%C3%A4mp%C3%B6`).

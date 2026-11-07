@@ -6,6 +6,7 @@ import Database from "better-sqlite3";
 
 import decodeStoredPaths from "./migrations/007_decoded_paths.js";
 import removeBots from "./migrations/008_bot_rules.js";
+import removeFastBursts from "./migrations/009_fast_bursts.js";
 
 const MIGRATIONS_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -16,6 +17,7 @@ const MIGRATIONS_DIR = path.join(
 const CODE_MIGRATIONS = {
   "007_decoded_paths.js": decodeStoredPaths,
   "008_bot_rules.js": removeBots,
+  "009_fast_bursts.js": removeFastBursts,
 };
 
 export function openDatabase(file, { readonly = false } = {}) {

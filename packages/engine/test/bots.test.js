@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { isBot } from "../src/classify.js";
 import { migrate } from "../src/db.js";
-import { BURST_PAGES, createIngest } from "../src/ingest.js";
+import { BURST_PAGES, FAST_BURST_PAGES, createIngest } from "../src/ingest.js";
 import { runMaintenance } from "../src/maintenance.js";
 import { summary } from "../src/modules/perus/reports.js";
 import { getSite } from "../src/sites.js";
@@ -50,6 +50,48 @@ test("a burst of page views removes the visitor's day and stops further rows", (
   // The mark lasts only as long as the visitor hash.
   runMaintenance(db, new Date("2026-11-06T12:00:00Z"));
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM bot_visitors").get().n, 0);
+});
+
+test("a crawler that loads five pages in three seconds is a bot", () => {
+  const { db } = setup();
+  const ingest = createIngest(db);
+  // A quick reader: five pages 0.8 seconds apart, the fifth 3.2 seconds after the first.
+  for (let i = 0; i <= FAST_BURST_PAGES; i += 1) {
+    assert.equal(view(ingest, db, { ip: "203.0.113.9", at: seconds(i * 0.8), path: `/${i}` }).stored, true);
+  }
+  // A crawler walking the menu 0.4 seconds apart: the fifth page removes the four before it.
+  for (let i = 0; i < FAST_BURST_PAGES; i += 1) {
+    assert.equal(view(ingest, db, { ip: "198.51.100.7", at: seconds(i * 0.4), path: `/${i}` }).stored, true);
+  }
+  assert.deepEqual(view(ingest, db, { ip: "198.51.100.7", at: seconds(1.6), path: "/4" }), { stored: false, reason: "bot" });
+  assert.deepEqual(view(ingest, db, { ip: "198.51.100.7", at: seconds(300) }), { stored: false, reason: "bot" });
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM pageviews").get().n, FAST_BURST_PAGES + 1);
+  assert.equal(summary(db, "lieromaa", { from: "2026-11-04", to: "2026-11-04" }).visitors, 1);
+});
+
+test("migration 009 removes stored fast bursts and rolls their days up again", () => {
+  const { db } = setup();
+  const day = new Date("2026-10-20T10:00:00Z");
+  const at = (s) => new Date(day.getTime() + s * 1000);
+  const insert = db.prepare(
+    `INSERT INTO pageviews (site_id, ts, day, visitor_hash, path, device, browser_family, os_family, source)
+     VALUES ('lieromaa', ?, '2026-10-20', ?, ?, 'mobile', 'Chrome', 'Android', 'server')`,
+  );
+  for (let i = 0; i < 12; i += 1) {
+    insert.run(at(100 + i * 0.4).toISOString(), "crawler", `/${i}`);
+  }
+  for (let i = 0; i < 6; i += 1) {
+    insert.run(at(200 + i).toISOString(), "reader", `/${i}`);
+  }
+  runMaintenance(db, NOW);
+  assert.equal(db.prepare("SELECT pageviews FROM daily_totals WHERE day = '2026-10-20'").get().pageviews, 18);
+
+  db.prepare("DELETE FROM schema_migrations WHERE name = '009_fast_bursts.js'").run();
+  migrate(db);
+
+  assert.deepEqual(db.prepare("SELECT DISTINCT visitor_hash FROM pageviews").all(), [{ visitor_hash: "reader" }]);
+  const totals = db.prepare("SELECT pageviews, visitors FROM daily_totals WHERE day = '2026-10-20'").get();
+  assert.deepEqual(totals, { pageviews: 6, visitors: 1 });
 });
 
 test("migration 008 removes stored bots and rolls their days up again", () => {

@@ -45,7 +45,8 @@ dashboard, the API and the monthly email. (`packages/engine/src/sites.js`, `visi
 **Do Not Track and Global Privacy Control are respected by default.** Page views, and data from the browser
 collector, are not recorded from requests with `DNT: 1` or `Sec-GPC: 1`. Known bots (recognised by the user agent)
 and prefetches are not recorded either. (`packages/next/src/index.js`) The receiver also drops requests whose user
-agent names neither a browser nor an operating system, and a visitor who loads more than 20 pages within two minutes:
+agent names neither a browser nor an operating system, and a visitor who loads more than 20 pages within two minutes
+or more than 4 pages within three seconds:
 that visitor's page views and events of the day are removed. (`packages/engine/src/classify.js`,
 `packages/engine/src/ingest.js`)
 

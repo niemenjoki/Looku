@@ -17,6 +17,14 @@ const MAX_PAST_MS = 24 * 60 * 60 * 1000;
 // on the same day are not stored.
 export const BURST_PAGES = 20;
 export const BURST_MS = 2 * 60 * 1000;
+// A faster burst under the limit above: nobody reads five pages in three
+// seconds, but a crawler that walks the menu does.
+export const FAST_BURST_PAGES = 4;
+export const FAST_BURST_MS = 3 * 1000;
+const BURSTS = [
+  [BURST_PAGES, BURST_MS],
+  [FAST_BURST_PAGES, FAST_BURST_MS],
+];
 const MAX_FUTURE_MS = 5 * 60 * 1000;
 const UTM_FIELDS = [
   "utm_source",
@@ -126,10 +134,12 @@ export function createIngest(db) {
       if (isBotVisitor.get(site.site_id, row.visitor_hash)) {
         return { stored: false, reason: "bot" };
       }
-      const since = new Date(time.getTime() - BURST_MS).toISOString();
-      if (countRecent.get(site.site_id, row.visitor_hash, since).n >= BURST_PAGES) {
-        markBot(site.site_id, row.visitor_hash, row.day);
-        return { stored: false, reason: "bot" };
+      for (const [pages, ms] of BURSTS) {
+        const since = new Date(time.getTime() - ms).toISOString();
+        if (countRecent.get(site.site_id, row.visitor_hash, since).n >= pages) {
+          markBot(site.site_id, row.visitor_hash, row.day);
+          return { stored: false, reason: "bot" };
+        }
       }
     }
 
