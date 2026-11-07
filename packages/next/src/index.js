@@ -10,6 +10,8 @@ const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "ut
 const FILE_PATH_PATTERN = /\/[^/]+\.[a-z0-9]+$/i;
 const SKIPPED_PREFIXES = ["/api/", "/_next/"];
 
+// Next.js removes the prefetch headers before proxy.js runs, so there only the
+// matcher can leave prefetches out. This check covers other setups.
 function isPrefetch(headers) {
   return (
     headers.has("next-router-prefetch") ||
@@ -31,6 +33,20 @@ export const DEFAULT_IP_HEADERS = [
 function clientIp(headers, ipHeaders) {
   for (const name of ipHeaders) {
     const value = String(headers.get(name) || "").split(",")[0].trim();
+    if (value) {
+      return { ip: value, header: name };
+    }
+  }
+  return { ip: "", header: "" };
+}
+
+// Behind Cloudflare, Vercel sees Cloudflare's server, and its country header
+// names the country of that server (often a neighbouring one). When the
+// address comes from Cloudflare, so does the country.
+function clientCountry(headers, ipHeader) {
+  const names = ipHeader === "cf-connecting-ip" ? ["cf-ipcountry"] : ["x-vercel-ip-country", "cf-ipcountry"];
+  for (const name of names) {
+    const value = String(headers.get(name) || "").trim();
     if (value) {
       return value;
     }
@@ -84,7 +100,7 @@ export function buildPageview(request, options = {}) {
   const url = new URL(request.url);
   const path = url.pathname;
   const userAgent = String(headers.get("user-agent") || "").trim();
-  const ip = clientIp(headers, ipHeaders);
+  const { ip, header: ipHeader } = clientIp(headers, ipHeaders);
 
   if (
     isPrefetch(headers) ||
@@ -109,7 +125,7 @@ export function buildPageview(request, options = {}) {
     referrer: String(headers.get("referer") || ""),
     ip,
     ua: userAgent,
-    country: String(headers.get("x-vercel-ip-country") || headers.get("cf-ipcountry") || ""),
+    country: clientCountry(headers, ipHeader),
   };
   for (const key of UTM_KEYS) {
     const value = url.searchParams.get(key);

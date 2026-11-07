@@ -102,6 +102,10 @@ the response, so the page is not slowed down. Nothing changes in your pages.
    opening them). Copy it as it is: the dot is written `[.]` on purpose, because `\.` in a JavaScript string becomes a
    plain dot that matches any character, and then only the front page would be counted.
 
+   If you add entries of your own to the `matcher`, for example for redirects, give each one the same `missing` list.
+   Next.js removes the prefetch headers before the proxy runs, so only the matcher can leave prefetches out. An entry
+   without it counts every link on the page that the browser loads in advance.
+
    If your proxy file is in `src/`, the import is `"../lib/looku.js"` when `lib` is in the root, or
    `"./lib/looku.js"` when `lib` is in `src/`.
 
@@ -221,6 +225,9 @@ open the link again after that or after clearing your cookies. The link is shown
 - **Client-side navigation is counted.** When a visitor clicks a link, Next.js asks the server for the next page's
   data, and the proxy runs for that request too. Prefetches are skipped by the matcher.
 - **Bots** are skipped by their user agent, and so are requests without `Accept-Language`.
+- **The country** comes from the platform: `x-vercel-ip-country` on Vercel, `CF-IPCountry` on Cloudflare. When the
+  site is on Vercel behind Cloudflare, Vercel sees Cloudflare's server, so the country is read from Cloudflare. Turn on
+  **IP Geolocation** in Cloudflare (Network settings) if the country stays empty.
 
 ## Next
 

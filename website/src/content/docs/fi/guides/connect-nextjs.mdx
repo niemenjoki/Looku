@@ -104,6 +104,10 @@ vastauksen jälkeen, joten sivu ei hidastu. Sivuihisi ei tarvitse muuttaa mitä�
    tarkoituksella: JavaScript-merkkijonossa `\.` muuttuu tavalliseksi pisteeksi, joka vastaa mitä tahansa merkkiä, ja
    silloin vain etusivu laskettaisiin.
 
+   Jos lisäät `matcher`iin omia rivejä, esimerkiksi uudelleenohjauksia varten, anna jokaiselle sama `missing`-luettelo.
+   Next.js poistaa esilatausten otsakkeet ennen kuin proxy ajetaan, joten vain `matcher` voi jättää esilataukset pois.
+   Rivi ilman sitä laskee sivunäytöksi jokaisen linkin, jonka selain lataa sivulta etukäteen.
+
    Jos proxy-tiedostosi on kansiossa `src/`, import on `"../lib/looku.js"`, kun `lib` on juuressa, tai
    `"./lib/looku.js"`, kun `lib` on kansiossa `src/`.
 
@@ -225,6 +229,9 @@ olet kirjautunut.
 - **Selaimen sisäiset siirtymät lasketaan.** Kun kävijä napsauttaa linkkiä, Next.js pyytää palvelimelta seuraavan
   sivun tiedot, ja proxy ajetaan myös sille pyynnölle. `matcher` ohittaa esilataukset.
 - **Botit** ohitetaan niiden user agent -tunnisteen perusteella, samoin pyynnöt, joissa ei ole `Accept-Language`-otsaketta.
+- **Maa** tulee alustalta: Vercelissä otsakkeesta `x-vercel-ip-country`, Cloudflaressa otsakkeesta `CF-IPCountry`. Kun
+  sivusto on Vercelissä Cloudflaren takana, Vercel näkee Cloudflaren palvelimen, joten maa luetaan Cloudflarelta. Jos
+  maa jää tyhjäksi, ota Cloudflaressa käyttöön **IP Geolocation** (Network-asetukset).
 
 ## Seuraavaksi
 

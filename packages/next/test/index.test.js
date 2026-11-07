@@ -30,6 +30,17 @@ test("prefers Cloudflare's client IP header and allows a custom order", () => {
   assert.equal(buildPageview(request("/", headers), { ipHeaders: ["x-forwarded-for"] }).ip, "172.68.0.1");
 });
 
+test("reads the country from Cloudflare when the address comes from Cloudflare", () => {
+  const both = { "cf-ipcountry": "FI", "x-vercel-ip-country": "SE" };
+  assert.equal(buildPageview(request("/", { ...both, "cf-connecting-ip": "203.0.113.9" })).country, "FI");
+  // Behind Cloudflare without its country header, Vercel's header would name Cloudflare's server.
+  assert.equal(buildPageview(request("/", { "cf-connecting-ip": "203.0.113.9", "x-vercel-ip-country": "SE" })).country, "");
+  assert.equal(buildPageview(request("/", { "x-vercel-ip-country": "SE" })).country, "SE");
+  assert.equal(buildPageview(request("/", both)).country, "SE");
+  assert.equal(buildPageview(request("/", { "cf-ipcountry": "FI" })).country, "FI");
+  assert.equal(buildPageview(request("/")).country, "");
+});
+
 test("skips requests that are not real page views", () => {
   const skipped = [
     request("/", { "next-router-prefetch": "1" }),
