@@ -160,7 +160,7 @@ a.fl:hover, a.fl:focus-visible { color: var(--accent); text-decoration: underlin
 .s-vis { stroke: var(--accent2); stroke-width: 2; fill: none; }
 .s-shop { stroke: var(--m-shop); stroke-width: 2; fill: none; }
 .part { stroke-dasharray: 3 3; }
-.s-prev { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 3; fill: none; }
+.s-prev { stroke: var(--muted); stroke-width: 1.2; fill: none; }
 .a-pv { fill: var(--accent); fill-opacity: .12; stroke: none; }
 .spark-line { stroke: var(--m, var(--accent)); stroke-width: 1.5; fill: none; }
 .spark-area { fill: var(--m, var(--accent)); fill-opacity: .12; stroke: none; }
