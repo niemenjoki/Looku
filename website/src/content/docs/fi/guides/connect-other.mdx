@@ -112,4 +112,7 @@ Vastaukset: `202` hyväksytty, `400` virheellinen runko (syy on vastauksessa), `
 tunnus tai aika, `409` sama allekirjoitus on jo käytetty, `413` liian suuri.
 
 Ohita itse botit, esilataukset ja tiedostopyynnöt, ja kunnioita Do Not Track -toivetta. Tiedoston
-`packages/next/src/index.js` funktiot `sendToLooku` ja `buildPageview` ovat täydellinen mallitoteutus.
+`packages/next/src/index.js` funktiot `sendToLooku` ja `buildPageview` ovat täydellinen mallitoteutus. Tunnettujen
+bottien lisäksi `buildPageview` ohittaa pyynnöt, joissa ei ole `Accept-Language`-otsaketta, pyynnöt, joissa on Do Not
+Track- tai Global Privacy Control -signaali, sekä HTTPS:n yli tulevat pyynnöt, jotka esiintyvät uutena selaimena
+ilman `Sec-Fetch-Mode`-otsaketta.

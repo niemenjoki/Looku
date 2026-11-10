@@ -131,7 +131,7 @@ vastauksen jälkeen, joten sivu ei hidastu. Sivuihisi ei tarvitse muuttaa mitä�
    ```
 
    Avaa `http://localhost:3000` ja pari sivua ja avaa sitten Lookun kojelauta. Käyntiesi pitäisi näkyä muutamassa
-   sekunnissa. Tämä lähettää koneeltasi oikeita sivunäyttöjä Lookuusi. Niitä on vähän, eivätkä ne haittaa.
+   sekunnissa. Jos portti 3000 on varattu, käynnistä komennolla `npm start -- -p 3001` ja avaa portti 3001. Tämä lähettää koneeltasi oikeita sivunäyttöjä Lookuusi. Niitä on vähän, eivätkä ne haittaa.
 
 5. **Lisää asetukset sinne, missä sivusto toimii.**
 
@@ -230,7 +230,8 @@ olet kirjautunut.
 - **Selaimen sisäiset siirtymät lasketaan.** Kun kävijä napsauttaa linkkiä, Next.js pyytää palvelimelta seuraavan
   sivun tiedot, ja proxy ajetaan myös sille pyynnölle. `matcher` ohittaa esilataukset.
 - **Botit** ohitetaan niiden user agent -tunnisteen perusteella, samoin pyynnöt, joissa ei ole `Accept-Language`-otsaketta,
-  ja pyynnöt, jotka esiintyvät uutena selaimena mutta joista puuttuu sen `Sec-Fetch-Mode`-otsake.
+  ja pyynnöt, jotka esiintyvät uutena selaimena mutta joista puuttuu sen `Sec-Fetch-Mode`-otsake. Looku pudottaa
+  myös kävijän, joka lataa yli 4 sivua kolmessa sekunnissa, joten napsauta tavallista tahtia, kun testaat.
 - **Maa** tulee alustalta: Vercelissä otsakkeesta `x-vercel-ip-country`, Cloudflaressa otsakkeesta `CF-IPCountry`. Kun
   sivusto on Vercelissä Cloudflaren takana, Vercel näkee Cloudflaren palvelimen, joten maa luetaan Cloudflarelta. Jos
   maa jää tyhjäksi, ota Cloudflaressa käyttöön **IP Geolocation** (Network-asetukset).

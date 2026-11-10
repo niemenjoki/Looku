@@ -129,7 +129,7 @@ the response, so the page is not slowed down. Nothing changes in your pages.
    ```
 
    Open `http://localhost:3000` and a couple of pages, then open the Looku dashboard. Your visits should appear
-   within a few seconds. This sends real page views from your computer to your Looku; they are few and do no harm.
+   within a few seconds. If port 3000 is in use, start with `npm start -- -p 3001` and open port 3001 instead. This sends real page views from your computer to your Looku; they are few and do no harm.
 
 5. **Add the settings where the site runs.**
 
@@ -226,7 +226,8 @@ open the link again after that or after clearing your cookies. The link is shown
 - **Client-side navigation is counted.** When a visitor clicks a link, Next.js asks the server for the next page's
   data, and the proxy runs for that request too. Prefetches are skipped by the matcher.
 - **Bots** are skipped by their user agent, and so are requests without `Accept-Language` and requests that claim a
-  modern browser but lack its `Sec-Fetch-Mode` header.
+  modern browser but lack its `Sec-Fetch-Mode` header. Looku also drops a visitor who loads more than 4 pages in three
+  seconds, so click at a normal pace when you test.
 - **The country** comes from the platform: `x-vercel-ip-country` on Vercel, `CF-IPCountry` on Cloudflare. When the
   site is on Vercel behind Cloudflare, Vercel sees Cloudflare's server, so the country is read from Cloudflare. Turn on
   **IP Geolocation** in Cloudflare (Network settings) if the country stays empty.

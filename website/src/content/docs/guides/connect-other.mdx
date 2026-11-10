@@ -110,4 +110,6 @@ Answers: `202` accepted, `400` invalid body (the reason is in the response), `40
 `409` the same signature was already used, `413` too large.
 
 Skip bots, prefetches and requests for files yourself, and respect Do Not Track. `sendToLooku` and `buildPageview` in
-`packages/next/src/index.js` are a complete reference implementation.
+`packages/next/src/index.js` are a complete reference implementation. Besides known bots, `buildPageview` skips
+requests without `Accept-Language`, requests with Do Not Track or Global Privacy Control, and requests over HTTPS
+that name a modern browser but lack its `Sec-Fetch-Mode` header.

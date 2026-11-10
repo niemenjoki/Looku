@@ -92,7 +92,13 @@ Käy nämä läpi järjestyksessä. Ensimmäinen kohta, joka ei toimi, on yleens
    Testi epäonnistuu myös, jos tietokoneen kello on yli viisi minuuttia väärässä.
 
 5. **Onko sivu rajattu pois?** API-reittejä, tiedostoja, joiden nimessä on piste, esilatauksia, botteja ja
-   asetuksen `excludePaths` polkuja ei lasketa.
+   asetuksen `excludePaths` polkuja ei lasketa. Botiksi lasketaan pyyntö, jossa ei ole `Accept-Language`-otsaketta,
+   jonka tunniste on työkalun, kuten curlin, tai joka (HTTPS:n yli) esiintyy uutena selaimena ilman
+   `Sec-Fetch-Mode`-otsaketta.
+
+   **Testaatko nopeasti?** Kävijä, joka lataa yli 4 sivua kolmessa sekunnissa tai yli 20 kahdessa minuutissa,
+   tulkitaan indeksoijaksi: sen saman päivän sivunäytöt poistetaan ja myöhemmät ohitetaan ilman virheilmoitusta.
+   Napsauta tavallista tahtia ja testaa uudelleen toisella selaimella tai seuraavana päivänä.
 
 6. **Näyttääkö kojelauta oikeaa sivustoa ja päiviä?** Valitse kojelaudassa sivusto ja tämä päivä.
 

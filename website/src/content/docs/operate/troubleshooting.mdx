@@ -89,7 +89,12 @@ Go through these in order. The first one that fails is usually the cause.
    five minutes off.
 
 5. **Is the page excluded?** API routes, files with a dot in the name, prefetches, bots and paths in `excludePaths`
-   are not counted.
+   are not counted. Requests without `Accept-Language`, with a tool's user agent such as curl's, or (over HTTPS) with
+   a modern browser's user agent but no `Sec-Fetch-Mode` header count as bots.
+
+   **Testing quickly?** A visitor who loads more than 4 pages in three seconds, or more than 20 in two minutes, is
+   taken for a crawler: that day's page views of the visitor are removed and later ones are skipped, with no error.
+   Click at a normal pace, and test again with another browser or on the next day.
 
 6. **Is the dashboard showing the right site and dates?** Choose the site and today in the dashboard.
 

@@ -118,7 +118,8 @@ nothing is stored in the visitor's browser.
 
    **Want to test first?** You can try it on your computer before publishing: put the three lines in `.env.local`,
    run `npm run build` and then `npm start`, and open `http://localhost:3000`. These are real page views from your
-   computer; they are few and do no harm. (`npm run dev` sends nothing on purpose.)
+   computer; they are few and do no harm. (`npm run dev` sends nothing on purpose. If port 3000 is in use, run
+   `npm start -- -p 3001` and open port 3001.)
 
 4. **Publish.** Commit `lib/looku.js` and the proxy file and push them to the branch Vercel publishes from (usually
    `main`), as you normally publish changes. Vercel builds a new version with the settings. (If you added the settings after pushing, open **Deployments**, select the latest

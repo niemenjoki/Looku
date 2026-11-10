@@ -121,7 +121,7 @@ eikä kävijän selaimeen tallenneta mitään.
    **Haluatko kokeilla ensin?** Voit kokeilla omalla tietokoneellasi ennen julkaisua: kirjoita kolme riviä tiedostoon
    `.env.local`, aja `npm run build` ja sitten `npm start` ja avaa `http://localhost:3000`. Nämä ovat oikeita
    sivunäyttöjä omalta tietokoneeltasi; niitä on vähän, eikä niistä ole haittaa. (`npm run dev` ei tarkoituksella
-   lähetä mitään.)
+   lähetä mitään. Jos portti 3000 on varattu, aja `npm start -- -p 3001` ja avaa portti 3001.)
 
 4. **Julkaise.** Tee commit tiedostoille `lib/looku.js` ja proxy-tiedosto ja pushaa ne haaraan, josta Vercel
    julkaisee (yleensä `main`), samalla tavalla kuin julkaiset muutkin muutokset. Vercel rakentaa uuden version

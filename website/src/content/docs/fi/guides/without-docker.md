@@ -11,6 +11,23 @@ Jos tämä on sinulle uutta, Docker-ohjeet ovat helpompia.
 **Tarvitset:** Node.js 22:n tai uudemman, gitin sekä käänteisen välityspalvelimen tai tunnelin vastaanottimelle
 samoin kuin muissa ohjeissa.
 
+## Kokeile ensin omassa kansiossasi
+
+Kun kokeilet Lookua omalla koneellasi, et tarvitse pääkäyttäjän oikeuksia, palvelun käyttäjää etkä systemd:tä, ja
+nvm:llä asennettu Node.js käy. Kansiossa, johon kloonasit Lookun:
+
+```bash
+npm install --omit=dev
+export LOOKU_DB="$PWD/data/looku.db"
+npx looku site:add myblog --domain localhost --timezone Europe/Helsinki
+npx looku admin:password
+npx looku all
+```
+
+`looku all` jää käyntiin tähän päätteeseen, joten aja muut komennot toisessa päätteessä (aseta `LOOKU_DB` siinäkin).
+Kojelauta on osoitteessa `http://127.0.0.1:8788`, ja sivuston `LOOKU_ENDPOINT` on sama osoite, koska `looku all`
+vastaanottaa sivunäytöt samassa portissa. Pysäytä Ctrl+C:llä. Oikealle sivustolle asenna alla olevan ohjeen mukaan.
+
 ## Asennus
 
 Node.js on asennettava kaikille käyttäjille (jakelusi paketeista tai [NodeSourcesta](https://github.com/nodesource/distributions)),
@@ -26,8 +43,9 @@ sudo npm install --omit=dev
 `npm install` kääntää SQLite-kirjaston. Jos se epäonnistuu virheellä `gyp ERR!`, asenna käännöstyökalut
 (`sudo apt install python3 make g++`) ja aja komento uudelleen.
 
-Jokainen komento tarvitsee tietokannan sijainnin. Komennot ajetaan `looku`-käyttäjänä, jotta tietokanta kuuluu
-sille:
+Jokainen komento tarvitsee tietokannan sijainnin. Ilman `LOOKU_DB`:tä komento käyttää nykyisen kansion tiedostoa
+`./data/looku.db` ja luo uuden, tyhjän tietokannan, jos sitä ei ole. Komennot ajetaan `looku`-käyttäjänä, jotta
+tietokanta kuuluu sille:
 
 ```bash
 sudo -u looku LOOKU_DB=/var/lib/looku/looku.db node packages/engine/src/cli.js site:add myblog --domain example.com --timezone Europe/Helsinki
@@ -43,7 +61,8 @@ sudo -u looku LOOKU_DB=/var/lib/looku/looku.db node packages/engine/src/cli.js a
 | `looku all` | `LOOKU_API_HOST:LOOKU_PORT` (oletus `127.0.0.1:8788`) | molemmat samassa portissa: `/ingest`, `/orders` ja `/healthz` menevät vastaanottimelle, kaikki muu kojelaudalle |
 
 Kahdella prosessilla voit julkaista pelkän vastaanottimen. `looku all` on yksinkertaisempi, kun molemmat ovat saman
-HTTPS-välityspalvelimen takana ja `LOOKU_API_ALLOW` on asetettu, kuten [VPS-ohjeessa](/looku/fi/guides/vps-caddy/).
+HTTPS-välityspalvelimen takana. Aseta silloin `LOOKU_API_ALLOW`, jotta kojelaudan voi avata vain omista osoitteistasi
+(katso [Asetukset](/looku/fi/reference/settings/)).
 
 ## Pidä käynnissä systemd:llä
 

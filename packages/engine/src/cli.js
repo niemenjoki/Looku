@@ -198,7 +198,9 @@ async function main(argv) {
     case "site:visitors": {
       const db = openDatabase(dbFile);
       setVisitors(db, positional[0], positional[1]);
-      console.log(`Visitors for ${positional[0]}: ${positional[1]}. Applies to new page views.`);
+      console.log(positional[1] === "off"
+        ? `Visitors for ${positional[0]}: off. Reports stop showing visitors now; new page views get no hash.`
+        : `Visitors for ${positional[0]}: ${positional[1]}. Applies to new page views.`);
       db.close();
       return;
     }
