@@ -1,8 +1,9 @@
 # Changelog
 
-## 1.0.0 (unreleased)
+## 0.9.0 (2026-11-10)
 
-First public version.
+First public version. Looku runs in production, but until 1.0 a new minor version (0.10) may change
+settings or the API; read the changelog before you update to it.
 
 **Install and run**
 - Docker image `ghcr.io/niemenjoki/looku` (amd64 and arm64) and a Compose file; `looku all` runs everything in one

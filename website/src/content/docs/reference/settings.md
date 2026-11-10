@@ -18,7 +18,7 @@ These are read by `compose.yaml`, not by Looku itself.
 | `LOOKU_DATA_DIR` | `./data` | folder on the host for the database; back it up. `looku-data` keeps the database in a Docker volume instead, for [trying Looku](/looku/tutorials/try-it/) on a desktop computer |
 | `LOOKU_DASHBOARD_BIND` | `127.0.0.1` | host address the dashboard port is published on: a LAN or Tailscale address keeps it private, `127.0.0.1` only for a proxy on the same host |
 | `LOOKU_DASHBOARD_PORT` | `8788` | host port of the dashboard |
-| `LOOKU_VERSION` | `1` | version of the Looku image (`ghcr.io/niemenjoki/looku`); `1` is the newest 1.x, a full version such as `1.0.0` stays put |
+| `LOOKU_VERSION` | `0.9` | version of the Looku image (`ghcr.io/niemenjoki/looku`); `0.9` is the newest 0.9.x, a full version such as `0.9.0` stays put |
 | `CLOUDFLARED_VERSION` | empty = `latest` | version of the Cloudflare tunnel image |
 | `LOOKU_TUNNEL_TOKEN` | empty | token of your Cloudflare tunnel (profile `tunnel`) |
 

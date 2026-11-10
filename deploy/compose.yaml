@@ -20,7 +20,7 @@ name: looku
 
 x-looku: &looku
   build: ..
-  image: ghcr.io/niemenjoki/looku:${LOOKU_VERSION:-1}
+  image: ghcr.io/niemenjoki/looku:${LOOKU_VERSION:-0.9}
   restart: unless-stopped
   volumes:
     - ${LOOKU_DATA_DIR:-./data}:/data

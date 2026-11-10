@@ -82,10 +82,10 @@ docker compose pull
 docker compose up -d
 ```
 
-`git pull` päivittää Compose-tiedoston ja nämä ohjeet, `docker compose pull` lataa uusimman Looku 1.x:n, ja `up -d`
+`git pull` päivittää Compose-tiedoston ja nämä ohjeet, `docker compose pull` lataa uusimman Looku 0.9.x:n, ja `up -d`
 korvaa kontit. Jos olet muuttanut Lookun koodia itse, aja kahden viimeisen komennon sijaan `docker compose up -d
---build`. Uutta pääversiota (2.0) ei oteta automaattisesti: lue sen muutosloki ja aseta sitten `.env`-tiedostoon
-`LOOKU_VERSION=2`. Vanha levykuva jää levylle nimettömänä; `docker image prune` poistaa tällaiset käyttämättömät levykuvat silloin tällöin (se kysyy
+--build`. Uutta alaversiota (0.10) ei oteta automaattisesti, koska ennen versiota 1.0 se voi muuttaa
+asetuksia tai rajapintaa: lue sen muutosloki ja aseta sitten `.env`-tiedostoon `LOOKU_VERSION=0.10`. Vanha levykuva jää levylle nimettömänä; `docker image prune` poistaa tällaiset käyttämättömät levykuvat silloin tällöin (se kysyy
 ennen poistoa eikä koske levykuviin, joita kontit käyttävät). Tietokannan muutokset
 ajetaan itsestään, kun vastaanotin käynnistyy. Vastaanotin on poissa käytöstä muutaman sekunnin, ja sinä aikana
 lähetetyt sivunäytöt menetetään. Tarkista jälkeenpäin:

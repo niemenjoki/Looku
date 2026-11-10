@@ -78,10 +78,10 @@ docker compose pull
 docker compose up -d
 ```
 
-`git pull` updates the Compose file and these guides, `docker compose pull` downloads the newest Looku 1.x, and
+`git pull` updates the Compose file and these guides, `docker compose pull` downloads the newest Looku 0.9.x, and
 `up -d` replaces the containers. If you have changed Looku's code yourself, run `docker compose up -d --build`
-instead of the last two commands. A new major version (2.0) is not taken automatically: read its changelog, then set
-`LOOKU_VERSION=2` in `.env`. The old image stays on the disk without a name; `docker image prune` removes such unused images now and then (it asks
+instead of the last two commands. A new minor version (0.10) is not taken automatically, because before 1.0 it may change
+settings or the API: read its changelog, then set `LOOKU_VERSION=0.10` in `.env`. The old image stays on the disk without a name; `docker image prune` removes such unused images now and then (it asks
 before removing, and it does not touch images that containers use). Database
 changes run by themselves when the receiver starts. The receiver is down for a few seconds, and page views sent during
 that time are lost. Check afterwards:

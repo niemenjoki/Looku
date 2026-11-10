@@ -1,6 +1,6 @@
 {
   "name": "@looku/next",
-  "version": "1.0.0",
+  "version": "0.9.0",
   "private": true,
   "description": "Next.js proxy/middleware connector for Looku: server-side page views without cookies or scripts.",
   "type": "module",
