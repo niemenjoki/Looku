@@ -79,7 +79,7 @@ Then [connect your site](https://niemenjoki.github.io/looku/guides/connect-nextj
 
 ## Support
 
-Questions and bug reports are welcome as [GitHub issues](https://github.com/niemenjoki/Looku/issues). Looku is made
+Questions and bug reports are welcome as [GitHub issues](https://github.com/niemenjoki/looku/issues). Looku is made
 by one person in their spare time, so answers can take a few days. Help with installing on your own server is not
 included; the [guides](https://niemenjoki.github.io/looku/) cover the supported setups.
 
