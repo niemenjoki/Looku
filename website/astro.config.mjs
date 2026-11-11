@@ -63,6 +63,11 @@ export default defineConfig({
           items: ["operate/backup-and-update", "operate/troubleshooting"],
         },
         {
+          label: "Use the numbers",
+          translations: { fi: "Lukujen käyttö" },
+          items: ["guides/home-assistant"],
+        },
+        {
           label: "Reference",
           translations: { fi: "Viite" },
           items: ["reference/settings", "reference/cli", "reference/api", "reference/security"],

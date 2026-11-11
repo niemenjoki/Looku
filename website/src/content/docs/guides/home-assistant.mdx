@@ -1,0 +1,104 @@
+---
+title: Home Assistant
+description: Show your sites' page views, visitors and shop sales in Home Assistant with the Looku integration.
+sidebar:
+  order: 1
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+**What you get:** every site as its own device in Home Assistant, with page views, visitors, sessions and pages per
+session for the period you choose, and for a shop also orders, revenue, average order and conversion. A sensor shows
+when page views last arrived, so you notice when a site stops sending. The numbers are the same ones the dashboard
+shows.
+
+The [Looku integration for Home Assistant](https://github.com/niemenjoki/ha-looku) is made by the author of Looku. It
+only reads: it never changes Looku's settings or keys, and it talks only to your own Looku.
+
+**Time:** 15 minutes. **You need:** a running Looku, Home Assistant with [HACS](https://hacs.xyz/), and a way for
+Home Assistant to reach the Looku dashboard address (the same home network, or [Tailscale](/looku/guides/tailscale/)).
+
+<Steps>
+
+1. **Let Home Assistant reach Looku.** The integration uses the [read API](/looku/reference/api/), which is on the
+   dashboard's address, so the dashboard's rules apply to Home Assistant too. Check these in Looku's `.env` (on the
+   server, in the Looku folder):
+
+   - `LOOKU_DASHBOARD_BIND`: by default the dashboard listens only on `127.0.0.1`, which Home Assistant on another
+     machine cannot reach. Set the server's LAN address, for example `192.168.1.10`.
+   - `LOOKU_API_HOSTS`: if it is set, add the address you will enter in Home Assistant, for example
+     `192.168.1.10:8788`. Otherwise Looku answers `421 Unknown host`.
+   - `LOOKU_API_ALLOW`: if it is set, add Home Assistant's IP address. Otherwise Looku answers `403 Forbidden`.
+
+   If you changed `.env`, restart Looku:
+
+   ```bash
+   docker compose up -d
+   ```
+
+   Check from the Home Assistant machine, or from any computer on the same network, that the address answers:
+
+   ```bash
+   curl http://192.168.1.10:8788/api/v1/health
+   ```
+
+   It works when you see `{"status":"ok","version":"…"}`.
+
+2. **Create a read key.** In the dashboard: **Settings > API keys**, name `homeassistant`, scope **Read**, then
+   **Create key**. Or on the server:
+
+   ```bash
+   docker compose run --rm ingest token:create homeassistant --scope read
+   ```
+
+   The key starts with `lk_` and is shown only once, so copy it. A **Read** key can read reports but cannot change
+   anything. To show only one site in Home Assistant, choose that site in the dashboard, or add `--site <site id>` to
+   the command.
+
+3. **Add the integration to HACS.** In Home Assistant, open **HACS**, the menu (⋮) in the top right corner, and
+   **Custom repositories**. Enter:
+
+   - Repository: `https://github.com/niemenjoki/ha-looku`
+   - Type: **Integration**
+
+   Click **Add**, then search for **Looku** in HACS and click **Download**. Restart Home Assistant (**Settings >
+   System > Restart**).
+
+4. **Set up the integration.** **Settings > Devices & services > Add integration > Looku.** Enter the dashboard
+   address, for example `http://192.168.1.10:8788`, and the key. Keep **Verify the SSL certificate** on unless your
+   HTTPS address uses a self-signed certificate.
+
+   It works when each site appears as a device with its sensors. Looku is read every 10 minutes.
+
+5. **Choose the period** (optional). **Settings > Devices & services > Looku > Configure.** The default is the last
+   7 days; the choices are the last 24 hours, 7 days, 28 days, 3 months and 12 months. A new period gets new sensors
+   with their own history, so update your dashboards and automations after changing it.
+
+</Steps>
+
+## Ready-made cards
+
+The integration's repository has [example cards and an automation](https://github.com/niemenjoki/ha-looku/tree/main/examples)
+that use only built-in Home Assistant cards: the totals and a page view graph of one site, the sales and orders of a
+shop, and a notification when a site has had no page views for six hours. Add a card with **Edit dashboard > Add card
+> Manual** and paste the file; the comments in the file say which entity ids to replace.
+
+The graphs use Home Assistant's long-term statistics, so they fill in day by day after the installation.
+
+## If it does not work
+
+| What you see | What to do |
+|---|---|
+| Setup says Looku refused Home Assistant | Step 1: `LOOKU_API_HOSTS` must contain the address you entered, and `LOOKU_API_ALLOW` Home Assistant's address. |
+| Setup cannot connect | `LOOKU_DASHBOARD_BIND` is still `127.0.0.1`, or a firewall blocks the port. Try the `curl` check in step 1 from the Home Assistant machine. |
+| The key cannot read any site | Add a site in Looku, or use a key without `--site`. |
+| Visitors, sessions and conversion are *unknown* | The site counts no visitors (`site:visitors off`). This is expected. |
+| Revenue has no currency | Set the shop's **Currency** in the dashboard settings ([Shop orders](/looku/guides/shop-orders/)). |
+
+Problems with the integration itself go to its [issues](https://github.com/niemenjoki/ha-looku/issues).
+
+## Without the integration
+
+If you want only one or two numbers, or another tool than Home Assistant, the
+[read API](/looku/reference/api/#home-assistant-example) gives every number the dashboard shows; its reference has
+a sensor example with Home Assistant's own `rest` integration.

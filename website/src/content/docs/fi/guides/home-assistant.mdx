@@ -1,0 +1,106 @@
+---
+title: Home Assistant
+description: Näytä sivustojesi sivunäytöt, kävijät ja verkkokaupan myynti Home Assistantissa Looku-integraatiolla.
+sidebar:
+  order: 1
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+**Mitä saat:** jokainen sivusto on Home Assistantissa oma laitteensa, jolla on valitsemasi jakson sivunäytöt,
+kävijät, istunnot ja sivuja istuntoa kohden, ja verkkokaupalla lisäksi tilaukset, myynti, keskiostos ja konversio.
+Anturi näyttää, milloin sivunäyttöjä viimeksi tuli, joten huomaat, jos sivusto lakkaa lähettämästä. Luvut ovat samat
+kuin kojelaudassa.
+
+[Looku-integraation Home Assistantiin](https://github.com/niemenjoki/ha-looku) on tehnyt Lookun tekijä. Se vain lukee:
+se ei koskaan muuta Lookun asetuksia eikä avaimia, ja se on yhteydessä vain omaan Lookuusi.
+
+**Aika:** 15 minuuttia. **Tarvitset:** käynnissä olevan Lookun, Home Assistantin ja siihen asennetun
+[HACSin](https://hacs.xyz/) sekä yhteyden Home Assistantista Lookun kojelaudan osoitteeseen (sama kotiverkko tai
+[Tailscale](/looku/fi/guides/tailscale/)).
+
+<Steps>
+
+1. **Päästä Home Assistant Lookuun.** Integraatio käyttää [lukurajapintaa](/looku/fi/reference/api/), joka on
+   kojelaudan osoitteessa, joten kojelaudan säännöt koskevat myös Home Assistantia. Tarkista nämä Lookun
+   `.env`-tiedostosta (palvelimella, Lookun kansiossa):
+
+   - `LOOKU_DASHBOARD_BIND`: oletuksena kojelauta kuuntelee vain osoitteessa `127.0.0.1`, johon toisella koneella
+     oleva Home Assistant ei yllä. Aseta palvelimen lähiverkko-osoite, esimerkiksi `192.168.1.10`.
+   - `LOOKU_API_HOSTS`: jos se on asetettu, lisää osoite, jonka annat Home Assistantissa, esimerkiksi
+     `192.168.1.10:8788`. Muuten Looku vastaa `421 Unknown host`.
+   - `LOOKU_API_ALLOW`: jos se on asetettu, lisää Home Assistantin IP-osoite. Muuten Looku vastaa `403 Forbidden`.
+
+   Jos muutit `.env`-tiedostoa, käynnistä Looku uudelleen:
+
+   ```bash
+   docker compose up -d
+   ```
+
+   Tarkista Home Assistantin koneelta tai mistä tahansa saman verkon koneelta, että osoite vastaa:
+
+   ```bash
+   curl http://192.168.1.10:8788/api/v1/health
+   ```
+
+   Toimii, kun näet `{"status":"ok","version":"…"}`.
+
+2. **Luo lukuavain.** Kojelaudassa: **Asetukset > API-avaimet**, nimeksi `homeassistant`, oikeudeksi **Luku** ja
+   sitten **Luo avain**. Tai palvelimella:
+
+   ```bash
+   docker compose run --rm ingest token:create homeassistant --scope read
+   ```
+
+   Avain alkaa `lk_` ja näytetään vain kerran, joten kopioi se. **Luku**-avaimella voi lukea raportteja mutta ei
+   muuttaa mitään. Jos haluat Home Assistantiin vain yhden sivuston, valitse se kojelaudassa tai lisää komentoon
+   `--site <sivuston tunnus>`.
+
+3. **Lisää integraatio HACSiin.** Avaa Home Assistantissa **HACS**, oikean yläkulman valikko (⋮) ja **Custom
+   repositories**. Anna:
+
+   - Repository: `https://github.com/niemenjoki/ha-looku`
+   - Type: **Integration**
+
+   Valitse **Add**, hae HACSista **Looku** ja valitse **Download**. Käynnistä Home Assistant uudelleen
+   (**Asetukset > Järjestelmä > Käynnistä uudelleen**).
+
+4. **Ota integraatio käyttöön.** **Asetukset > Laitteet ja palvelut > Lisää integraatio > Looku.** Anna kojelaudan
+   osoite, esimerkiksi `http://192.168.1.10:8788`, ja avain. Pidä **Tarkista SSL-varmenne** päällä, ellei
+   HTTPS-osoitteesi käytä itse allekirjoitettua varmennetta.
+
+   Toimii, kun jokainen sivusto näkyy laitteena antureineen. Looku luetaan 10 minuutin välein.
+
+5. **Valitse jakso** (valinnainen). **Asetukset > Laitteet ja palvelut > Looku > Määritä.** Oletus on viimeiset
+   7 päivää; vaihtoehdot ovat viimeiset 24 tuntia, 7 päivää, 28 päivää, 3 kuukautta ja 12 kuukautta. Uusi jakso saa
+   uudet anturit omalla historiallaan, joten päivitä kojelaudat ja automaatiot jakson vaihdon jälkeen.
+
+</Steps>
+
+## Valmiit kortit
+
+Integraation repossa on [esimerkkikortit ja automaatio](https://github.com/niemenjoki/ha-looku/tree/main/examples),
+joissa käytetään vain Home Assistantin omia kortteja: yhden sivuston luvut ja sivunäyttökäyrä, verkkokaupan myynti ja
+tilaukset sekä ilmoitus, kun sivustolla ei ole ollut sivunäyttöjä kuuteen tuntiin. Lisää kortti kohdasta **Muokkaa
+kojelautaa > Lisää kortti > Manuaalinen** ja liitä tiedosto; tiedoston kommenteissa kerrotaan, mitkä entiteettien
+tunnukset vaihdetaan.
+
+Käyrät käyttävät Home Assistantin pitkän aikavälin tilastoja, joten ne täyttyvät päivä kerrallaan asennuksen jälkeen.
+
+## Jos se ei toimi
+
+| Mitä näet | Mitä teet |
+|---|---|
+| Käyttöönotto sanoo, että Looku torjui Home Assistantin | Vaihe 1: `LOOKU_API_HOSTS`:ssa pitää olla antamasi osoite ja `LOOKU_API_ALLOW`:ssa Home Assistantin osoite. |
+| Käyttöönotto ei saa yhteyttä | `LOOKU_DASHBOARD_BIND` on yhä `127.0.0.1`, tai palomuuri estää portin. Kokeile vaiheen 1 `curl`-tarkistusta Home Assistantin koneelta. |
+| Avain ei voi lukea yhtään sivustoa | Lisää sivusto Lookuun tai käytä avainta ilman `--site`-rajausta. |
+| Kävijät, istunnot ja konversio ovat *tuntemattomia* | Sivusto ei laske kävijöitä (`site:visitors off`). Tämä on odotettua. |
+| Myynnillä ei ole valuuttaa | Aseta verkkokaupan **Valuutta** kojelaudan asetuksissa ([Verkkokaupan tilaukset](/looku/fi/guides/shop-orders/)). |
+
+Itse integraation ongelmat ilmoitetaan sen [issues-sivulle](https://github.com/niemenjoki/ha-looku/issues).
+
+## Ilman integraatiota
+
+Jos tarvitset vain luvun tai kaksi tai jonkin muun työkalun kuin Home Assistantin,
+[lukurajapinta](/looku/fi/reference/api/#home-assistant--esimerkki) antaa jokaisen kojelaudan luvun; sen ohjeessa on
+anturiesimerkki Home Assistantin omalla `rest`-integraatiolla.
