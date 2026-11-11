@@ -10,3 +10,8 @@ kävijöiden tietoja lähtee ulkopuoliseen analytiikkapalveluun. Siitä kasvoi t
 palvelimen omistaja voi käyttää.
 
 Looku on henkilökohtainen projekti. Koodi, kysymykset ja vikailmoitukset: [github.com/niemenjoki](https://github.com/niemenjoki).
+
+## Käytössä
+
+- [lieromaa.fi](https://www.lieromaa.fi/?utm_source=looku&utm_medium=docs), verkkokauppa
+- [niemenjoki.fi](https://www.niemenjoki.fi/?utm_source=looku&utm_medium=docs), blogi

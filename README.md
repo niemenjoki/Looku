@@ -29,7 +29,7 @@ How it compares with Plausible, Umami, GoatCounter and Matomo: [comparison](http
 - Page views for all visitors: pages, referrers, campaigns, devices, countries.
 - Visitors and sessions from a hash that changes daily, or none at all (a per-site setting).
 - Modules: shop, campaigns, content (reading time and scroll depth from visitors who consented).
-- Read API (`/api/v1`, OpenAPI) for your own dashboards or Home Assistant.
+- Read API (`/api/v1`, OpenAPI) for your own dashboards, and the [ha-looku](https://github.com/niemenjoki/ha-looku) integration for Home Assistant.
 
 Looku is not a cookie banner tool and does not make anything legal by itself. See [privacy and the law](https://niemenjoki.github.io/looku/privacy/).
 
@@ -44,6 +44,7 @@ reference for the rest:
 - Install on a [home server with Cloudflare](https://niemenjoki.github.io/looku/guides/home-server-cloudflare/) or a
   [VPS with Caddy](https://niemenjoki.github.io/looku/guides/vps-caddy/)
 - [Connect a Next.js site](https://niemenjoki.github.io/looku/guides/connect-nextjs/), or [Node.js, Express, Cloudflare or your own](https://niemenjoki.github.io/looku/guides/connect-other/)
+- [Home Assistant](https://niemenjoki.github.io/looku/guides/home-assistant/): your sites' numbers as sensors with the [ha-looku](https://github.com/niemenjoki/ha-looku) integration
 - [Privacy and the law](https://niemenjoki.github.io/looku/privacy/): what is collected, the open legal question, a privacy notice template
 - [Suomeksi](https://niemenjoki.github.io/looku/fi/)
 
@@ -76,6 +77,11 @@ Then [connect your site](https://niemenjoki.github.io/looku/guides/connect-nextj
 
 `npm install` and `npm test` in the root run all tests (Node.js 22 or newer). The documentation site is in
 `website` (`npm install` and `npm run dev` there; Node.js 22.22 or newer).
+
+## Used by
+
+- [lieromaa.fi](https://www.lieromaa.fi/?utm_source=looku&utm_medium=readme), a web shop
+- [niemenjoki.fi](https://www.niemenjoki.fi/?utm_source=looku&utm_medium=readme), a blog
 
 ## Support
 

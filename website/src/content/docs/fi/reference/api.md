@@ -68,7 +68,8 @@ tulevat vain suostumuksen antaneilta kävijöiltä (lukuaika).
 
 ## Home Assistant -esimerkki
 
-Kaikkien sivustojen anturit saat [Looku-integraatiolla](/looku/fi/guides/home-assistant/). Ilman sitä anturi
+Kaikkien sivustojen anturit saat [Looku-integraatiolla](/looku/fi/guides/home-assistant/)
+([ha-looku](https://github.com/niemenjoki/ha-looku) GitHubissa). Ilman sitä anturi
 viimeisen seitsemän päivän sivunäytöille tiedostossa `configuration.yaml`:
 
 ```yaml

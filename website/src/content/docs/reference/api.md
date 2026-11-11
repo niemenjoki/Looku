@@ -67,7 +67,8 @@ consenting visitors (reading time).
 
 ## Home Assistant example
 
-For sensors of every site, use the [Looku integration](/looku/guides/home-assistant/). Without it, a sensor for the
+For sensors of every site, use the [Looku integration](/looku/guides/home-assistant/)
+([ha-looku](https://github.com/niemenjoki/ha-looku) on GitHub). Without it, a sensor for the
 last seven days' page views, in `configuration.yaml`:
 
 ```yaml
