@@ -104,5 +104,7 @@ sivunäyttöjä ei voi yhdistää käynneiksi.
 
 Samalla asetussivulla on verkkokaupan **Valuutta**, jota kojelauta käyttää myynnissä. **Konversio, 7 pv liukuva**
 -kortti näyttää konversion ajan mittaan: jokaisena päivänä edellisten seitsemän päivän tilaukset jaettuna niiden
-istunnoilla. Saat tilaukset ja konversion kojelaudan yläriville valitsemalla **Kauppa**-näkymän tai kohdan
+istunnoilla. Jakso alkaa aikaisintaan ensimmäisestä päivästä, jolla on istuntoja, joten ensimmäiset pisteet lasketaan
+yhdestä päivästä, sitten kahdesta ja niin edelleen seitsemään asti. Ajalta ennen istuntojen keräystä tuodut tilaukset
+eivät siis vääristä konversiota. Saat tilaukset ja konversion kojelaudan yläriville valitsemalla **Kauppa**-näkymän tai kohdan
 **Muokkaa näkymää**.

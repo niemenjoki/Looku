@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1 (2026-11-11)
+
+- The 7-day conversion chart starts its window no earlier than the first day with sessions: the first points
+  use 1, 2, ... 7 days, and orders imported from before sessions were recorded no longer inflate the rate. The
+  tooltip shows the length of the window.
+
 ## 0.9.0 (2026-11-10)
 
 First public version. Looku runs in production, but until 1.0 a new minor version (0.10) may change

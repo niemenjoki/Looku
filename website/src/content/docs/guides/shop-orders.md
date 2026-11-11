@@ -101,4 +101,5 @@ cannot be linked into visits.
 
 The same settings page has the shop's **Currency**, which the dashboard uses for sales. The **Conversion, 7-day
 rolling** card shows conversion over time: at each day, the orders of the previous seven days divided by their
-sessions. To put orders and conversion in the top row of the dashboard, choose the **Shop** view, or **Edit view**.
+sessions. The window starts no earlier than the first day with sessions, so the first points use one day, then two,
+up to seven, and orders imported from before Looku recorded sessions are not divided by sessions they never had. To put orders and conversion in the top row of the dashboard, choose the **Shop** view, or **Edit view**.

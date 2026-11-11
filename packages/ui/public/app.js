@@ -2,6 +2,7 @@ import { lineChart, spark } from "./charts.js";
 import { h, replace } from "./dom.js";
 import { T } from "./i18n.js";
 import { buildReview, monthRange, percentChange, shiftMonth } from "./review.js";
+import { rollingConversion } from "./rolling.js";
 
 // Looku dashboard: the compact dashboard, full lists, the monthly review and
 // the settings. Everything is built with DOM calls and text nodes, never from
@@ -801,17 +802,9 @@ async function dashboardView(container, token) {
       ];
     },
     shop_conversion: () => {
-      // Orders divided by sessions over the last 7 days at each day: a single
-      // order on a quiet day does not swing the line.
-      const all = r.shopSeries.data.points;
-      const rows = [];
-      all.forEach((pt, i) => {
-        if (pt.period < shopFrom) return;
-        const week = all.slice(Math.max(0, i - 6), i + 1);
-        const orders = week.reduce((sum, x) => sum + x.orders, 0);
-        const sessions = week.reduce((sum, x) => sum + x.sessions, 0);
-        rows.push({ period: pt.period, rate: sessions ? (orders / sessions) * 100 : null, orders, sessions, day: pt });
-      });
+      // Orders divided by sessions over the last 7 days at each day, from the
+      // first day with sessions on (rolling.js).
+      const rows = rollingConversion(r.shopSeries.data.points, shopFrom);
       if (!rows.some((x) => x.day.sessions)) return empty();
       return [
         lineChart({
@@ -824,7 +817,7 @@ async function dashboardView(container, token) {
           label: L.sections.shop_conversion,
           texts: chartTexts(),
           extra: (i) => [
-            h("div", { class: "muted" }, L.shop.week(nf(rows[i].orders), nf(rows[i].sessions))),
+            rows[i].days ? h("div", { class: "muted" }, L.shop.window(rows[i].days, nf(rows[i].orders), nf(rows[i].sessions))) : null,
             h("div", { class: "muted" }, L.shop.day(nf(rows[i].day.orders), nf(rows[i].day.sessions))),
           ],
         }),
