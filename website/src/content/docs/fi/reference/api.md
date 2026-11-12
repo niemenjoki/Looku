@@ -44,7 +44,7 @@ Polut palautetaan dekoodattuina eli luettavassa muodossa: `/opas/lämpö` eikä 
 | `summary` | sivunäytöt, kävijät, käynnit, sivuja käyntiä kohden; `compare=previous` lisää edellisen jakson |
 | `timeseries` | summat jaksoittain (`interval`): `hour` (enintään 31 päivää), `day`, `week` tai `month` |
 | `breakdown/<dimension>` | summat jaoteltuina: `page`, `entry`, `exit`, `referrer`, `utm_source`, `utm_medium`, `utm_campaign`, `device`, `browser`, `os`, `country` tai `page_group`; `limit` (oletus 50), `sort` |
-| `reports/<module>/<report>` | moduulien raportit: `shop/summary`, `shop/timeseries`, `shop/funnel`, `shop/products`, `campaigns/overview`, `content/engagement`, `content/rising`. Vain sivustolla päällä oleville moduuleille (`site:modules`); muuten vastaus on `Unknown report.` |
+| `reports/<module>/<report>` | moduulien raportit: `perus/missing` (osoitteet, joihin sivusto vastasi "ei löydy", katso [Sivut, joita ei ole](/looku/fi/guides/connect-nextjs/#sivut-joita-ei-ole); `limit`), `shop/summary`, `shop/timeseries`, `shop/funnel`, `shop/products`, `campaigns/overview`, `content/engagement`, `content/rising`. Vain sivustolla päällä oleville moduuleille (`site:modules`); muuten vastaus on `Unknown report.` |
 | `export.csv?report=…` | mikä tahansa yllä olevista CSV-muodossa |
 
 `summary`, `timeseries` ja `breakdown` hyväksyvät myös suodattimet. `page` (yhden sivun polku), `page_group`,

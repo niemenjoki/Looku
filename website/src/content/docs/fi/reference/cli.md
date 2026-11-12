@@ -50,6 +50,7 @@ Palvelinkoneen tiedosto ei näy kontin sisällä. Jos haluat antaa tiedoston kom
 | `backup <file>` | tietokannan eheä kopio Lookun ollessa käynnissä, ilman päivän suolaa; katso [Varmuuskopiointi](/looku/fi/operate/backup-and-update/) |
 | `orders:import <id> <file>` | tuo tilaukset, yksi JSON-objekti riviä kohden; kaikki tai ei mitään |
 | `history:import <id> <file> [--before <time>]` | tuo sivunäytöt, tapahtumat ja lukuajan aiemmasta järjestelmästä; katso [Siirtyminen toisesta järjestelmästä](/looku/fi/guides/moving-from-another/) |
+| `pages:missing <id> <path>... [--from <day>] [--to <day>]` | siirtää olemattomien osoitteiden sivunäytöt listaan **Puuttuvat sivut** ja laskee niiden päivät uudelleen; anna polut niin kuin kojelauta ne näyttää; katso [Sivut, joita ei ole](/looku/fi/guides/connect-nextjs/#sivut-joita-ei-ole) |
 | `maintain` | ajaa yöajon heti: poistaa vanhat suolat, laskee valmiiden päivien summat ja soveltaa säilytysaikaa. Tulostaa yhteenvedon sivustoittain. |
 | `report:send [--month YYYY-MM] [--site <id>] [--dry-run]` | lähettää kuukausisähköpostin (oletus: edellinen kuukausi); `--dry-run` tulostaa sen lähettämisen sijaan |
 

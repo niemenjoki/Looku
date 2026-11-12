@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.2 (2026-11-12)
+
+- Missing pages: a catch-all page of the site can tell Looku that an address does not exist, with the Next.js
+  connector's new `trackNotFound`. The proxy passes the address to the page with `lookuRequestHeaders`, signed with
+  the site's key. The address's page views of that day are listed under **Missing pages** on the dashboard (API:
+  `reports/perus/missing`) and left out of the other numbers. See
+  [Pages that do not exist](https://niemenjoki.github.io/looku/guides/connect-nextjs/#pages-that-do-not-exist).
+- `looku pages:missing` moves page views of addresses that do not exist, stored before this, to the same list.
+- The Node.js connector already counts only successful responses, so it needs no change.
+
 ## 0.9.1 (2026-11-11)
 
 - The 7-day conversion chart starts its window no earlier than the first day with sessions: the first points

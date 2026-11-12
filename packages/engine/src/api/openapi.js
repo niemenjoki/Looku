@@ -123,7 +123,7 @@ export function openApiDocument(version) {
         { name: "sort", in: "query", schema: { type: "string", enum: ["pageviews", "visitors", "entries", "exits"] } },
         ...filterParams,
       ]),
-      "/sites/{site}/reports/{module}/{report}": report("Any report of a module enabled for the site (see /modules): shop/summary, shop/timeseries, shop/funnel, shop/products, campaigns/overview, content/engagement, content/rising. Results with sample: true come only from consenting visitors.", [
+      "/sites/{site}/reports/{module}/{report}": report("Any report of a module enabled for the site (see /modules): perus/missing (pages the site answered with not found), shop/summary, shop/timeseries, shop/funnel, shop/products, campaigns/overview, content/engagement, content/rising. Results with sample: true come only from consenting visitors.", [
         { name: "module", in: "path", required: true, schema: { type: "string" } },
         { name: "report", in: "path", required: true, schema: { type: "string" } },
       ]),

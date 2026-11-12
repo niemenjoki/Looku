@@ -24,6 +24,7 @@ const SECTIONS = [
   { id: "browsers", module: "perus" },
   { id: "countries", module: "perus" },
   { id: "page_groups", module: "perus" },
+  { id: "missing_pages", module: "perus" },
   { id: "shop_overview", module: "shop" },
   { id: "shop_conversion", module: "shop" },
   { id: "shop_funnel", module: "shop" },
@@ -33,7 +34,7 @@ const SECTIONS = [
   { id: "content_rising", module: "content" },
 ];
 // Sections added after sites could save a layout without hidden_sections.
-const ADDED_LATER = ["shop_conversion"];
+const ADDED_LATER = ["shop_conversion", "missing_pages"];
 const DEFAULT_WIDE = new Set(["shop_conversion"]);
 
 // Sections that list one breakdown dimension. filter = the filter a row sets.
@@ -55,6 +56,7 @@ const MODULE_LISTS = {
   campaigns: { url: "/reports/campaigns/overview", rows: 10 },
   content_engagement: { url: "/reports/content/engagement", rows: 8 },
   content_rising: { url: "/reports/content/rising", rows: 8 },
+  missing_pages: { url: "/reports/perus/missing", rows: 8 },
 };
 const ROW_CHOICES = [5, 8, 10, 15, 25];
 
@@ -844,6 +846,7 @@ async function dashboardView(container, token) {
     campaigns: () => moduleTable("campaigns", moduleRows("campaigns"), r.campaigns.data),
     content_engagement: () => [moduleTable("content_engagement", moduleRows("content_engagement"), r.content_engagement.data), sample(r.content_engagement.data)],
     content_rising: () => moduleTable("content_rising", moduleRows("content_rising"), r.content_rising.data),
+    missing_pages: () => moduleTable("missing_pages", moduleRows("missing_pages"), r.missing_pages.data),
   };
 
   // Filter bar: active filters as chips, and lists for the common ones.
@@ -870,7 +873,7 @@ async function dashboardView(container, token) {
   const csvReport = {
     shop_overview: "shop/summary", shop_conversion: "shop/timeseries", shop_funnel: "shop/funnel", shop_products: "shop/products",
     campaigns: "campaigns/overview", content_engagement: "content/engagement", content_rising: "content/rising",
-    pages: "breakdown&dimension=page", entries: "breakdown&dimension=entry", exits: "breakdown&dimension=exit",
+    missing_pages: "perus/missing", pages: "breakdown&dimension=page", entries: "breakdown&dimension=entry", exits: "breakdown&dimension=exit",
     referrers: "breakdown&dimension=referrer", utm_source: "breakdown&dimension=utm_source", utm_campaign: "breakdown&dimension=utm_campaign",
     devices: "breakdown&dimension=device", browsers: "breakdown&dimension=browser", countries: "breakdown&dimension=country", page_groups: "breakdown&dimension=page_group",
   };
@@ -902,7 +905,8 @@ async function dashboardView(container, token) {
       empties.push(L.sections[id]);
       continue;
     }
-    const unfiltered = filtered && section.module !== "perus";
+    // Missing pages have no page views to filter.
+    const unfiltered = filtered && (section.module !== "perus" || id === "missing_pages");
     const listLink = more[id] ? h("a", { class: "more", href: href(`list/${id}`) }, L.showAll) : null;
     const el = h("section", {
       class: `m-${section.module}${cardOption(cfg, id, "wide") ? " wide" : ""}${unfiltered ? " unfiltered" : ""}`,
@@ -967,6 +971,11 @@ function moduleColumns(id, data) {
       { title: L.col.page, value: page, text: (row) => row.value, path: true, sort: (row) => row.value },
       { title: L.col.views, value: (row) => nf(row.pageviews), right: true, sort: (row) => row.pageviews },
       { title: L.col.change, value: (row) => chg(row.pageviews, row.pageviews - row.change) || "", right: true, sort: (row) => row.change },
+    ],
+    // The site answered these with "not found", so they are not filter links.
+    missing_pages: [
+      { title: L.col.page, value: (row) => row.value, text: (row) => row.value, path: true, sort: (row) => row.value },
+      { title: L.col.views, value: (row) => nf(row.pageviews), right: true, sort: (row) => row.pageviews },
     ],
   };
   return columns[id];

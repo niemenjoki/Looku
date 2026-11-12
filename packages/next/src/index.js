@@ -265,6 +265,106 @@ export function trackPageview(request, event, options = {}) {
   return sending;
 }
 
+// ---------- pages that do not exist ----------
+
+// A page does not see the requested address the way the proxy does, so the
+// proxy passes it on in this request header. The header carries an HMAC made
+// with the site's signing key: a visitor can send the header too, on paths
+// where the proxy does not run, but cannot make one that Looku would accept.
+export const PATH_HEADER = "x-looku-path";
+
+/**
+ * Headers for NextResponse.next() that pass the requested path on to the
+ * catch-all page (see trackNotFound). A copy of the header sent by the
+ * visitor is always replaced or removed.
+ *
+ *   export async function proxy(request, event) {
+ *     trackPageview(request, event, lookuOptions);
+ *     return NextResponse.next({ request: { headers: await lookuRequestHeaders(request, lookuOptions) } });
+ *   }
+ */
+export async function lookuRequestHeaders(request, options = {}) {
+  const headers = new Headers(request.headers);
+  headers.delete(PATH_HEADER);
+  const { enabled, send } = settings(options);
+  if (!enabled || !send.signingKey) {
+    return headers;
+  }
+  try {
+    const path = new URL(request.url).pathname;
+    headers.set(PATH_HEADER, `${await hmacHex(send.signingKey, `path:${path}`)}:${path}`);
+  } catch {
+    // A malformed request must not break the page.
+  }
+  return headers;
+}
+
+function sameText(a, b) {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let difference = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    difference |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return difference === 0;
+}
+
+/**
+ * Builds the not-found message from the request headers of the catch-all
+ * page, or returns null when the header is missing or not made with the
+ * signing key, or the request would not have been counted as a page view
+ * (see buildPageview). Only the path, the time and the user agent are sent;
+ * Looku uses the user agent to leave out bots and does not store it.
+ */
+export async function buildNotFound(headers, options = {}) {
+  const { send } = settings(options);
+  const value = String(headers.get(PATH_HEADER) || "");
+  const split = value.indexOf(":");
+  if (!send.signingKey || split < 0) {
+    return null;
+  }
+  const path = value.slice(split + 1);
+  if (!path.startsWith("/") || !sameText(value.slice(0, split), await hmacHex(send.signingKey, `path:${path}`))) {
+    return null;
+  }
+  const pageview = buildPageview({ method: "GET", url: `https://looku.invalid${path}`, headers }, options);
+  if (!pageview) {
+    return null;
+  }
+  return { type: "notfound", ts: pageview.ts, path: pageview.path, ua: pageview.ua };
+}
+
+/**
+ * Tells Looku that the requested page does not exist, so its page views are
+ * listed under missing pages instead of pages. Call it from a catch-all page,
+ * app/[...missing]/page.js, which Next.js uses only for addresses that match
+ * no other page, after the response (Next.js 15.1 or newer):
+ *
+ *   export default async function MissingPage() {
+ *     const requestHeaders = await headers();
+ *     after(() => trackNotFound(requestHeaders, lookuOptions));
+ *     notFound();
+ *   }
+ *
+ * Not from app/not-found.js: reading the headers there makes every page of the
+ * site render for each request. Use the same options as in the proxy. Never
+ * throws.
+ */
+export async function trackNotFound(headers, options = {}) {
+  const { enabled, send } = settings(options);
+  if (!enabled) {
+    return false;
+  }
+  let payload;
+  try {
+    payload = await buildNotFound(headers, options);
+  } catch {
+    return false;
+  }
+  return payload ? sendToLooku(payload, send) : false;
+}
+
 /**
  * Recommended matcher. Next.js requires `config` to be a literal in the
  * proxy file, so copy this there instead of importing it. A dot is written

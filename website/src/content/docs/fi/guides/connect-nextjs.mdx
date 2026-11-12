@@ -223,10 +223,75 @@ Eväste kuuluu yhdelle selaimelle. Yksityinen ikkuna unohtaa sen, ja selaimet s�
 päivää, joten avaa linkki uudelleen sen jälkeen tai kun olet tyhjentänyt evästeet. Linkki näkyy vain sinulle, kun
 olet kirjautunut.
 
+## Sivut, joita ei ole
+
+Proxy ajetaan ennen kuin Next.js tietää, onko sivu olemassa, joten väärin kirjoitettu osoite, vanha linkki tai
+`/wp-admin`-osoitetta kokeileva botti laskettaisiin sivuksi. Sivustosi catch-all-sivu voi kertoa Lookulle, ettei
+sivua ole. Looku näyttää silloin nämä sivunäytöt kojelaudassa listassa **Puuttuvat sivut** eikä laske niitä muihin
+lukuihin. Tämä vaatii Next.js:n 15.1 tai uudemman ja App Routerin.
+
+<Steps>
+
+1. **Välitä osoite eteenpäin.** Muuta proxy-tiedoston funktio tällaiseksi (`middleware.js`:ssä funktion nimi
+   on `middleware`):
+
+   ```js
+   import { NextResponse } from "next/server";
+   import { lookuRequestHeaders, trackPageview } from "./lib/looku.js";
+
+   export async function proxy(request, event) {
+     trackPageview(request, event);
+     return NextResponse.next({ request: { headers: await lookuRequestHeaders(request) } });
+   }
+   ```
+
+   Sivu ei näe osoitetta samalla tavalla kuin proxy, joten proxy välittää osoitteen pyynnön otsakkeessa.
+   Otsake allekirjoitetaan allekirjoitusavaimellasi, joten kävijä ei voi sen avulla merkitä oikeaa sivuasi
+   puuttuvaksi.
+
+2. **Lisää catch-all-sivu.** Luo `app/[...missing]/page.js` (tai jos sinulla on jo catch-all-sivu, joka kutsuu
+   `notFound()`-funktiota, lisää rivit siihen):
+
+   ```jsx
+   import { headers } from "next/headers";
+   import { notFound } from "next/navigation";
+   import { after } from "next/server";
+   import { trackNotFound } from "../../lib/looku.js";
+
+   export default async function MissingPage() {
+     const requestHeaders = await headers();
+     after(() => trackNotFound(requestHeaders));
+     notFound();
+   }
+   ```
+
+   Next.js käyttää catch-all-sivua vain osoitteisiin, joita mikään muu sivu ei vastaa, ja `notFound()` näyttää oman
+   not-found-sivusi tilakoodilla 404. `after` lähettää viestin vasta vastauksen jälkeen, joten kukaan ei odota sitä.
+   Älä laita näitä rivejä tiedostoon `app/not-found.js`: jos pyynnön otsakkeet luetaan siellä, Next.js tekee
+   sivuston jokaisen sivun jokaiselle pyynnölle erikseen eikä kerran käännöksen aikana. Jos annat
+   `trackPageview`-kutsulle valintoja, anna samat myös `lookuRequestHeaders`- ja `trackNotFound`-kutsuille.
+
+   Osoite, joka vastaa parametrillista sivua, esimerkiksi blogikirjoitusta, jota ei ole, saa not-found-sivun ilman
+   tätä sivua, joten se jää sivuihin.
+
+3. **Julkaise ja tarkista.** Avaa julkaistulla sivustollasi keksitty osoite, esimerkiksi `/looku-testi-404`, ja
+   sitten kojelauta. Osoite näkyy muutamassa sekunnissa listassa **Puuttuvat sivut** eikä listassa **Suosituimmat
+   sivut**.
+
+</Steps>
+
+Looku pitää puuttuvat sivut päivittäin: päivänä, jona sivusto vastasi osoitteeseen "ei löydy", jokainen näyttö siihen
+osoitteeseen lasketaan puuttuvaksi. Jos lisäät sivun myöhemmin, se lasketaan sivuksi seuraavasta päivästä alkaen.
+Puuttuvista sivuista on vain määrä, ei kävijöitä, ja niitä säilytetään yhtä kauan kuin muitakin tietoja.
+
+Ennen käyttöönottoa tallentuneet sivunäytöt jäävät paikalleen. Siirrä ne antamalla osoitteet komennolle
+`pages:missing` ([komentorivi](/looku/fi/reference/cli/#data)), esimerkiksi
+`docker compose run --rm ingest pages:missing myblog /wp-admin /vanha-sivu`.
+
 ## Hyvä tietää
 
-- **Puuttuvat sivut lasketaan.** Proxy ajetaan ennen kuin Next.js tietää, onko sivu olemassa, joten käynti
-  väärin kirjoitetussa osoitteessa (404) on myös sivunäyttö.
+- **Puuttuvat sivut lasketaan** sivuiksi, ellei sivustosi kerro niistä Lookulle; katso
+  [Sivut, joita ei ole](#sivut-joita-ei-ole).
 - **Selaimen sisäiset siirtymät lasketaan.** Kun kävijä napsauttaa linkkiä, Next.js pyytää palvelimelta seuraavan
   sivun tiedot, ja proxy ajetaan myös sille pyynnölle. `matcher` ohittaa esilataukset.
 - **Botit** ohitetaan niiden user agent -tunnisteen perusteella, samoin pyynnöt, joissa ei ole `Accept-Language`-otsaketta,

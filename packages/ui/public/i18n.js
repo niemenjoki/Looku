@@ -97,6 +97,7 @@ export const T = {
       countries: "Maat", page_groups: "Sivuryhmät",
       shop_overview: "Verkkokauppa", shop_conversion: "Konversio, 7 pv liukuva", shop_funnel: "Ostopolku", shop_products: "Myydyimmät tuotteet",
       campaigns: "Kampanjat", content_engagement: "Lukuaika ja vieritys", content_rising: "Nousevat sivut",
+      missing_pages: "Puuttuvat sivut",
     },
     col: {
       page: "Sivu", value: "Arvo", source: "Lähde", sessions: "Istunnot", views: "Näytöt", visitors: "Kävijät", entries: "Aloitukset", exits: "Poistumiset",
@@ -320,6 +321,7 @@ export const T = {
       countries: "Countries", page_groups: "Page groups",
       shop_overview: "Shop", shop_conversion: "Conversion, 7-day rolling", shop_funnel: "Purchase path", shop_products: "Best sellers",
       campaigns: "Campaigns", content_engagement: "Reading time and scroll", content_rising: "Rising pages",
+      missing_pages: "Missing pages",
     },
     col: {
       page: "Page", value: "Value", source: "Source", sessions: "Sessions", views: "Views", visitors: "Visitors", entries: "Entries", exits: "Exits",

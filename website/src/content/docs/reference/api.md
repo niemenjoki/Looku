@@ -43,7 +43,7 @@ Paths are returned decoded, as people read them: `/opas/lämpö`, not `/opas/l%C
 | `summary` | page views, visitors, sessions, pages per session; `compare=previous` adds the previous period |
 | `timeseries` | totals per `interval`: `hour` (at most 31 days), `day`, `week` or `month` |
 | `breakdown/<dimension>` | totals by `page`, `entry`, `exit`, `referrer`, `utm_source`, `utm_medium`, `utm_campaign`, `device`, `browser`, `os`, `country` or `page_group`; `limit` (default 50), `sort` |
-| `reports/<module>/<report>` | module reports: `shop/summary`, `shop/timeseries`, `shop/funnel`, `shop/products`, `campaigns/overview`, `content/engagement`, `content/rising`. Only for modules that are on for the site (`site:modules`); otherwise the answer is `Unknown report.` |
+| `reports/<module>/<report>` | module reports: `perus/missing` (addresses the site answered with "not found", see [Pages that do not exist](/looku/guides/connect-nextjs/#pages-that-do-not-exist); `limit`), `shop/summary`, `shop/timeseries`, `shop/funnel`, `shop/products`, `campaigns/overview`, `content/engagement`, `content/rising`. Only for modules that are on for the site (`site:modules`); otherwise the answer is `Unknown report.` |
 | `export.csv?report=…` | any of the above as CSV |
 
 `summary`, `timeseries` and `breakdown` also take filters. `page` (one page path), `page_group`, `device` and

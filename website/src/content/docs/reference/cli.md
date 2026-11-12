@@ -49,6 +49,7 @@ A file on the host is not visible inside the container. To give one to a command
 | `backup <file>` | consistent copy of the database while Looku runs, without the daily salt; see [Backup](/looku/operate/backup-and-update/) |
 | `orders:import <id> <file>` | imports orders, one JSON object per line; all or nothing |
 | `history:import <id> <file> [--before <time>]` | imports page views, events and reading time from an earlier system; see [Moving from another system](/looku/guides/moving-from-another/) |
+| `pages:missing <id> <path>... [--from <day>] [--to <day>]` | moves the page views of addresses that do not exist to **Missing pages** and adds up those days again; give the paths as the dashboard shows them; see [Pages that do not exist](/looku/guides/connect-nextjs/#pages-that-do-not-exist) |
 | `maintain` | runs the nightly job now: deletes old salts, adds up finished days, applies retention. Prints a summary per site. |
 | `report:send [--month YYYY-MM] [--site <id>] [--dry-run]` | sends the monthly email (default: last month); `--dry-run` prints it instead |
 

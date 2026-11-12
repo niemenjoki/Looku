@@ -12,7 +12,7 @@ import * as shop from "./shop/reports.js";
 
 export const MODULES = {
   perus: {
-    version: 2,
+    version: 3,
     reports: {
       summary: {
         params: ["compare", ...FILTER_PARAMS],
@@ -43,6 +43,10 @@ export const MODULES = {
                 filters,
               });
         },
+      },
+      missing: {
+        params: ["limit"],
+        run: (db, site, range, query) => perus.missing(db, site.site_id, range, { limit: query.limit }),
       },
     },
   },

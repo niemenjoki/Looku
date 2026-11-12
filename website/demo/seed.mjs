@@ -114,6 +114,15 @@ export function seedDemo(db, now) {
         order(site, { id: String(++orderNo), ts: paid.toISOString(), total, items, ...(utm.utm_campaign ? { utm_campaign: utm.utm_campaign } : {}) }, paid);
       }
     }
+
+    // Old links and bots trying addresses, which the shop answers with "not found".
+    for (const [p, every] of [["/wp-admin", 2], ["/old-shop/worms", 5], ["/blog/2019/compost-tips", 9]]) {
+      const at = new Date(now.getTime() - d * 86400000 - 3600000);
+      if (d % every !== 0) continue;
+      const visitor = { ip: `192.0.2.${every}`, ua: UA.chromeWin };
+      ingest(site, { type: "pageview", ts: at.toISOString(), path: p, ...visitor }, at);
+      ingest(site, { type: "notfound", ts: at.toISOString(), path: p, ua: visitor.ua }, at);
+    }
   }
   runMaintenance(db, now);
   return { visitors: visitorNo, orders: orderNo - 1000 };

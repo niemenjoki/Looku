@@ -87,7 +87,7 @@ export function runMaintenance(db, now = new Date()) {
         )
         .run(site.site_id, cutoff, site.site_id).changes;
       // Orders are the shop's own records without personal data and are kept.
-      for (const table of ["events", "engagement"]) {
+      for (const table of ["events", "engagement", "missing_pages"]) {
         counts[table] = db
           .prepare(`DELETE FROM ${table} WHERE site_id = ? AND day < ?`)
           .run(site.site_id, cutoff).changes;

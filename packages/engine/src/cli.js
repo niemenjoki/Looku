@@ -10,6 +10,7 @@ import { createApiServer } from "./api/server.js";
 import { openDatabase } from "./db.js";
 import { importHistory } from "./history.js";
 import { runMaintenance } from "./maintenance.js";
+import { markMissing } from "./missing.js";
 import { createOrderIngest } from "./orders.js";
 import { buildMonthlyReview, renderReviewEmail, sendMonthlyReports, smtpSettings } from "./report-email.js";
 import { runMaintenanceInWorker } from "./maintenance-worker.js";
@@ -33,6 +34,8 @@ const USAGE = `Usage: looku <command>
   orders:import <site-id> <file>        Import orders (JSON lines, same format as POST /orders)
   history:import <site-id> <file> [--before <time>]
                          Import page views, events and engagement from an earlier system (JSON lines)
+  pages:missing <site-id> <path>... [--from <day>] [--to <day>]
+                         Move the page views of paths that do not exist to the missing pages list
   report:send [--month YYYY-MM] [--site <site-id>] [--dry-run]
                          Monthly email (default: last month)
   serve                  Start the read API and dashboard
@@ -352,6 +355,25 @@ async function main(argv) {
           `${site.site_id}; ${result.skippedBefore} skipped at or after --before, ${result.skippedRetention} older ` +
           `than the retention; ${result.daysRolledUp} days rolled up.`,
       );
+      db.close();
+      return;
+    }
+    case "pages:missing": {
+      const [siteId, ...paths] = positional;
+      if (!siteId || !paths.length) {
+        throw new Error("Give the site and at least one path, e.g. looku pages:missing myblog /wp-admin");
+      }
+      for (const key of ["from", "to"]) {
+        if (options[key] !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(options[key]))) {
+          throw new Error(`--${key} must be YYYY-MM-DD.`);
+        }
+      }
+      const db = openDatabase(dbFile);
+      const result = markMissing(db, siteId, paths, { from: options.from, to: options.to });
+      for (const row of result.paths) {
+        console.log(`${row.pageviews}\t${row.path}`);
+      }
+      console.log(`${result.pageviews} page views moved to missing pages on ${result.days} days.`);
       db.close();
       return;
     }

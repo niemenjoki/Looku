@@ -260,6 +260,22 @@ export function pageGroups(db, siteId, range, groups = [], { filters = null } = 
   return { range, dimension: "page_group", sort: "pageviews", rows };
 }
 
+// Paths the site answered with "not found" (missing.js), with their page
+// views, which the other reports do not count. Visitors are not kept for them.
+export function missing(db, siteId, range, { limit = 50 } = {}) {
+  checkRange(range);
+  const rowLimit = Math.min(Math.max(Math.trunc(Number(limit)) || 50, 1), 1000);
+  const rows = db
+    .prepare(
+      `SELECT path AS value, SUM(views) AS pageviews, MAX(day) AS last_day FROM missing_pages
+       WHERE site_id = ? AND day BETWEEN ? AND ?
+       GROUP BY path HAVING SUM(views) > 0
+       ORDER BY pageviews DESC, path LIMIT ?`,
+    )
+    .all(siteId, range.from, range.to, rowLimit);
+  return { range, rows };
+}
+
 const SORT_COLUMNS = ["pageviews", "visitors", "entries", "exits"];
 
 export function breakdown(db, siteId, dimension, range, { limit = 50, sort, filters = null } = {}) {

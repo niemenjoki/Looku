@@ -20,7 +20,7 @@ import {
 import { openApiDocument } from "./openapi.js";
 import { parseConfig, resolveRange, toCsv, validateConfig } from "./params.js";
 
-export const API_VERSION = "0.9.1";
+export const API_VERSION = "0.9.2";
 const MAX_BODY_BYTES = 64 * 1024;
 const SESSION_COOKIE = "looku_session";
 

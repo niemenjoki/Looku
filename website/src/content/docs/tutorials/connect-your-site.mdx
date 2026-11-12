@@ -132,8 +132,10 @@ nothing is stored in the visitor's browser.
 </Steps>
 
 Only the production site sends page views. Your own `npm run dev` and Vercel's preview versions send nothing, so your
-work on the site does not show up as visitors. Visits to addresses that do not exist (404) are counted too, so odd
-paths in the list are usually mistyped links. Bots are left out.
+work on the site does not show up as visitors. Visits to addresses that do not exist (404) are counted as pages too, so odd
+paths in the list are usually mistyped or old links;
+[Pages that do not exist](/looku/guides/connect-nextjs/#pages-that-do-not-exist) moves them to a list of their own.
+Bots are left out.
 
 Nothing appears? Go through [No page views appear](/looku/operate/troubleshooting/#no-page-views-appear); it checks
 each link in the chain.

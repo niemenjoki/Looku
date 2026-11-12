@@ -1,6 +1,6 @@
 {
   "name": "@looku/browser",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "private": true,
   "description": "Looku browser collector: reading time, scroll depth and events from consented visitors, without cookies or identifiers.",
   "type": "module",

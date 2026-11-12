@@ -8,6 +8,7 @@ import {
   osFamily,
   parseReferrer,
 } from "./classify.js";
+import { COUNT_MISSING_SQL } from "./missing.js";
 import { dayKey } from "./time.js";
 import { createVisitorHasher, randomVisitor } from "./visitor.js";
 
@@ -96,6 +97,13 @@ export function createIngest(db) {
     db.prepare("DELETE FROM pageviews WHERE site_id = ? AND visitor_hash = ?").run(siteId, hash);
     db.prepare("DELETE FROM events WHERE site_id = ? AND visitor_hash = ?").run(siteId, hash);
   });
+  const isMissing = db.prepare(
+    "SELECT 1 FROM missing_pages WHERE site_id = ? AND day = ? AND path = ?",
+  );
+  const countMissing = db.prepare(COUNT_MISSING_SQL);
+  const removeMissing = db.prepare(
+    "DELETE FROM pageviews WHERE site_id = ? AND day = ? AND path = ?",
+  );
   const setLastIngest = db.prepare(
     "INSERT INTO meta (key, value) VALUES ('last_ingest', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
   );
@@ -143,10 +151,36 @@ export function createIngest(db) {
       }
     }
 
-    insertPageview.run(row);
     setLastIngest.run(now.toISOString());
+    // A path the site has answered with "not found" today is counted, not stored.
+    if (isMissing.get(site.site_id, row.day, row.path)) {
+      countMissing.run(site.site_id, row.day, row.path, 1);
+      return { stored: false, reason: "missing" };
+    }
+    insertPageview.run(row);
     return { stored: true };
   }
+
+  // The site answered the path with "not found". Its page views of the day are
+  // moved to the missing pages count, and later ones that day are counted
+  // there too. The page view and this message come from the same request in
+  // either order. The user agent is only checked for bots, never stored.
+  const recordNotFound = db.transaction((site, payload, now = new Date()) => {
+    if (typeof payload.path !== "string" || !payload.path.startsWith("/")) {
+      throw new IngestError("path is required for notfound.");
+    }
+    const userAgent = cleanText(payload.ua, 500);
+    if (userAgent && isBot(userAgent)) {
+      return { stored: false, reason: "bot" };
+    }
+    const time = eventTime(payload.ts, now);
+    const day = dayKey(time, site.timezone);
+    const path = normalizePath(payload.path);
+    const removed = removeMissing.run(site.site_id, day, path).changes;
+    countMissing.run(site.site_id, day, path, removed);
+    setLastIngest.run(now.toISOString());
+    return { stored: true };
+  });
 
   const recordEvent = db.transaction((site, payload, now = new Date()) => {
     const name = cleanText(payload.name, 80);
@@ -230,8 +264,10 @@ export function createIngest(db) {
         return recordEvent(site, payload, now);
       case "engagement":
         return recordEngagement(site, payload, now);
+      case "notfound":
+        return recordNotFound(site, payload, now);
       default:
-        throw new IngestError("type must be pageview, event or engagement.");
+        throw new IngestError("type must be pageview, event, engagement or notfound.");
     }
   };
 }

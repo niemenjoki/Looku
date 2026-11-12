@@ -219,10 +219,73 @@ cookie, and a page on your own site sets that cookie with one tap.
 The cookie belongs to one browser. A private window forgets it, and browsers keep it for at most about 400 days, so
 open the link again after that or after clearing your cookies. The link is shown only to you when you are logged in.
 
+## Pages that do not exist
+
+The proxy runs before Next.js knows whether a page exists, so a mistyped address, an old link or a bot trying
+`/wp-admin` would be counted as a page. A catch-all page of your site can tell Looku that the page does not exist. Looku then
+lists those page views under **Missing pages** on the dashboard and leaves them out of the other numbers. This needs
+Next.js 15.1 or newer and the App Router.
+
+<Steps>
+
+1. **Pass the address on.** In the proxy file, change the function like this (in
+   `middleware.js`, the function is called `middleware`):
+
+   ```js
+   import { NextResponse } from "next/server";
+   import { lookuRequestHeaders, trackPageview } from "./lib/looku.js";
+
+   export async function proxy(request, event) {
+     trackPageview(request, event);
+     return NextResponse.next({ request: { headers: await lookuRequestHeaders(request) } });
+   }
+   ```
+
+   A page does not see the address the way the proxy does, so the proxy passes the address in a request header. The header is signed with your signing key, so a visitor cannot use it to mark one of your real pages as
+   missing.
+
+2. **Add a catch-all page.** Create `app/[...missing]/page.js` (or, if you already have a catch-all page that
+   calls `notFound()`, add the lines to it):
+
+   ```jsx
+   import { headers } from "next/headers";
+   import { notFound } from "next/navigation";
+   import { after } from "next/server";
+   import { trackNotFound } from "../../lib/looku.js";
+
+   export default async function MissingPage() {
+     const requestHeaders = await headers();
+     after(() => trackNotFound(requestHeaders));
+     notFound();
+   }
+   ```
+
+   Next.js uses a catch-all page only for addresses that no other page matches, and `notFound()` shows your own
+   not-found page with status 404. `after` sends the message after the response, so nobody waits for it. Do not put
+   these lines in `app/not-found.js`: reading the request headers there makes Next.js render every page of the site
+   for each request instead of once at build time. If you pass options to `trackPageview`, pass the same options to
+   `lookuRequestHeaders` and `trackNotFound`.
+
+   An address that matches a page with parameters, such as a blog post that does not exist, gets the not-found page
+   without this page, so it stays under pages.
+
+3. **Deploy and check.** Open a made-up address on your live site, for example `/looku-test-404`, and then the
+   dashboard. The address appears under **Missing pages** within a few seconds, and not under **Top pages**.
+
+</Steps>
+
+Looku keeps missing pages by day: on a day when the site answered an address with "not found", every view of that
+address is counted as missing. If you add the page later, it is counted as a page from the next day on. Missing pages
+have a count only, no visitors, and they are kept as long as other data.
+
+Page views from before you set this up stay where they are. To move them, give the addresses to `pages:missing`
+([command line](/looku/reference/cli/#data)), for example
+`docker compose run --rm ingest pages:missing myblog /wp-admin /old-page`.
+
 ## Good to know
 
-- **Missing pages are counted.** The proxy runs before Next.js knows whether the page exists, so a visit to a
-  mistyped address (404) is also a page view.
+- **Missing pages are counted** as pages unless your site tells Looku about them; see
+  [Pages that do not exist](#pages-that-do-not-exist).
 - **Client-side navigation is counted.** When a visitor clicks a link, Next.js asks the server for the next page's
   data, and the proxy runs for that request too. Prefetches are skipped by the matcher.
 - **Bots** are skipped by their user agent, and so are requests without `Accept-Language` and requests that claim a

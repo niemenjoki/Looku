@@ -73,7 +73,7 @@ export async function createDemoApi({ initSqlJs, base, fetch }) {
   function route(method, path, query, body) {
     const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
     if (path === "/health") return { status: "ok", version: "demo" };
-    if (path === "/openapi.json") return openApiDocument("0.9.1");
+    if (path === "/openapi.json") return openApiDocument("0.9.2");
     if (path === "/login" || path === "/logout") return { ok: true };
     if (method !== "GET" && !["/login", "/logout"].includes(path) && parts[0] !== "tokens" && !(parts[2] === "config" && method === "PUT")) {
       throw new HttpError(404, "Not found.");
